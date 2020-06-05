@@ -1,0 +1,32 @@
+name: Release Reader nuget
+
+on:
+  push:
+    tags: "Reader-*"
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.100
+    - name: Build
+      run: dotnet build --configuration Release
+    - name: Test
+      run: dotnet test --configuration Release      
+      
+    - name: Create the package - Reader
+      run: dotnet pack --configuration Release MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-}
+    - name: Create the package - Reader20
+      run: dotnet pack --configuration Release MyNoSqlServer20.DataReader/MyNoSqlServer20.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-}
+
+    - name: Publish the package to GPR - Reader
+      run: dotnet nuget push MyNoSqlServer.DataReader/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+    - name: Publish the package to GPR - Reader20
+      run: dotnet nuget push MyNoSqlServer20.DataReader/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+
