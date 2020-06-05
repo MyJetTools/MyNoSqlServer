@@ -27,5 +27,5 @@ jobs:
 
     - name: Publish the package to GPR - Writer
       run: dotnet nuget push MyNoSqlServer.DataWriter/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
-    - name: Publish the package to GPR - MyTcpSockets20
+    - name: Publish the package to GPR - Writer20
       run: dotnet nuget push MyNoSqlServer20.DataWriter/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
