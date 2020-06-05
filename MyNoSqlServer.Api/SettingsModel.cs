@@ -16,6 +16,14 @@ namespace MyNoSqlServer.Api
 
             try
             {
+                var connectionString = Environment.GetEnvironmentVariable("BackupAzureConnectString");
+
+                if (!string.IsNullOrEmpty(connectionString))
+                {
+                    var conf = new SettingsModel() {BackupAzureConnectString = connectionString};
+                    return conf;
+                }
+
                 var homeFolder = Environment.GetEnvironmentVariable("HOME");
 
                 var fileName = homeFolder.AddLastSymbolIfOneNotExists('/') + ".mynosqlserver";
