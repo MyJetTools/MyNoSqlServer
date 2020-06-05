@@ -26,7 +26,7 @@ jobs:
     - name: Publish Server to Registry
       uses: swisschain/Publish-Docker-Github-Action@master
       with:
-        name: swisschains/MyNoSqlServerApi
+        name: swisschains/my-nosql-server
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         workdir: ./publish-api
