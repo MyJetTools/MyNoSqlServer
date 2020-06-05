@@ -1,0 +1,37 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace MyNoSqlServer.Abstractions
+{
+    public interface IMyNoSqlServerDataWriter<T> where T : IMyNoSqlEntity, new()
+    {
+        ValueTask InsertAsync(T entity);
+        ValueTask InsertOrReplaceAsync(T entity);
+
+        ValueTask CleanAndKeepLastRecordsAsync(string partitionKey, int amount);
+        ValueTask BulkInsertOrReplaceAsync(IEnumerable<T> entity, DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5);
+        ValueTask CleanAndBulkInsertAsync(IEnumerable<T> entity, DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5);
+        ValueTask CleanAndBulkInsertAsync(string partitionKey, IEnumerable<T> entity, DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5);
+        
+        ValueTask<IEnumerable<T>> GetAsync();
+        ValueTask<IEnumerable<T>> GetAsync(string partitionKey);
+        ValueTask<T> GetAsync(string partitionKey, string rowKey);
+        
+        ValueTask<IReadOnlyList<T>> GetMultipleRowKeysAsync(string partitionKey, IEnumerable<string> rowKeys);
+        
+        ValueTask<T> DeleteAsync(string partitionKey, string rowKey);
+
+
+        ValueTask<IEnumerable<T>> QueryAsync(string query);
+
+        ValueTask<IEnumerable<T>> GetHighestRowAndBelow(string partitionKey, string rowKeyFrom, int amount);
+
+
+        ValueTask CleanAndKeepMaxPartitions( int maxAmount);
+        ValueTask CleanAndKeepMaxRecords(string partitionKey, int maxAmount);
+
+        ValueTask<int> GetCountAsync(string partitionKey);
+    }
+
+
+}

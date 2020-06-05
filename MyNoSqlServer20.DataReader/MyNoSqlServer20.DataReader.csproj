@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="..\MyNoSqlServer.DataReader\IMyNoSqlSubscriber.cs">
+        <Link>IMyNoSqlSubscriber.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.DataReader\MyNoSqlReadRepository.cs">
+        <Link>MyNoSqlReadRepository.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.DataReader\MyNoSqlServerClientTcpContext.cs">
+        <Link>MyNoSqlServerClientTcpContext.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.DataReader\MyNoSqlSubscriber.cs">
+        <Link>MyNoSqlSubscriber.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.DataReader\MyNoSqlTcpClient.cs">
+        <Link>MyNoSqlTcpClient.cs</Link>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
+      <ProjectReference Include="..\MyNoSqlServer20.TcpContracts\MyNoSqlServer20.TcpContracts.csproj" />
+    </ItemGroup>
+
+</Project>

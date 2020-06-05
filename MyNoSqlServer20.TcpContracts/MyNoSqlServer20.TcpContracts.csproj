@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <RootNamespace>MyNoSqlServer.TcpContracts</RootNamespace>
+    </PropertyGroup>
+
+
+    <ItemGroup>
+        <PackageReference Include="MyTcpSockets20" Version="1.2.16" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <Compile Include="..\MyNoSqlServer.TcpContracts\CommandType.cs">
+        <Link>CommandType.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.TcpContracts\IMyNoSqlTcpContract.cs">
+        <Link>IMyNoSqlTcpContract.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.TcpContracts\SerializerDeserializer.cs">
+        <Link>SerializerDeserializer.cs</Link>
+      </Compile>
+    </ItemGroup>
+
+</Project>

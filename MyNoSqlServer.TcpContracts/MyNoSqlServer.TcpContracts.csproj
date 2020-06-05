@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Version>1.1.1</Version>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="MyTcpSockets" Version="1.2.16" />
+    </ItemGroup>
+
+</Project>
