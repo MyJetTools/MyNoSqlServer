@@ -3,3 +3,6 @@ rm -rf app
 dotnet publish -o app -c release
 docker build -t amigin/mynosqlserver:1.0.9 .
 docker push amigin/mynosqlserver:1.0.9
+# or change version at Makefile and run
+make build
+make push
