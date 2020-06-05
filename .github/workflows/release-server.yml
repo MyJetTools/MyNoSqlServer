@@ -22,6 +22,8 @@ jobs:
     - name: Publish Server
       run: dotnet publish --no-build ./MyNoSqlServer.Api/MyNoSqlServer.Api.csproj --output ./publish-api --configuration Release /p:AssemblyVersion=${GITHUB_REF#refs/tags/Server-}
 
+    - name: ls
+      run: ls ./publish-api
       
     - name: Publish Server to Registry
       uses: swisschain/Publish-Docker-Github-Action@master
