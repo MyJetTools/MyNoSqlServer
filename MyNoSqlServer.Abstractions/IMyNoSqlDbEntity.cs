@@ -2,20 +2,20 @@
 
 namespace MyNoSqlServer.Abstractions
 {
-    public interface IMyNoSqlEntity
+    public interface IMyNoSqlDbEntity
     {
         string PartitionKey { get; set; }
         string RowKey { get; set; }
-        DateTime TimeStamp { get; set; }
+        string TimeStamp { get; set; }
         DateTime? Expires { get; set; }
     }
 
 
-    public class MyNoSqlEntity : IMyNoSqlEntity
+    public class MyNoSqlDbEntity : IMyNoSqlDbEntity
     {
         public string PartitionKey { get; set; }
         public string RowKey { get; set; }
-        public DateTime TimeStamp { get; set; }
+        public string TimeStamp { get; set; }
         public DateTime? Expires { get; set; }
     }
 }

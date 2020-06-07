@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace MyNoSqlServer.Abstractions
 {
-    public interface IMyNoSqlServerDataWriter<T> where T : IMyNoSqlEntity, new()
+    public interface IMyNoSqlServerDataWriter<T> where T : IMyNoSqlDbEntity, new()
     {
         ValueTask InsertAsync(T entity);
         ValueTask InsertOrReplaceAsync(T entity);

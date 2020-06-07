@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace MyNoSqlServer.Abstractions
 {
     
-    public interface IMyNoSqlServerDataReader<out T> where T : IMyNoSqlEntity
+    public interface IMyNoSqlServerDataReader<out T> where T : IMyNoSqlDbEntity
     {
         T Get(string partitionKey, string rowKey);
         
