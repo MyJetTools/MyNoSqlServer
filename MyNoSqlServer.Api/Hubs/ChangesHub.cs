@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
@@ -124,7 +123,7 @@ namespace MyNoSqlServer.Api.Hubs
             if (string.IsNullOrEmpty(tableName))
                 return;
 
-            var table = DbInstance.GetTable(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
                 return;
@@ -141,7 +140,7 @@ namespace MyNoSqlServer.Api.Hubs
 
         public Task GetRow(string tableName, string corrId, string partitionKey, string rowKey)
         {
-            var dbTable = DbInstance.GetTable(tableName);
+            var dbTable = ServiceLocator.DbInstance.TryGetTable(tableName);
             if (dbTable == null)
                 return Clients.Caller.SendTableNotFoundAsync(corrId);
 
@@ -162,7 +161,7 @@ namespace MyNoSqlServer.Api.Hubs
         
         public Task GetRowsByPartition(string tableName, string corrId, string partitionKey, int limit, int skip)
         {
-            var dbTable = DbInstance.GetTable(tableName);
+            var dbTable = ServiceLocator.DbInstance.TryGetTable(tableName);
             if (dbTable == null)
                 return Clients.Caller.SendTableNotFoundAsync(corrId);
 
@@ -178,7 +177,7 @@ namespace MyNoSqlServer.Api.Hubs
         
         public Task GetRows(string tableName, string corrId, int limit, int skip)
         {
-            var dbTable = DbInstance.GetTable(tableName);
+            var dbTable = ServiceLocator.DbInstance.TryGetTable(tableName);
             if (dbTable == null)
                 return Clients.Caller.SendTableNotFoundAsync(corrId);
 

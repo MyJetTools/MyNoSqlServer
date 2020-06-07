@@ -1,10 +1,9 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using MyNoSqlServer.Domains;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.SnapshotSaver;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -19,7 +18,8 @@ namespace MyNoSqlServer.Api.Controllers
             if (period == DataSynchronizationPeriod.Immediately)
                 return result.ResponseWithActionAsync(() => ServiceLocator
                     .SnapshotStorage
-                    .SaveTableSnapshotAsync(dbTable));
+                    .SaveTableSnapshotAsync(dbTable)
+                    .AsTask());
             
             ServiceLocator.SnapshotSaverScheduler.SynchronizeTable(dbTable, period);
             return new ValueTask<IActionResult>(result);
@@ -38,7 +38,8 @@ namespace MyNoSqlServer.Api.Controllers
 
                 return result.ResponseWithActionAsync(() => ServiceLocator
                     .SnapshotStorage
-                    .SavePartitionSnapshotAsync(partitionSnapshot));
+                    .SavePartitionSnapshotAsync(partitionSnapshot)
+                    .AsTask());
             }
 
             ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(dbTable, partitionToSave, period);
@@ -56,7 +57,8 @@ namespace MyNoSqlServer.Api.Controllers
             if (period == DataSynchronizationPeriod.Immediately)
                 return result.ResponseWithActionAsync(() => ServiceLocator
                     .SnapshotStorage
-                    .DeleteTablePartitionAsync(dbTable.Name, dbPartition.PartitionKey));
+                    .DeleteTablePartitionAsync(dbTable.Name, dbPartition.PartitionKey)
+                    .AsTask());
 
             ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(dbTable, dbPartition, period);
             return new ValueTask<IActionResult>(result);

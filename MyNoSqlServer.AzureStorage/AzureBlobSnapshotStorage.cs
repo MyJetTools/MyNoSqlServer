@@ -20,7 +20,7 @@ namespace MyNoSqlServer.AzureStorage
             _storageAccount = CloudStorageAccount.Parse(connectionString);
         }
 
-        public async Task SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot)
+        public async ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(partitionSnapshot.TableName);
 
@@ -36,7 +36,7 @@ namespace MyNoSqlServer.AzureStorage
             Console.WriteLine($"{DateTime.UtcNow:s} Saved snapshot: {partitionSnapshot}");
         }
 
-        public async Task SaveTableSnapshotAsync(DbTable dbTable)
+        public async ValueTask SaveTableSnapshotAsync(DbTable dbTable)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             if (container == null)
@@ -59,7 +59,7 @@ namespace MyNoSqlServer.AzureStorage
             }
         }
 
-        public async Task DeleteTablePartitionAsync(string tableName, string partitionKey)
+        public async ValueTask DeleteTablePartitionAsync(string tableName, string partitionKey)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(tableName);
             if (container == null)
@@ -74,13 +74,10 @@ namespace MyNoSqlServer.AzureStorage
             
         }
 
-
-
         public async IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync()
         {
 
             const string ignoreContainerName = "nosqlsnapshots";
-
 
             await foreach (var container in _storageAccount.GetListOfContainersAsync())
             {

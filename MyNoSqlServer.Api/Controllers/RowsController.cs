@@ -1,7 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Rows;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -23,7 +22,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (rowKeys == null || rowKeys.Length == 0)
                 return this.ToDbRowsResult(Array.Empty<DbRow>());
 
-            var table = DbInstance.GetTable(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             var result = table.GetMultipleRows(partitionKey, rowKeys);
             
@@ -44,7 +43,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(rowKey))
                 return this.RowKeyIsNull();
 
-            var table = DbInstance.GetTable(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             var result = table.GetHighestRowAndBelow(partitionKey, rowKey, maxAmount);
             

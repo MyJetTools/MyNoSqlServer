@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
 using System.Threading;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
+using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Domains.Db.Tables
@@ -22,43 +23,38 @@ namespace MyNoSqlServer.Domains.Db.Tables
         {
             return new DbTable(name);
         }
-        
-        public static DbTable CreateByInit(string name)
-        {
-            return new DbTable(name);
-        }
-        
+
         public string Name { get; }
-        
-        internal readonly ReaderWriterLockSlim ReaderWriterLockSlim = new ReaderWriterLockSlim();
+
+        private readonly ReaderWriterLockSlim _readerWriterLockSlim = new ReaderWriterLockSlim();
         
         private readonly SortedList<string, DbPartition> _partitions = new SortedList<string, DbPartition>();
 
 
         public IReadOnlyList<DbPartition> GetAllPartitions()
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 return _partitions.Values.ToList();
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
         }
 
 
         public DbPartition GetPartition(string partitionKey)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 return _partitions.ContainsKey(partitionKey) ? _partitions[partitionKey] : null;
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -66,109 +62,95 @@ namespace MyNoSqlServer.Domains.Db.Tables
         public DbPartition InitPartitionFromSnapshot(IMyMemory data)
         {
             DbPartition partition = null;
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
                 foreach (var dbRowMemory in data.SplitJsonArrayToObjects())
                 {
 
-                    var jsonFields = dbRowMemory.ParseFirstLevelOfJson();
+                    var entity = dbRowMemory.ParseDynamicEntity();
 
-                    var entityInfo = jsonFields.GetEntityInfo();
-
-                    if (!_partitions.ContainsKey(entityInfo.PartitionKey))
+                    if (!_partitions.ContainsKey(entity.PartitionKey))
                     {
-                        partition = DbPartition.Create(entityInfo.PartitionKey);
-                        _partitions.Add(entityInfo.PartitionKey, partition);
+                        partition = DbPartition.Create(entity.PartitionKey);
+                        _partitions.Add(entity.PartitionKey, partition);
                     }
 
-                    if (partition == null)
-                        partition = _partitions[entityInfo.PartitionKey];
+                    partition ??= _partitions[entity.PartitionKey];
                     
-                    var dbRow = DbRow.RestoreSnapshot(entityInfo, dbRowMemory);
+                    var dbRow = DbRow.RestoreSnapshot(entity, dbRowMemory);
 
                     partition.InsertOrReplace(dbRow);
                 }
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
             
             return partition;
 
         }
 
-        public (DbPartition partition, DbRow dbRow) Insert(IMyNoSqlDbEntity entityInfo, List<MyJsonFirstLevelFieldData> fields)
+        public (OperationResult result, DbPartition partition, DbRow dbRow) 
+            Insert(DynamicEntity entity, DateTime now)
         {
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
-                if (!_partitions.ContainsKey(entityInfo.PartitionKey))
-                    _partitions.Add(entityInfo.PartitionKey, DbPartition.Create(entityInfo.PartitionKey));
+                if (!_partitions.ContainsKey(entity.PartitionKey))
+                    _partitions.Add(entity.PartitionKey, DbPartition.Create(entity.PartitionKey));
 
-                var partition = _partitions[entityInfo.PartitionKey];
+                var partition = _partitions[entity.PartitionKey];
                 
-                var dbRow = DbRow.CreateNew(entityInfo, fields);
+                var dbRow = DbRow.CreateNew(entity, now);
                 
-                if (partition.Insert(dbRow))
-                    return (partition, dbRow);
+                if (partition.Insert(dbRow, now))
+                    return (OperationResult.Ok, partition, dbRow);
+                
+                return (OperationResult.RecordExists, null, null);
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
 
-            return (null, null);
+
         }
         
-        public (DbPartition partition, DbRow dbRow) InsertOrReplace(IMyNoSqlDbEntity entityInfo, List<MyJsonFirstLevelFieldData> fields)
+        public (DbPartition partition, DbRow dbRow) InsertOrReplace(DynamicEntity entity, DateTime now)
         {
            
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
-                if (!_partitions.ContainsKey(entityInfo.PartitionKey))
-                    _partitions.Add(entityInfo.PartitionKey, DbPartition.Create(entityInfo.PartitionKey));
+                if (!_partitions.ContainsKey(entity.PartitionKey))
+                    _partitions.Add(entity.PartitionKey, DbPartition.Create(entity.PartitionKey));
 
-                var partition = _partitions[entityInfo.PartitionKey];
+                var partition = _partitions[entity.PartitionKey];
 
-                var dbRow = DbRow.CreateNew(entityInfo, fields);
+                var dbRow = DbRow.CreateNew(entity, now);
                 partition.InsertOrReplace(dbRow);
                 
                 return (partition, dbRow);
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
 
         }    
 
         public DbRow GetEntity(string partitionKey, string rowKey)
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
-            {
-
-                if (!_partitions.ContainsKey(partitionKey))
-                    return null;
-                var partition = _partitions[partitionKey];
-
-                return partition.GetRow(rowKey);
-
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
-            }
+            return TryGetDbRowWithReadLock(partitionKey, rowKey);
         }
 
 
         public IReadOnlyList<DbRow> GetAllRecords(int? limit)
         {
             var result = new List<DbRow>();
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 if (limit == null)
@@ -189,7 +171,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
 
             return result;
@@ -197,7 +179,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         public IEnumerable<DbRow> GetRecords(string partitionKey, int? limit, int? skip)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 if (!_partitions.ContainsKey(partitionKey))
@@ -213,13 +195,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
         }
 
         public (DbPartition dbPartition, DbRow dbRow) DeleteRow(string partitionKey, string rowKey)
         {
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
                 if (!_partitions.ContainsKey(partitionKey))
@@ -234,7 +216,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
 
             return (null, null);
@@ -242,7 +224,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
         
         public (DbPartition dbPartition, IReadOnlyList<DbRow> dbRows) CleanAndKeepLastRecords(string partitionKey, int amount)
         {
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
                 if (!_partitions.ContainsKey(partitionKey))
@@ -256,13 +238,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
         }
 
         public bool HasRecord(IMyNoSqlDbEntity entityInfo)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 if (!_partitions.ContainsKey(entityInfo.PartitionKey))
@@ -274,7 +256,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -291,7 +273,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             
             var rowsToSync = new List<DbRow>();
             
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
                 foreach (var dbRow in dbRows)
@@ -312,7 +294,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
            
             }
 
@@ -329,7 +311,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                     .ToDbRow())
                 .ToList();
             
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             
             try
             {
@@ -348,7 +330,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
         }
         
@@ -360,7 +342,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                     .ToDbRow())
                 .ToArray();
             
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             
             
 
@@ -387,7 +369,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
 
             return result.Values;
@@ -395,7 +377,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
         
         public void Clean()
         {
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             
             try
             {
@@ -403,7 +385,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
         }
 
@@ -412,12 +394,12 @@ namespace MyNoSqlServer.Domains.Db.Tables
         {
             var conditionsDict = queryConditions.GroupBy(itm => itm.FieldName).ToDictionary(itm => itm.Key, itm => itm.ToList());
 
-            var partitions = conditionsDict.ContainsKey(DbRowDataUtils.PartitionKeyField)
-                ? _partitions.FilterByQueryConditions(conditionsDict[DbRowDataUtils.PartitionKeyField]).ToList()
+            var partitions = conditionsDict.ContainsKey(RowJsonUtils.PartitionKeyFieldName)
+                ? _partitions.FilterByQueryConditions(conditionsDict[RowJsonUtils.PartitionKeyFieldName]).ToList()
                 : _partitions.Values.ToList();
 
-            if (conditionsDict.ContainsKey(DbRowDataUtils.PartitionKeyField))
-                conditionsDict.Remove(DbRowDataUtils.PartitionKeyField);
+            if (conditionsDict.ContainsKey(RowJsonUtils.PartitionKeyFieldName))
+                conditionsDict.Remove(RowJsonUtils.PartitionKeyFieldName);
                 
             foreach (var partition in partitions)
                 foreach (var dbRow in partition.ApplyQuery(conditionsDict))
@@ -428,7 +410,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         public int GetRecordsCount(string partitionKey)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 if (string.IsNullOrEmpty(partitionKey))
@@ -438,13 +420,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
         }
 
         public IReadOnlyList<DbRow> GetMultipleRows(string partitionKey, string[] rowKeys)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 if (string.IsNullOrEmpty(partitionKey))
@@ -458,13 +440,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
         }
 
         public IEnumerable<DbRow> GetHighestRowAndBelow(string partitionKey, string rowKey, int maxAmount)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 if (string.IsNullOrEmpty(partitionKey))
@@ -478,14 +460,14 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }
         }
 
 
         private IReadOnlyList<DbPartition> GetPartitionsToGarbageCollect(int maxAmount)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
 
@@ -502,7 +484,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock(); 
+                _readerWriterLockSlim.ExitReadLock(); 
             }
         }
 
@@ -515,7 +497,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             
             var result = new List<DbPartition>();
             
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
                 foreach (var dbPartition in partitionsToGc)
@@ -530,7 +512,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
 
             return result;
@@ -540,7 +522,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         private DbPartition GetPartitionIfItHasToBeCleaned(string partitionKey, int maxAmount)
         {
-            ReaderWriterLockSlim.EnterReadLock();
+            _readerWriterLockSlim.EnterReadLock();
             try
             {
                 if (!_partitions.ContainsKey(partitionKey))
@@ -555,9 +537,100 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitReadLock();
+                _readerWriterLockSlim.ExitReadLock();
             }   
         }
+
+
+        public (OperationResult result, DbPartition partition, DbRow dbRow) Replace(
+            DynamicEntity entity, DateTime now)
+        {
+            _readerWriterLockSlim.EnterWriteLock();
+            try
+            {
+                if (!_partitions.ContainsKey(entity.PartitionKey))
+                    return (OperationResult.RecordNotFound, null, null);
+                
+                var partition = _partitions[entity.PartitionKey];
+
+                var record = partition.GetRow(entity.RowKey);
+
+                if (record == null)
+                    return (OperationResult.RecordNotFound, null, null);
+                
+                if (record.TimeStamp != entity.TimeStamp)
+                    return (OperationResult.RecordChangedConcurrently, null, null);
+                
+                record.Replace(entity, now);            
+                
+                return (OperationResult.Ok, partition, record);
+
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
+            }   
+        }
+
+
+
+
+        private DbRow TryGetDbRowWithReadLock(string partitionKey, string rowKey)
+        {            
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                return !_partitions.ContainsKey(partitionKey) 
+                    ? null 
+                    : _partitions[partitionKey].GetRow(rowKey);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+            
+        }
+
+        
+        public (OperationResult result, DbPartition partition, DbRow dbRow) Merge(
+           DynamicEntity entity, DateTime now)
+        {
+            var dbRow = TryGetDbRowWithReadLock(entity.PartitionKey, entity.RowKey);
+
+            if (dbRow == null)
+                return (OperationResult.RecordNotFound, null, null);
+            
+            if (dbRow.TimeStamp != entity.TimeStamp)
+                return (OperationResult.RecordChangedConcurrently, null, null);
+
+            var newEntities = dbRow.MergeEntities(entity);
+
+            _readerWriterLockSlim.EnterWriteLock();
+            try
+            {
+                if (!_partitions.ContainsKey(entity.PartitionKey))
+                    return (OperationResult.RecordNotFound, null, null);
+                
+                var partition = _partitions[entity.PartitionKey];
+
+                var record = partition.GetRow(entity.RowKey);
+
+                if (record == null)
+                    return (OperationResult.RecordNotFound, null, null);
+                
+                if (record.TimeStamp != entity.TimeStamp)
+                    return (OperationResult.RecordChangedConcurrently, null, null);
+                
+                record.Replace(newEntities, now);            
+                
+                return (OperationResult.Ok, partition, record);
+
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
+            }   
+        }        
 
 
         public DbPartition KeepMaxRecordsAmount(string partitionKey, int maxAmount)
@@ -569,7 +642,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 return null;
 
             
-            ReaderWriterLockSlim.EnterWriteLock();
+            _readerWriterLockSlim.EnterWriteLock();
             try
             {
 
@@ -582,7 +655,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
             finally
             {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _readerWriterLockSlim.ExitWriteLock();
             }
 
         }

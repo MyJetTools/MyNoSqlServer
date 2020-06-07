@@ -1,10 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
-using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.Db;
-using MyNoSqlServer.Domains.SnapshotSaver;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -20,10 +18,10 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.TableNameIsNull();
 
-            var table = DbInstance.GetTable(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
-                return this.TableNotFound(tableName);
+                return this.TableNotFound();
 
             var result = table.KeepMaxPartitions(maxAmount);
 
@@ -52,10 +50,10 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(partitionKey))
                 return new ValueTask<IActionResult>(this.PartitionKeyIsNull());
 
-            var table = DbInstance.GetTable(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
-                return new ValueTask<IActionResult>(this.TableNotFound(tableName));
+                return new ValueTask<IActionResult>(this.TableNotFound());
 
 
             var (dbPartition, dbRows) = table.CleanAndKeepLastRecords(partitionKey, maxAmount);
@@ -65,7 +63,7 @@ namespace MyNoSqlServer.Api.Controllers
                 ServiceLocator.DataSynchronizer.SynchronizeDelete(table, dbRows);
 
                 return this.ResponseOk()
-                    .SynchronizePartitionAsync(table, dbPartition, syncPeriod.ParseSynchronizationPeriod());
+                    .SynchronizePartitionAsync(table, dbPartition, syncPeriod.ParseSynchronizationPeriodContract());
             }
 
             return new ValueTask<IActionResult>(this.ResponseOk());

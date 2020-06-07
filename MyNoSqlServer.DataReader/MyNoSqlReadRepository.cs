@@ -6,7 +6,7 @@ using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataReader
 {
-public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyNoSqlEntity
+public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyNoSqlDbEntity
     {
         
         private readonly SortedDictionary<string, SortedDictionary<string, T>> _cache = new SortedDictionary<string, SortedDictionary<string, T>>();

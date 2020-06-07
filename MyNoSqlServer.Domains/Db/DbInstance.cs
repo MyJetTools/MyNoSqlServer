@@ -1,108 +1,85 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using MyNoSqlServer.Domains.Db.Tables;
 
 namespace MyNoSqlServer.Domains.Db
 {
-    public static class DbInstance
+    public class DbInstance
     {
+        private readonly object _lockObject = new object();
         
-        private static readonly ReaderWriterLockSlim ReaderWriterLockSlim = new ReaderWriterLockSlim();
-        
-        private static readonly Dictionary<string, DbTable> Tables = new Dictionary<string, DbTable>();
+        private Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
+        private IReadOnlyList<string> _tableNames = Array.Empty<string>();
+        private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
 
-        public static DbTable CreateTableIfNotExists(string tableName)
+
+        private DbTable CreateTableAndUpdateDictionary(string tableName)
         {
-            tableName = tableName.ToLowerInvariant();
+            var tableInstance = DbTable.CreateByRequest(tableName);
+            
+            var tables = new Dictionary<string, DbTable>(_tables);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            _tables = tables;
+
+            _tableNames = _tables.Keys.ToList();
+
+            _tablesAsArray = _tables.Values.ToList();
+
+            return tableInstance;
+        }
+
+        public DbTable CreateTableIfNotExists(string tableName)
+        {
+            var tables = _tables;
+            if (tables.ContainsKey(tableName))
+                return tables[tableName];
+
+            lock (_lockObject)
             {
-                if (Tables.ContainsKey(tableName))
-                    return Tables[tableName];
+                if (_tables.ContainsKey(tableName))
+                    return _tables[tableName];
 
-                var tableInstance = DbTable.CreateByRequest(tableName);
-
-                Tables.Add(tableName, tableInstance);
-
-                return tableInstance;
-
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
+                return CreateTableAndUpdateDictionary(tableName);
             }
 
         }
 
-        public static bool CreateTable(string tableName)
+        public bool CreateTable(string tableName)
         {
 
-            tableName = tableName.ToLowerInvariant();
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            var tables = _tables;
+            if (tables.ContainsKey(tableName))
+                return false;
+
+            lock (_lockObject)
             {
-                if (Tables.ContainsKey(tableName))
+                if (_tables.ContainsKey(tableName))
                     return false;
-                
-                var tableInstance = DbTable.CreateByRequest(tableName);
-                
-                Tables.Add(tableName, tableInstance);
 
+                CreateTableAndUpdateDictionary(tableName);
                 return true;
-
-            }
-            finally 
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
             
         }
         
-        public static DbTable[] GetTables()
+        public IReadOnlyList<DbTable> GetTables()
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
-            {
-                
-                return Tables.Values.ToArray();
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
-            }
-            
+            return _tablesAsArray;
         }
 
 
-        public static string[] GetTablesList()
+        public IReadOnlyList<string> GetTablesList()
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
-            {
-                
-                return Tables.Keys.ToArray();
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
-            }
-            
+            return _tableNames;
+
         }
         
-        public static DbTable GetTable(string tableName)
+        public DbTable TryGetTable(string tableName)
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
-            {
-                return Tables.ContainsKey(tableName) ? Tables[tableName] : null;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
-            }
-            
+            var tables = _tables;
+            return tables.ContainsKey(tableName) ? tables[tableName] : null;
+
         }
 
 

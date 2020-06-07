@@ -1,14 +1,10 @@
 using System;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Tables;
 
 namespace MyNoSqlServer.Domains.SnapshotSaver
 {
-    public enum DataSynchronizationPeriod
-    {
-        Immediately, Sec1, Sec5, Sec15, Sec30, Min1
-    }
-    
     public interface ISyncTask
     {
         DateTime SyncDateTime { get; }

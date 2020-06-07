@@ -6,12 +6,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="MyDependencies">
+        <Version>1.0.1</Version>
+      </PackageReference>
       <PackageReference Include="System.Threading.Tasks.Extensions">
         <Version>4.5.4</Version>
       </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
       <ProjectReference Include="..\MyNoSqlServer.Common\MyNoSqlServer.Common.csproj" />
     </ItemGroup>
 

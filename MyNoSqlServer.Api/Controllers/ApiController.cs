@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
-using MyNoSqlServer.Domains;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -12,7 +11,7 @@ namespace MyNoSqlServer.Api.Controllers
 
         private static readonly Lazy<object> Version = new Lazy<object>(() => new
         {
-            version = ApiServiceLocator.Version,
+            version = ServiceLocator.Version,
             app = "MyNoSqlServer"
         });
 
@@ -28,7 +27,7 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("/api/status")]
         public IActionResult Status()
         {
-            var connections = ChangesTcpService.TcpServer.GetConnections();
+            var connections = ServiceLocator.TcpServer.GetConnections();
 
 
             var result = connections.Cast<ChangesTcpService>().Select(itm =>

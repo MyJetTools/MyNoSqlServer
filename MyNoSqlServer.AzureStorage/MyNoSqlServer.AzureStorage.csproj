@@ -6,6 +6,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="MyDependencies">
+        <Version>1.0.1</Version>
+      </PackageReference>
       <PackageReference Include="WindowsAzure.Storage">
         <Version>9.3.3</Version>
       </PackageReference>

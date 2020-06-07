@@ -39,9 +39,9 @@ namespace MyNoSqlServer.Domains.DataSynchronization
     
     public interface ISnapshotStorage
     {
-        Task SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot);
-        Task SaveTableSnapshotAsync(DbTable dbTable);
-        Task DeleteTablePartitionAsync(string tableName, string partitionKey);
+        ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot);
+        ValueTask SaveTableSnapshotAsync(DbTable dbTable);
+        ValueTask DeleteTablePartitionAsync(string tableName, string partitionKey);
         IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync();
     }
 }

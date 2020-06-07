@@ -2,7 +2,7 @@ using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataWriter
 {
-    public class MyNoSqlIndex : MyNoSqlEntity
+    public class MyNoSqlIndex : MyNoSqlDbEntity
     {
         public MyNoSqlIndex()
         {
@@ -21,7 +21,7 @@ namespace MyNoSqlServer.DataWriter
             PrimaryRowKey = primaryRowKey;
         }
 
-        public MyNoSqlIndex(string partitionKey, string rowKey, IMyNoSqlEntity tableEntity)
+        public MyNoSqlIndex(string partitionKey, string rowKey, IMyNoSqlDbEntity tableEntity)
         {
             PartitionKey = partitionKey;
             RowKey = rowKey;
@@ -36,7 +36,7 @@ namespace MyNoSqlServer.DataWriter
         public static MyNoSqlIndex Create(
             string partitionKey,
             string rowKey,
-            IMyNoSqlEntity tableEntity)
+            IMyNoSqlDbEntity tableEntity)
         {
             var azureIndex = new MyNoSqlIndex
             {

@@ -9,18 +9,35 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     
     public class SnapshotSaverEngine 
     {
-        private static async Task LoadSnapshotsAsync()
+        private readonly DbInstance _dbInstance;
+        private readonly ISnapshotStorage _snapshotStorage;
+        private readonly IReplicaSynchronizationService _replicaSynchronizationService;
+        private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
+
+
+        public SnapshotSaverEngine(DbInstance dbInstance, ISnapshotStorage snapshotStorage, 
+            IReplicaSynchronizationService replicaSynchronizationService, 
+            ISnapshotSaverScheduler snapshotSaverScheduler)
+        {
+            _dbInstance = dbInstance;
+            _snapshotStorage = snapshotStorage;
+            _replicaSynchronizationService = replicaSynchronizationService;
+            _snapshotSaverScheduler = snapshotSaverScheduler;
+        }
+        
+        
+        private async Task LoadSnapshotsAsync()
         {
 
-            await foreach (var snapshot in ServiceLocator.SnapshotStorage.LoadSnapshotsAsync())
+            await foreach (var snapshot in _snapshotStorage.LoadSnapshotsAsync())
             {
                 try
                 {
-                    var table = DbInstance.CreateTableIfNotExists(snapshot.TableName);
+                    var table = _dbInstance.CreateTableIfNotExists(snapshot.TableName);
                     var partition = table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
 
                     if (partition != null)
-                        ServiceLocator.DataSynchronizer.PublishInitPartition(table, partition);
+                        _replicaSynchronizationService.PublishInitPartition(table, partition);
                 }
                 catch (Exception e)
                 {
@@ -36,10 +53,10 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         {
             await LoadSnapshotsAsync();
             
-            while (!_appIsShuttingDown || ServiceLocator.SnapshotSaverScheduler.TasksToSyncCount()>0)
+            while (!_appIsShuttingDown || _snapshotSaverScheduler.TasksToSyncCount()>0)
                 try
                 {
-                    var elementToSave = ServiceLocator.SnapshotSaverScheduler.GetTaskToSync(_appIsShuttingDown);
+                    var elementToSave = _snapshotSaverScheduler.GetTaskToSync(_appIsShuttingDown);
 
                     while (elementToSave != null)
                     {
@@ -47,23 +64,23 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                         {
                             
                             case SyncTable syncTable:
-                                await ServiceLocator.SnapshotStorage.SaveTableSnapshotAsync(syncTable.DbTable);
+                                await _snapshotStorage.SaveTableSnapshotAsync(syncTable.DbTable);
                                 break;
                             
                             case SyncPartition syncPartition:
                                 
                                 var partitionSnapshot = PartitionSnapshot.Create(syncPartition.DbTable, syncPartition.DbPartition);
-                                await ServiceLocator.SnapshotStorage.SavePartitionSnapshotAsync(partitionSnapshot);
+                                await _snapshotStorage.SavePartitionSnapshotAsync(partitionSnapshot);
                                 break;
                             
                             case SyncDeletePartition syncDeletePartition:
-                                await ServiceLocator.SnapshotStorage.DeleteTablePartitionAsync(syncDeletePartition.TableName,
+                                await _snapshotStorage.DeleteTablePartitionAsync(syncDeletePartition.TableName,
                                     syncDeletePartition.PartitionKey);
                                 break;
                             
                         }
 
-                        elementToSave = ServiceLocator.SnapshotSaverScheduler.GetTaskToSync(_appIsShuttingDown);
+                        elementToSave = _snapshotSaverScheduler.GetTaskToSync(_appIsShuttingDown);
                     }
 
                 }

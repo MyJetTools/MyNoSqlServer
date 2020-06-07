@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Domains.Db.Rows
@@ -18,26 +20,35 @@ namespace MyNoSqlServer.Domains.Db.Rows
 
             PartitionKey = partitionKey;
             RowKey = rowKey;
-            Timestamp = timestamp;
+            TimeStamp = timestamp;
             Data = data;
         }
         
         public string PartitionKey { get; }
 
         public string RowKey { get; }
-        public string Timestamp { get; }
-        public byte[] Data { get; }
+        public string TimeStamp { get; private set; }
+        public byte[] Data { get; private set; }
 
-        public static DbRow CreateNew(IMyNoSqlDbEntity entity, List<MyJsonFirstLevelFieldData> fields)
-        {
-            var timeStamp = DateTime.UtcNow.ToTimeStampString();
-            fields.InjectTimeStamp(timeStamp);
-            return new DbRow(entity.PartitionKey, entity.RowKey, timeStamp, fields.AsDbRowJson());
-        }
+
+        
 
         public static DbRow RestoreSnapshot(IMyNoSqlDbEntity techData, IMyMemory data)
         {
-            return new DbRow(techData.PartitionKey, techData.RowKey, techData.Timestamp, data.AsArray());
+            return new DbRow(techData.PartitionKey, techData.RowKey, techData.TimeStamp, data.AsArray());
+        }
+        
+        public static DbRow CreateNew(DynamicEntity entity, DateTime now)
+        {
+            var timeStamp = now.ToTimeStampString();
+            entity.UpdateTimeStamp(timeStamp);
+            return new DbRow(entity.PartitionKey, entity.RowKey, timeStamp, entity.AsDbRowJson());
+        }
+        
+        public void Replace(DynamicEntity entity, DateTime now)
+        {   TimeStamp = now.ToTimeStampString();
+            entity.UpdateTimeStamp(TimeStamp);
+            Data = entity.AsDbRowJson();
         }
 
         public bool MatchesQuery(IDictionary<string, List<QueryCondition>> conditionsDict)
@@ -45,16 +56,14 @@ namespace MyNoSqlServer.Domains.Db.Rows
             throw new NotImplementedException("Temporary disabled the ability to filter within Fields of DbRow");
         }
 
-
     }
 
     public static class DbRowHelpers
     {
         public static DbRow ToDbRow(this IMyMemory myMemory)
         {
-            var fields = myMemory.ParseFirstLevelOfJson().ToList();
-            var entityInfo = fields.GetEntityInfo();
-            return DbRow.CreateNew(entityInfo, fields);
+            var entity = myMemory.ParseDynamicEntity();
+            return DbRow.CreateNew(entity, DateTime.UtcNow);
         }
     }
     

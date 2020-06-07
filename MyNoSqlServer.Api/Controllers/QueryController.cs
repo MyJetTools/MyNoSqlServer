@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -20,10 +19,10 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(query))
                 return this.QueryIsNull();
             
-            var table = DbInstance.GetTable(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
-                return this.TableNotFound(tableName);
+                return this.TableNotFound();
 
             var conditions = query.ParseQueryConditions();
 

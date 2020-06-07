@@ -2,8 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Api.Models;
-using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.Db;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -14,7 +12,7 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("Tables/List")]
         public IActionResult List()
         {
-            var list = DbInstance.GetTablesList();
+            var list = ServiceLocator.DbInstance.GetTablesList();
             return Json(list);
         }
 
@@ -28,7 +26,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.ResponseConflict("Please specify table name");
 
-            DbInstance.CreateTableIfNotExists(tableName);
+            ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
             return this.ResponseOk();
         }
 
@@ -42,7 +40,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.ResponseConflict("Please specify table name");
 
-            if (DbInstance.CreateTable(tableName))
+            if (ServiceLocator.DbInstance.CreateTable(tableName))
                 return this.ResponseOk();
 
             return this.ResponseConflict("Can not create table: " + tableName);
@@ -59,15 +57,15 @@ namespace MyNoSqlServer.Api.Controllers
                 return new ValueTask<IActionResult>(this.ResponseConflict("Please specify table name"));
 
 
-            var table = DbInstance.GetTable(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
             if (table == null)
-                return new ValueTask<IActionResult>(this.TableNotFound(tableName));
+                return new ValueTask<IActionResult>(this.TableNotFound());
 
             table.Clean();
 
             ServiceLocator.DataSynchronizer.PublishInitTable(table);
 
-            return Ok().SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriod());
+            return Ok().SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
 
         }    
 

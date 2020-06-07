@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MyDependencies;
 using MyNoSqlServer.Api.Hubs;
-using MyNoSqlServer.Api.Services;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
 using SimpleTrading.ServiceStatusReporterConnector;
@@ -20,6 +20,8 @@ namespace MyNoSqlServer.Api
         }
 
         public IConfiguration Configuration { get; }
+        
+        public static MyIoc IoC = new MyIoc();
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -34,12 +36,13 @@ namespace MyNoSqlServer.Api
             services.AddSwaggerDocument(o => { o.Title = "MyNoSqlServer"; });
 
             var settings = SettingsLoader.LoadSettings();
-
-            settings.BackupAzureConnectString.BindAzureStorage();
-
-            ServiceLocator.DataSynchronizer = new ChangesPublisherToSocket();
-
-            ServiceLocator.SnapshotSaverEngine.Start();
+            
+            IoC.BindDomainsServices();
+            IoC.BindAzureStorage(settings.BackupAzureConnectString);
+            IoC.BindApiServices();
+            
+            
+            ServiceLocator.Init(IoC);
 
         }
 
@@ -83,15 +86,12 @@ namespace MyNoSqlServer.Api
                 endpoints.MapHub<ChangesHub>("/changes");
             });
             
-            ChangesTcpService.TcpServer.Start();
-            
-            ApiServiceLocator.Init();
-
+            ServiceLocator.Start();
         }
 
         private void OnShutdown()
         {
-            ServiceLocator.ShuttingDown = true;
+            ServiceLocator.GlobalVariables.IsShuttingDown = true;
             Task.Delay(500).Wait();
 
             ServiceLocator.SnapshotSaverEngine.Stop();

@@ -2,12 +2,11 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.Common;
-using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.SnapshotSaver;
+using MyNoSqlServer.Domains.Json;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -27,12 +26,12 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.TableNameIsNull();
 
-            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriod();
+            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
 
             if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
                 return Conflict("Bulk insert does not support immediate persistence");
             
-            var table = DbInstance.CreateTableIfNotExists(tableName);
+            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
 
             var body = await Request.BodyAsIMemoryAsync();
 
@@ -98,13 +97,13 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.TableNameIsNull();
             
-            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriod();
+            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
 
             if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
                 return Conflict("CleanAndBulkInsert insert does not support immediate persistence");
 
 
-            var table = DbInstance.CreateTableIfNotExists(tableName);
+            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
 
             var body = await Request.BodyAsIMemoryAsync();
             

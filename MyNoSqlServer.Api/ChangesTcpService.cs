@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using MyNoSqlServer.Api.Hubs;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
@@ -19,17 +17,7 @@ namespace MyNoSqlServer.Api
         
         private  IReadOnlyList<string> _tablesSubscribed = new List<string>();
 
-
-
         public IReadOnlyList<string> Tables => _tablesSubscribed;
-
-        
-        public static readonly MyServerTcpSocket<IMyNoSqlTcpContract> TcpServer = 
-            new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
-            .RegisterSerializer(()=> new MyNoSqlTcpSerializer())
-            .SetService(()=>new ChangesTcpService())
-            .AddLog(Console.WriteLine);
-
         
         protected override ValueTask OnConnectAsync()
         {
@@ -153,7 +141,7 @@ namespace MyNoSqlServer.Api
             if (string.IsNullOrEmpty(subscribeContract.TableName))
                 return;
 
-            var table = DbInstance.GetTable(subscribeContract.TableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(subscribeContract.TableName);
 
             if (table == null)
                 return;

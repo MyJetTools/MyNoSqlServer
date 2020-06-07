@@ -9,15 +9,11 @@ using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataWriter
 {
-    public class MyNoSqlServerDataWriter<T> : IMyNoSqlServerDataWriter<T> where T : IMyNoSqlEntity, new()
+    public class MyNoSqlServerDataWriter<T> : IMyNoSqlServerDataWriter<T> where T : IMyNoSqlDbEntity, new()
     {
         private readonly Func<string> _getUrl;
         private readonly DataSynchronizationPeriod _dataSynchronizationPeriod;
         private readonly string _tableName;
-
-        private const string PartitionKey = "partitionKey";
-        private const string RowKey = "rowKey";
-        private const string TableName = "tableName";
 
         public MyNoSqlServerDataWriter(Func<string> getUrl, string tableName,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
@@ -32,7 +28,7 @@ namespace MyNoSqlServer.DataWriter
         {
             await _getUrl()
                 .AppendPathSegments("Tables", "CreateIfNotExists")
-                .SetQueryParam(TableName, _tableName)
+                .WithTableNameAsQueryParam(_tableName)
                 .PostStringAsync(string.Empty);
         }
 
@@ -41,7 +37,7 @@ namespace MyNoSqlServer.DataWriter
             await _getUrl()
                 .AppendPathSegments("Row", "Insert")
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .SetQueryParam(TableName, _tableName)
+                .WithTableNameAsQueryParam(_tableName)
                 .PostJsonAsync(entity);
         }
 
@@ -50,7 +46,7 @@ namespace MyNoSqlServer.DataWriter
             await _getUrl()
                 .AppendPathSegments("Row", "InsertOrReplace")
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .SetQueryParam(TableName, _tableName)
+                .WithTableNameAsQueryParam(_tableName)
                 .PostJsonAsync(entity);
         }
 
@@ -58,8 +54,8 @@ namespace MyNoSqlServer.DataWriter
         {
             await _getUrl()
                 .AppendPathSegments("CleanAndKeepLastRecords")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
                 .SetQueryParam("amount", amount)
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .AllowHttpStatus(HttpStatusCode.NotFound)
@@ -73,7 +69,7 @@ namespace MyNoSqlServer.DataWriter
             {
                 await _getUrl()
                     .AppendPathSegments("Bulk", "InsertOrReplace")
-                    .SetQueryParam(TableName, _tableName)
+                    .WithTableNameAsQueryParam(_tableName)
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
                     .PostJsonAsync(entities);
 
@@ -93,7 +89,7 @@ namespace MyNoSqlServer.DataWriter
                 await _getUrl()
                     .AppendPathSegments("Bulk", "CleanAndBulkInsert")
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
-                    .SetQueryParam(TableName, _tableName)
+                    .WithTableNameAsQueryParam(_tableName)
                     .PostJsonAsync(entities);
 
             }
@@ -111,8 +107,8 @@ namespace MyNoSqlServer.DataWriter
             {
                 await _getUrl()
                     .AppendPathSegments("Bulk", "CleanAndBulkInsert")
-                    .SetQueryParam(TableName, _tableName)
-                    .SetQueryParam(PartitionKey, partitionKey)
+                    .WithTableNameAsQueryParam(_tableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
                     .PostJsonAsync(entities);
 
@@ -128,7 +124,7 @@ namespace MyNoSqlServer.DataWriter
         {
             return await _getUrl()
                 .AppendPathSegments("Row")
-                .SetQueryParam(TableName, _tableName)
+                .WithTableNameAsQueryParam(_tableName)
                 .GetAsync()
                 .ReadAsJsonAsync<T[]>();
         }
@@ -137,8 +133,8 @@ namespace MyNoSqlServer.DataWriter
         {
             return await _getUrl()
                 .AppendPathSegments("Row")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
                 .GetAsync()
                 .ReadAsJsonAsync<T[]>();
         }
@@ -147,9 +143,9 @@ namespace MyNoSqlServer.DataWriter
         {
             var response = await _getUrl()
                 .AppendPathSegments("Row")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
-                .SetQueryParam(RowKey, rowKey)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
+                .WithRowKeyAsQueryParam(rowKey)
                 .AllowHttpStatus(HttpStatusCode.NotFound)
                 .GetAsync();
 
@@ -167,8 +163,8 @@ namespace MyNoSqlServer.DataWriter
         {
             var response = await _getUrl()
                 .AppendPathSegments("Rows", "SinglePartitionMultipleRows")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
                 .AllowHttpStatus(HttpStatusCode.NotFound)
                 .PostJsonAsync(rowKeys);
 
@@ -187,9 +183,9 @@ namespace MyNoSqlServer.DataWriter
 
             await _getUrl()
                 .AppendPathSegments("Row")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
-                .SetQueryParam(RowKey, rowKey)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
+                .WithRowKeyAsQueryParam(rowKey)
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .AllowHttpStatus(HttpStatusCode.NotFound)
                 .DeleteAsync();
@@ -202,7 +198,7 @@ namespace MyNoSqlServer.DataWriter
         {
             var response = await _getUrl()
                 .AppendPathSegments("Query")
-                .SetQueryParam(TableName, _tableName)
+                .WithTableNameAsQueryParam(_tableName)
                 .SetQueryParam("query", query)
                 .GetAsync();
 
@@ -214,9 +210,9 @@ namespace MyNoSqlServer.DataWriter
         {
             var response = await _getUrl()
                 .AppendPathSegments("Rows", "HighestRowAndBelow")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
-                .SetQueryParam(RowKey, rowKeyFrom)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
+                .WithRowKeyAsQueryParam(rowKeyFrom)
                 .SetQueryParam("maxAmount", amount)
                 .GetAsync();
 
@@ -227,7 +223,7 @@ namespace MyNoSqlServer.DataWriter
         {
             var result = _getUrl()
                 .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxPartitions")
-                .SetQueryParam(TableName, _tableName)
+                .WithTableNameAsQueryParam(_tableName)
                 .SetQueryParam("maxAmount", maxAmount)
                 .PostStringAsync("");
 
@@ -238,8 +234,8 @@ namespace MyNoSqlServer.DataWriter
         {
             var result = _getUrl()
                 .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxRecords")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
                 .SetQueryParam("maxAmount", maxAmount)
                 .PostStringAsync("");
 
@@ -250,8 +246,8 @@ namespace MyNoSqlServer.DataWriter
         {
             var response = await _getUrl()
                 .AppendPathSegments("/Count")
-                .SetQueryParam(TableName, _tableName)
-                .SetQueryParam(PartitionKey, partitionKey)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
                 .GetStringAsync();
 
             return int.Parse(response);

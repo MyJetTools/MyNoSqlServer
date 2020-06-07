@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
+using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Domains.Db.Partitions
@@ -19,13 +21,13 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         
         public DateTime LastAccessTime { get; private set; }
 
-        public bool Insert(DbRow row)
+        public bool Insert(DbRow row, DateTime now)
         {
             if (_rows.ContainsKey(row.RowKey))
                 return false;
             
             _rows.Add(row.RowKey, row);
-            LastAccessTime = DateTime.UtcNow;
+            LastAccessTime = now;
             
             return true;
         }
@@ -102,12 +104,12 @@ namespace MyNoSqlServer.Domains.Db.Partitions
 
         public IEnumerable<DbRow> ApplyQuery(IDictionary<string, List<QueryCondition>> conditionsDict)
         {
-            var rows = conditionsDict.ContainsKey(DbRowDataUtils.RowKeyField)
-                ? _rows.FilterByQueryConditions(conditionsDict[DbRowDataUtils.RowKeyField])
+            var rows = conditionsDict.ContainsKey(RowJsonUtils.RowKeyFieldName)
+                ? _rows.FilterByQueryConditions(conditionsDict[RowJsonUtils.RowKeyFieldName])
                 : _rows.Values;
 
-            if (conditionsDict.ContainsKey(DbRowDataUtils.RowKeyField))
-                conditionsDict.Remove(DbRowDataUtils.RowKeyField);
+            if (conditionsDict.ContainsKey(RowJsonUtils.RowKeyFieldName))
+                conditionsDict.Remove(RowJsonUtils.RowKeyFieldName);
 
             if (conditionsDict.Count == 0)
             {
@@ -154,7 +156,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             while (_rows.Count>amount)
             {
                 if (rowsByLastInsertDateTime == null)
-                    rowsByLastInsertDateTime = _rows.OrderBy(itm => itm.Value.Timestamp).ToQueue();
+                    rowsByLastInsertDateTime = _rows.OrderBy(itm => itm.Value.TimeStamp).ToQueue();
                 
                 var item = rowsByLastInsertDateTime.Dequeue();
                 
