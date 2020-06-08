@@ -129,7 +129,7 @@ namespace MyNoSqlServer.DataWriter
                 .WithPartitionKeyAsQueryParam(entity.PartitionKey)
                 .WithRowKeyAsQueryParam(entity.RowKey)
                 .AllowNonOkCodes()
-                .PostJsonAsync(entity);
+                .PutJsonAsync(entity);
 
             return await response.GetOperationResultCodeAsync();
         }
