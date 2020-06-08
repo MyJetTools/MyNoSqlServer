@@ -21,9 +21,9 @@ jobs:
       run: dotnet test --configuration Release      
       
     - name: Create the package - Reader
-      run: dotnet pack --configuration Release MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-}
+      run: dotnet pack --configuration Release MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-} -IncludeReferencedProjects
     - name: Create the package - Reader20
-      run: dotnet pack --configuration Release MyNoSqlServer20.DataReader/MyNoSqlServer20.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-}
+      run: dotnet pack --configuration Release MyNoSqlServer20.DataReader/MyNoSqlServer20.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-} -IncludeReferencedProjects
 
     - name: Publish the package to GPR - Reader
       run: dotnet nuget push MyNoSqlServer.DataReader/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
