@@ -72,7 +72,6 @@ namespace MyNoSqlServer.Api
             //  app.UseForwardedHeaders();
 
             
-            app.BindIsAlive();
             app.UseStaticFiles();
 
             app.UseOpenApi();

@@ -11,17 +11,20 @@ namespace MyNoSqlServer.Api.Controllers
 
         private static readonly Lazy<object> Version = new Lazy<object>(() => new
         {
-            version = ServiceLocator.Version,
-            app = "MyNoSqlServer"
+            Name = ServiceLocator.AppName,
+            Version = ServiceLocator.AppVersion,
+            StartedAt = ServiceLocator.StartedAt,
+            Host = ServiceLocator.Host,
+            Environment = ServiceLocator.AspNetEnvironment
         });
 
-        private static IActionResult _versionResult;
+        private static IActionResult _isAliveResult;
         
         [HttpGet("api/isalive")]
         public IActionResult IsAlive()
         {
-            _versionResult ??= Json(Version.Value);
-            return _versionResult;
+            _isAliveResult ??= Json(Version.Value);
+            return _isAliveResult;
         }
 
         [HttpGet("/api/status")]
