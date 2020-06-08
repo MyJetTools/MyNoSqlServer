@@ -69,7 +69,6 @@ namespace MyNoSqlServer.Api.Controllers
         public async ValueTask<IActionResult> ReplaceAsync([Required][FromQuery] string tableName, 
             [FromQuery]string syncPeriod)
         {
-
             var (getTableResult, table) = this.GetTable(tableName);
             
             if (getTableResult != null)
@@ -88,7 +87,6 @@ namespace MyNoSqlServer.Api.Controllers
         public async ValueTask<IActionResult> MergeAsync([Required] [FromQuery] string tableName,
             [FromQuery] string syncPeriod)
         {
-
             var (getTableResult, table) = this.GetTable(tableName);
 
             if (getTableResult != null)

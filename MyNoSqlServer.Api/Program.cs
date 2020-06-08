@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore;
+﻿using System;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-
+using Microsoft.Extensions.Logging;
 
 namespace MyNoSqlServer.Api
 {
@@ -14,18 +14,20 @@ namespace MyNoSqlServer.Api
                 .Run();
         }
 
-        
-        
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder
                         .UseUrls("http://*:5123")
-                        .UseStartup<Startup>();
+                        .UseStartup<Startup>()
+                        .ConfigureLogging((context, logging) =>
+                        {
+                            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
+                                logging.ClearProviders();
+                        });
+
                 });
         
-
     }
 }

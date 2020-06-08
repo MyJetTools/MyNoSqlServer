@@ -36,6 +36,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyNoSqlServer20.TcpContract
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyNoSqlServer.Tests", "MyNoSqlServer.Tests\MyNoSqlServer.Tests.csproj", "{4EBBDC73-C07F-4D46-A91C-93D40055BFD9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyNoSqlServer.ConsoleTest", "MyNoSqlServer.ConsoleTest\MyNoSqlServer.ConsoleTest.csproj", "{2E00EC2D-2A4A-4E8E-A33F-7A40264FC61A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -94,6 +96,10 @@ Global
 		{4EBBDC73-C07F-4D46-A91C-93D40055BFD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4EBBDC73-C07F-4D46-A91C-93D40055BFD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4EBBDC73-C07F-4D46-A91C-93D40055BFD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E00EC2D-2A4A-4E8E-A33F-7A40264FC61A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E00EC2D-2A4A-4E8E-A33F-7A40264FC61A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E00EC2D-2A4A-4E8E-A33F-7A40264FC61A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E00EC2D-2A4A-4E8E-A33F-7A40264FC61A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C38BE410-84CE-42FA-A712-98FB60DEA3EB} = {79422F00-F6B3-427F-9362-56162BC6112C}

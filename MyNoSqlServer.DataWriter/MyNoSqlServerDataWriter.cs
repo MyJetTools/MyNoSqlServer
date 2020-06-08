@@ -46,8 +46,8 @@ namespace MyNoSqlServer.DataWriter
         {
             await _getUrl()
                 .AppendPathSegments(RowController, "InsertOrReplace")
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .WithTableNameAsQueryParam(_tableName)
+                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .PostJsonAsync(entity);
         }
 
@@ -121,13 +121,13 @@ namespace MyNoSqlServer.DataWriter
         }
 
 
-        private async ValueTask<OperationResult> ExecuteUpdateHttpAsync(T entity, string method)
+        private async ValueTask<OperationResult> ExecuteUpdateHttpAsync(T entity, string method, 
+            DataSynchronizationPeriod syncPeriod)
         {
             var response = await _getUrl()
-                .AppendPathSegments("Rows", method)
+                .AppendPathSegments(RowController, method)
                 .WithTableNameAsQueryParam(_tableName)
-                .WithPartitionKeyAsQueryParam(entity.PartitionKey)
-                .WithRowKeyAsQueryParam(entity.RowKey)
+                .AppendDataSyncPeriod(syncPeriod)
                 .AllowNonOkCodes()
                 .PutJsonAsync(entity);
 
@@ -136,7 +136,8 @@ namespace MyNoSqlServer.DataWriter
 
 
         private async ValueTask<OperationResult> ExecuteUpdateProcessAsync(string partitionKey, string rowKey, 
-            string method, Func<T, bool> updateCallback)
+            string method, Func<T, bool> updateCallback, 
+            DataSynchronizationPeriod syncPeriod)
         {
             while (true)
             {
@@ -148,7 +149,7 @@ namespace MyNoSqlServer.DataWriter
                 if (!updateCallback(entity))
                     return OperationResult.Canceled;
 
-                var result = await ExecuteUpdateHttpAsync(entity, method);
+                var result = await ExecuteUpdateHttpAsync(entity, method, syncPeriod);
 
                 if (result == OperationResult.RecordChangedConcurrently)
                     continue;
@@ -158,14 +159,15 @@ namespace MyNoSqlServer.DataWriter
         }
 
         public ValueTask<OperationResult> ReplaceAsync(string partitionKey, string rowKey,
-            Func<T, bool> updateCallback)
+            Func<T, bool> updateCallback, DataSynchronizationPeriod syncPeriod = DataSynchronizationPeriod.Sec5)
         {
-            return ExecuteUpdateProcessAsync(partitionKey, rowKey, "replace", updateCallback);
+            return ExecuteUpdateProcessAsync(partitionKey, rowKey, "Replace", updateCallback, syncPeriod);
         }
 
-        public ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback)
+        public ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey, 
+            Func<T, bool> updateCallback, DataSynchronizationPeriod syncPeriod = DataSynchronizationPeriod.Sec5)
         {
-            return ExecuteUpdateProcessAsync(partitionKey, rowKey, "merge", updateCallback);
+            return ExecuteUpdateProcessAsync(partitionKey, rowKey, "Merge", updateCallback, syncPeriod);
         }
 
         public async ValueTask<IEnumerable<T>> GetAsync()

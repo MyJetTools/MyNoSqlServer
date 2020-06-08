@@ -34,7 +34,7 @@ namespace MyNoSqlServer.DataWriter
 
         public static Url WithTableNameAsQueryParam(this Url url, string tableName)
         {
-            return url.SetQueryParam("rowKey", tableName);
+            return url.SetQueryParam("tableName", tableName);
         }
         
         

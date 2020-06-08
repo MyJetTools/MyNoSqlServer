@@ -15,8 +15,10 @@ namespace MyNoSqlServer.Abstractions
         ValueTask CleanAndBulkInsertAsync(string partitionKey, IEnumerable<T> entity, DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5);
 
 
-        ValueTask<OperationResult> ReplaceAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback);
-        ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback);
+        ValueTask<OperationResult> ReplaceAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback, 
+            DataSynchronizationPeriod syncPeriod = DataSynchronizationPeriod.Sec5);
+        ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback, 
+            DataSynchronizationPeriod syncPeriod = DataSynchronizationPeriod.Sec5);
         
         
         ValueTask<IEnumerable<T>> GetAsync();
