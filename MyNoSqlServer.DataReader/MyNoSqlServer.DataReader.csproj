@@ -10,8 +10,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
-      <ProjectReference Include="..\MyNoSqlServer20.TcpContracts\MyNoSqlServer20.TcpContracts.csproj" />
+      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
+      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer20.TcpContracts\MyNoSqlServer20.TcpContracts.csproj" />
     </ItemGroup>
 
 </Project>
