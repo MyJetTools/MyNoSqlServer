@@ -15,13 +15,11 @@ namespace MyNoSqlServer.Api.Controllers
         public IActionResult CleanAndKeepMaxPartitions([FromQuery] [Required] string tableName,
             [FromQuery] [Required] int maxAmount)
         {
-            if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
-
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-
-            if (table == null)
-                return this.TableNotFound();
+            
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
 
             var result = table.KeepMaxPartitions(maxAmount);
 
@@ -35,25 +33,16 @@ namespace MyNoSqlServer.Api.Controllers
 
 
         [HttpPost("CleanAndKeepMaxRecords")]
-        public ValueTask<IActionResult> CleanAndKeepMaxRecords(
+        public async ValueTask<IActionResult> CleanAndKeepMaxRecords(
             [FromQuery][Required] string tableName,
             [FromQuery][Required]string partitionKey, [FromQuery][Required]int maxAmount,
             [FromQuery] string syncPeriod)
         {
-            var shutDown = this.CheckOnShuttingDown();
-            if (shutDown != null)
-                return new ValueTask<IActionResult>(shutDown);
 
-            if (string.IsNullOrEmpty(tableName))
-                return new ValueTask<IActionResult>(this.TableNameIsNull());
-
-            if (string.IsNullOrEmpty(partitionKey))
-                return new ValueTask<IActionResult>(this.PartitionKeyIsNull());
-
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-
-            if (table == null)
-                return new ValueTask<IActionResult>(this.TableNotFound());
+            var (getTableResult, table) = this.GetTable(tableName, partitionKey);
+            
+            if (getTableResult != null)
+                return getTableResult;
 
 
             var (dbPartition, dbRows) = table.CleanAndKeepLastRecords(partitionKey, maxAmount);
@@ -62,11 +51,11 @@ namespace MyNoSqlServer.Api.Controllers
             {
                 ServiceLocator.DataSynchronizer.SynchronizeDelete(table, dbRows);
 
-                return this.ResponseOk()
+                return await this.ResponseOk()
                     .SynchronizePartitionAsync(table, dbPartition, syncPeriod.ParseSynchronizationPeriodContract());
             }
 
-            return new ValueTask<IActionResult>(this.ResponseOk());
+            return this.ResponseOk();
         }
     }
 }

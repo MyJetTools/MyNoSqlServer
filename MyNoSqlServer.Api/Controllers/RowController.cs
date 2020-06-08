@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -15,13 +16,10 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery] string rowKey, [FromQuery] int? limit, [FromQuery] int? skip)
         {
             
-            if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
-
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-
-            if (table == null)
-                return this.TableNotFound();
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
 
             if (partitionKey != null)
             {
@@ -34,7 +32,7 @@ namespace MyNoSqlServer.Api.Controllers
                 var entity = table.GetEntity(partitionKey, rowKey);
 
                 return entity == null 
-                    ? this.RowNotFound() 
+                    ? this.GetResult(OperationResult.RowNotFound) 
                     : this.ToDbRowResult(entity);
             }
 
@@ -130,10 +128,10 @@ namespace MyNoSqlServer.Api.Controllers
                 return getTableResult;
 
             if (string.IsNullOrEmpty(partitionKey))
-                return this.PartitionKeyIsNull();
+                return this.GetResult(OperationResult.PartitionKeyIsNull);
 
             if (string.IsNullOrEmpty(rowKey))
-                return this.RowKeyIsNull();
+                return this.GetResult(OperationResult.RowKeyIsNull);
 
             var result = await ServiceLocator.DbOperations.DeleteAsync(table, partitionKey, rowKey,
                 syncPeriod.ParseSynchronizationPeriodContract());
@@ -148,10 +146,7 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery] string syncPeriod)
         {
             
-            if (string.IsNullOrEmpty(partitionKey))
-                return this.PartitionKeyIsNull();
-            
-            var (getTableResult, table) = this.GetTable(tableName);
+            var (getTableResult, table) = this.GetTable(tableName, partitionKey);
             
             if (getTableResult != null)
                 return getTableResult;
@@ -167,15 +162,15 @@ namespace MyNoSqlServer.Api.Controllers
         public IActionResult Count([Required][FromQuery] string tableName, [FromQuery] string partitionKey)
         {
             if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
+                return this.GetResult(OperationResult.TableNameIsEmpty);
 
             if (string.IsNullOrEmpty(partitionKey))
-                return this.PartitionKeyIsNull();
+                return this.GetResult(OperationResult.PartitionKeyIsNull);
             
             var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
-                return this.TableNotFound();
+                return this.GetResult(OperationResult.TableNotFound);
 
             var count = table.GetRecordsCount(partitionKey);
 

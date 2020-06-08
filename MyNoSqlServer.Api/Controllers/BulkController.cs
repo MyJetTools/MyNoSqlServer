@@ -19,12 +19,14 @@ namespace MyNoSqlServer.Api.Controllers
         public async ValueTask<IActionResult> InsertOrReplace([Required][FromQuery] string tableName, 
             [FromQuery]string syncPeriod)
         {
+            
+            
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
                 return shutDown;
             
             if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
+                return this.GetResult(OperationResult.TableNameIsEmpty);
 
             var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
 
@@ -70,40 +72,21 @@ namespace MyNoSqlServer.Api.Controllers
             ServiceLocator.DataSynchronizer?.PublishInitTable(table);
         }
 
-        /*
-        [HttpPost]
-        public IActionResult TestBody()
-        {
-
-            var body = Request.BodyAsByteArrayAsync().Result;
-            var res = Encoding.UTF8.GetString(body);
-            Console.WriteLine(res);
-            return Json(new
-            {
-                res
-            });
-        }
-*/
 
         [HttpPost]
         public async ValueTask<IActionResult> CleanAndBulkInsert([Required] [FromQuery] string tableName,
             [FromQuery] string partitionKey,
             [FromQuery] string syncPeriod)
         {
-            var shutDown = this.CheckOnShuttingDown();
-            if (shutDown != null)
-                return shutDown;
-
-            if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
+            var (getTableResult, table) = this.GetTable(tableName, partitionKey);
+            
+            if (getTableResult != null)
+                return getTableResult;
             
             var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
 
             if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
                 return Conflict("CleanAndBulkInsert insert does not support immediate persistence");
-
-
-            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
 
             var body = await Request.BodyAsIMemoryAsync();
             

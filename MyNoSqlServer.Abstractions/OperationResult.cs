@@ -5,6 +5,6 @@ namespace MyNoSqlServer.Abstractions
         Ok, RecordNotFound, TableNotFound, TableNameIsEmpty, 
         ShuttingDown, PartitionKeyIsNull, 
         RowKeyIsNull, RecordExists, RecordChangedConcurrently, 
-        RowNotFound, CanNotCreateObject, Canceled
+        RowNotFound, CanNotCreateObject, Canceled, QueryIsNull
     }
 }

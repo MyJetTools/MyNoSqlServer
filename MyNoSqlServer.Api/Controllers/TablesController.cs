@@ -25,7 +25,7 @@ namespace MyNoSqlServer.Api.Controllers
                 return shutDown;
 
             if (string.IsNullOrEmpty(tableName))
-                return this.ResponseConflict(OperationResult.TableNameIsEmpty);
+                return this.GetResult(OperationResult.TableNameIsEmpty);
 
             ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
             return this.ResponseOk();
@@ -39,34 +39,34 @@ namespace MyNoSqlServer.Api.Controllers
                 return shutDown;
 
             if (string.IsNullOrEmpty(tableName))
-                return this.ResponseConflict(OperationResult.TableNameIsEmpty);
+                return this.GetResult(OperationResult.TableNameIsEmpty);
 
             if (ServiceLocator.DbInstance.CreateTable(tableName))
                 return this.ResponseOk();
 
-            return this.ResponseConflict(OperationResult.CanNotCreateObject);
+            return this.GetResult(OperationResult.CanNotCreateObject);
         }
 
         [HttpDelete("Tables/Clean")]
-        public ValueTask<IActionResult> Clean([Required] [FromQuery] string tableName, [FromQuery] string syncPeriod)
+        public async ValueTask<IActionResult> Clean([Required] [FromQuery] string tableName, [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
-                return new ValueTask<IActionResult>(shutDown);
+                return shutDown;
 
             if (string.IsNullOrEmpty(tableName))
-                return new ValueTask<IActionResult>(this.ResponseConflict(OperationResult.TableNameIsEmpty));
+                return this.GetResult(OperationResult.TableNameIsEmpty);
 
-
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-            if (table == null)
-                return new ValueTask<IActionResult>(this.TableNotFound());
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
 
             table.Clean();
 
             ServiceLocator.DataSynchronizer.PublishInitTable(table);
 
-            return Ok().SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
+            return await Ok().SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
 
         }    
 

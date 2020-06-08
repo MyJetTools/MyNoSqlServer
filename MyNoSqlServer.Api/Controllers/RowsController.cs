@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Rows;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -13,16 +14,13 @@ namespace MyNoSqlServer.Api.Controllers
             [Required][FromBody] string[] rowKeys)
         {
             
-            if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
-
-            if (string.IsNullOrEmpty(partitionKey))
-                return this.PartitionKeyIsNull();
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
 
             if (rowKeys == null || rowKeys.Length == 0)
                 return this.ToDbRowsResult(Array.Empty<DbRow>());
-
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             var result = table.GetMultipleRows(partitionKey, rowKeys);
             
@@ -34,16 +32,13 @@ namespace MyNoSqlServer.Api.Controllers
         public IActionResult HighestRowAndBelow([Required][FromQuery] string tableName, [Required][FromQuery] string partitionKey, 
             [Required][FromQuery] string rowKey, [Required][FromQuery] int maxAmount)
         {
-            if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
-
-            if (string.IsNullOrEmpty(partitionKey))
-                return this.PartitionKeyIsNull();
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
             
             if (string.IsNullOrEmpty(rowKey))
-                return this.RowKeyIsNull();
-
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
+                return this.GetResult(OperationResult.RowKeyIsNull);
 
             var result = table.GetHighestRowAndBelow(partitionKey, rowKey, maxAmount);
             

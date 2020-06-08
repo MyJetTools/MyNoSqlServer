@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -36,11 +35,30 @@ namespace MyNoSqlServer.Api.Controllers
         public static IActionResult CheckOnShuttingDown(this Controller ctx)
         {
             if (ServiceLocator.GlobalVariables.IsShuttingDown)
-                return ctx.ApplicationIsShuttingDown();
+                return ctx.GetResult(OperationResult.ShuttingDown);
             
             return null;
         }
 
+        public static (IActionResult result, DbTable dbTable) GetTable(this Controller ctx, string tableName, 
+            string partitionKey)
+        {
+            var shutDown = ctx.CheckOnShuttingDown();
+            if (shutDown != null)
+                return (shutDown, null); 
+            
+            if (string.IsNullOrEmpty(tableName))
+                return (ctx.GetResult(OperationResult.TableNameIsEmpty), null);
+            
+            if (string.IsNullOrEmpty(partitionKey))
+                return (ctx.GetResult(OperationResult.PartitionKeyIsNull), null);
+
+            tableName = tableName.ToLowerInvariant();
+            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
+            return (null, table);
+        }
+
+        
         public static (IActionResult result, DbTable dbTable) GetTable(this Controller ctx, string tableName)
         {
             var shutDown = ctx.CheckOnShuttingDown();
@@ -48,7 +66,7 @@ namespace MyNoSqlServer.Api.Controllers
                 return (shutDown, null); 
             
             if (string.IsNullOrEmpty(tableName))
-                return (ctx.TableNameIsNull(), null);
+                return (ctx.GetResult(OperationResult.TableNameIsEmpty), null);
 
             tableName = tableName.ToLowerInvariant();
             var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
@@ -56,44 +74,19 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
 
-
         public static IActionResult GetResult(this Controller ctx, OperationResult result)
         {
-            switch (result)
+            return result switch
             {
-                case OperationResult.Ok:
-                    return ctx.Ok();
-
-                case OperationResult.TableNotFound:
-                    return ctx.TableNotFound();
-                
-                case OperationResult.RecordExists:
-                    return ctx.ResponseConflict(result);
-
-                case OperationResult.ShuttingDown:
-                    return ctx.ApplicationIsShuttingDown();
-                
-                case OperationResult.RecordNotFound:
-                    return ctx.RecordIsNotFound();
-                
-                case OperationResult.TableNameIsEmpty:
-                    return ctx.TableNameIsNull();
-                
-                case OperationResult.RecordChangedConcurrently:
-                    return ctx.Conflict("Record changed");
-
-                case OperationResult.PartitionKeyIsNull:
-                    return ctx.PartitionKeyIsNull();
-
-                case OperationResult.RowKeyIsNull:
-                    return ctx.RowKeyIsNull();
-                
-                case OperationResult.RowNotFound:
-                    return ctx.RowNotFound();
-                
-            }
-            
-            throw new Exception("Technical Error. Unknown Result: "+result);
+                OperationResult.Ok => ctx.ResponseOk(),
+                OperationResult.TableNotFound => ctx.NotFound("Table not found"),
+                OperationResult.PartitionKeyIsNull => ctx.ValidationProblem("Partition key is null"),
+                OperationResult.RowKeyIsNull => ctx.ValidationProblem("Row key is null"),
+                OperationResult.QueryIsNull => ctx.ValidationProblem("Query is null"),
+                OperationResult.RowNotFound => ctx.NotFound("Row not found"),
+                OperationResult.TableNameIsEmpty => ctx.ValidationProblem("Table name is empty"),
+                _ => ctx.ResponseConflict(result)
+            };
         }
     
 

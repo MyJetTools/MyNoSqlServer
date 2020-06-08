@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -13,16 +14,14 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("Query")]
         public IActionResult Index([Required][FromQuery] string tableName,[Required][FromQuery] string query)
         {
-            if (string.IsNullOrEmpty(tableName))
-                return this.TableNameIsNull();
             
             if (string.IsNullOrEmpty(query))
-                return this.QueryIsNull();
+                return this.GetResult(OperationResult.QueryIsNull);
             
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-
-            if (table == null)
-                return this.TableNotFound();
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
 
             var conditions = query.ParseQueryConditions();
 

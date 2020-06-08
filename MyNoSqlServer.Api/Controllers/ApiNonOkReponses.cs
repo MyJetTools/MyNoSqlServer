@@ -25,48 +25,6 @@ namespace MyNoSqlServer.Api.Controllers
             return ctx.Conflict(((int)operationResult).ToString());
         }
 
-        public static IActionResult TableNameIsNull(this Controller ctx)
-        {
-            return ctx.NotFound("Please specify table name");
-        }
-
-        public static IActionResult QueryIsNull(this Controller ctx)
-        {
-            return ctx.NotFound("Please specify query as body json field");
-        }
-
-
-        public static IActionResult TableNotFound(this Controller ctx)
-        {
-            return ctx.NotFound($"Table not found");
-        }
-        
-        
-        public static IActionResult ApplicationIsShuttingDown(this Controller ctx)
-        {
-            return ctx.NotFound("Application is Shutting Down");
-        }
-        
-        public static IActionResult RecordIsNotFound(this Controller ctx)
-        {
-            return ctx.NotFound("Record is not found");
-        }
-
-
-        public static IActionResult PartitionKeyIsNull(this Controller ctx)
-        {
-            return ctx.NotFound("Please specify PartitionKey");
-        }
-
-        public static IActionResult RowKeyIsNull(this Controller ctx)
-        {
-            return ctx.NotFound("Please specify RowKey");
-        }
-
-        public static IActionResult RowNotFound(this Controller ctx)
-        {
-            return ctx.NotFound("Row not Found");
-        }
 
 
 
