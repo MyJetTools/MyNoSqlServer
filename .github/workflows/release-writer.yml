@@ -21,9 +21,9 @@ jobs:
       run: dotnet test --configuration Release      
       
     - name: Create the package - Writer
-      run: dotnet pack --configuration Release MyNoSqlServer.DataWriter/MyNoSqlServer.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/Writer-}
+      run: dotnet pack --configuration Release MyNoSqlServer.DataWriter/MyNoSqlServer.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/Writer-} -IncludeReferencedProjects
     - name: Create the package - Writer20
-      run: dotnet pack --configuration Release MyNoSqlServer20.DataWriter/MyNoSqlServer20.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/Writer-}
+      run: dotnet pack --configuration Release MyNoSqlServer20.DataWriter/MyNoSqlServer20.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/Writer-} -IncludeReferencedProjects
 
     - name: Publish the package to GPR - Writer
       run: dotnet nuget push MyNoSqlServer.DataWriter/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
