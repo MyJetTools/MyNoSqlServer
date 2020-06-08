@@ -4,8 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
-using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 
@@ -68,7 +68,7 @@ namespace MyNoSqlServer.Api.Controllers
                     return ctx.TableNotFound();
                 
                 case OperationResult.RecordExists:
-                    return ctx.ResponseConflict("Record with the same PartitionKey and RowKey is already exists");
+                    return ctx.ResponseConflict(result);
 
                 case OperationResult.ShuttingDown:
                     return ctx.ApplicationIsShuttingDown();

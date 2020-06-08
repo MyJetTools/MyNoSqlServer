@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
@@ -11,6 +9,9 @@ namespace MyNoSqlServer.DataWriter
 {
     public class MyNoSqlServerDataWriter<T> : IMyNoSqlServerDataWriter<T> where T : IMyNoSqlDbEntity, new()
     {
+
+        private const string RowController = "Row";
+        
         private readonly Func<string> _getUrl;
         private readonly DataSynchronizationPeriod _dataSynchronizationPeriod;
         private readonly string _tableName;
@@ -35,7 +36,7 @@ namespace MyNoSqlServer.DataWriter
         public async ValueTask InsertAsync(T entity)
         {
             await _getUrl()
-                .AppendPathSegments("Row", "Insert")
+                .AppendPathSegments(RowController, "Insert")
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .WithTableNameAsQueryParam(_tableName)
                 .PostJsonAsync(entity);
@@ -44,7 +45,7 @@ namespace MyNoSqlServer.DataWriter
         public async ValueTask InsertOrReplaceAsync(T entity)
         {
             await _getUrl()
-                .AppendPathSegments("Row", "InsertOrReplace")
+                .AppendPathSegments(RowController, "InsertOrReplace")
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .WithTableNameAsQueryParam(_tableName)
                 .PostJsonAsync(entity);
@@ -58,7 +59,7 @@ namespace MyNoSqlServer.DataWriter
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .SetQueryParam("amount", amount)
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .AllowHttpStatus(HttpStatusCode.NotFound)
+                .AllowNonOkCodes()
                 .DeleteAsync();
         }
 
@@ -91,7 +92,6 @@ namespace MyNoSqlServer.DataWriter
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
                     .WithTableNameAsQueryParam(_tableName)
                     .PostJsonAsync(entities);
-
             }
             catch (Exception e)
             {
@@ -120,10 +120,58 @@ namespace MyNoSqlServer.DataWriter
             }
         }
 
+
+        private async ValueTask<OperationResult> ExecuteUpdateHttpAsync(T entity, string method)
+        {
+            var response = await _getUrl()
+                .AppendPathSegments("Rows", method)
+                .WithTableNameAsQueryParam(_tableName)
+                .WithPartitionKeyAsQueryParam(entity.PartitionKey)
+                .WithRowKeyAsQueryParam(entity.RowKey)
+                .AllowNonOkCodes()
+                .PostJsonAsync(entity);
+
+            return await response.GetOperationResultCodeAsync();
+        }
+
+
+        private async ValueTask<OperationResult> ExecuteUpdateProcessAsync(string partitionKey, string rowKey, 
+            string method, Func<T, bool> updateCallback)
+        {
+            while (true)
+            {
+                var entity = await GetAsync(partitionKey, rowKey);
+
+                if (entity == null)
+                    return OperationResult.RecordNotFound;
+
+                if (!updateCallback(entity))
+                    return OperationResult.Canceled;
+
+                var result = await ExecuteUpdateHttpAsync(entity, method);
+
+                if (result == OperationResult.RecordChangedConcurrently)
+                    continue;
+
+                return result;
+            }
+        }
+
+        public ValueTask<OperationResult> ReplaceAsync(string partitionKey, string rowKey,
+            Func<T, bool> updateCallback)
+        {
+            return ExecuteUpdateProcessAsync(partitionKey, rowKey, "replace", updateCallback);
+        }
+
+        public ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback)
+        {
+            return ExecuteUpdateProcessAsync(partitionKey, rowKey, "merge", updateCallback);
+        }
+
         public async ValueTask<IEnumerable<T>> GetAsync()
         {
             return await _getUrl()
-                .AppendPathSegments("Row")
+                .AppendPathSegments(RowController)
                 .WithTableNameAsQueryParam(_tableName)
                 .GetAsync()
                 .ReadAsJsonAsync<T[]>();
@@ -132,7 +180,7 @@ namespace MyNoSqlServer.DataWriter
         public async ValueTask<IEnumerable<T>> GetAsync(string partitionKey)
         {
             return await _getUrl()
-                .AppendPathSegments("Row")
+                .AppendPathSegments(RowController)
                 .WithTableNameAsQueryParam(_tableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .GetAsync()
@@ -142,16 +190,17 @@ namespace MyNoSqlServer.DataWriter
         public async ValueTask<T> GetAsync(string partitionKey, string rowKey)
         {
             var response = await _getUrl()
-                .AppendPathSegments("Row")
+                .AppendPathSegments(RowController)
                 .WithTableNameAsQueryParam(_tableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .WithRowKeyAsQueryParam(rowKey)
-                .AllowHttpStatus(HttpStatusCode.NotFound)
+                .AllowNonOkCodes()
                 .GetAsync();
 
+            var statusCode = await response.GetOperationResultCodeAsync();
 
-            if (response.IsRecordNotFound())
-                return default(T);
+            if (statusCode == OperationResult.RecordNotFound)
+                return default;
 
             return await response.ReadAsJsonAsync<T>();
         }
@@ -165,10 +214,13 @@ namespace MyNoSqlServer.DataWriter
                 .AppendPathSegments("Rows", "SinglePartitionMultipleRows")
                 .WithTableNameAsQueryParam(_tableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
-                .AllowHttpStatus(HttpStatusCode.NotFound)
+                .AllowNonOkCodes()
                 .PostJsonAsync(rowKeys);
 
-            if (response.IsRecordNotFound())
+            
+            var statusCode = await response.GetOperationResultCodeAsync();
+            
+            if (statusCode == OperationResult.RecordNotFound)
                 return EmptyResponse;
 
             return await response.ReadAsJsonAsync<List<T>>();
@@ -182,12 +234,12 @@ namespace MyNoSqlServer.DataWriter
                 return default;
 
             await _getUrl()
-                .AppendPathSegments("Row")
+                .AppendPathSegments(RowController)
                 .WithTableNameAsQueryParam(_tableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .WithRowKeyAsQueryParam(rowKey)
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .AllowHttpStatus(HttpStatusCode.NotFound)
+                .AllowNonOkCodes()
                 .DeleteAsync();
 
             return result;
@@ -252,30 +304,6 @@ namespace MyNoSqlServer.DataWriter
 
             return int.Parse(response);
         }
-    }
-
-    public static class MyNoSqlServerClientExt
-    {
-
-        public static async Task<T> ReadAsJsonAsync<T>(this Task<HttpResponseMessage> responseTask)
-        {
-            var response = await responseTask;
-            return await response.ReadAsJsonAsync<T>();
-        }
-
-        public static async Task<T> ReadAsJsonAsync<T>(this HttpResponseMessage response)
-        {
-            var json = await response.Content.ReadAsStringAsync();
-            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json);
-        }
-
-        internal static bool IsRecordNotFound(this HttpResponseMessage httpResponseMessage)
-        {
-            return
-                httpResponseMessage.StatusCode == HttpStatusCode.NotFound ||
-                httpResponseMessage.StatusCode == HttpStatusCode.NoContent;
-        }
-
     }
     
 }

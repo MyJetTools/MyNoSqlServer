@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -24,7 +25,7 @@ namespace MyNoSqlServer.Api.Controllers
                 return shutDown;
 
             if (string.IsNullOrEmpty(tableName))
-                return this.ResponseConflict("Please specify table name");
+                return this.ResponseConflict(OperationResult.TableNameIsEmpty);
 
             ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
             return this.ResponseOk();
@@ -38,12 +39,12 @@ namespace MyNoSqlServer.Api.Controllers
                 return shutDown;
 
             if (string.IsNullOrEmpty(tableName))
-                return this.ResponseConflict("Please specify table name");
+                return this.ResponseConflict(OperationResult.TableNameIsEmpty);
 
             if (ServiceLocator.DbInstance.CreateTable(tableName))
                 return this.ResponseOk();
 
-            return this.ResponseConflict("Can not create table: " + tableName);
+            return this.ResponseConflict(OperationResult.CanNotCreateObject);
         }
 
         [HttpDelete("Tables/Clean")]
@@ -54,7 +55,7 @@ namespace MyNoSqlServer.Api.Controllers
                 return new ValueTask<IActionResult>(shutDown);
 
             if (string.IsNullOrEmpty(tableName))
-                return new ValueTask<IActionResult>(this.ResponseConflict("Please specify table name"));
+                return new ValueTask<IActionResult>(this.ResponseConflict(OperationResult.TableNameIsEmpty));
 
 
             var table = ServiceLocator.DbInstance.TryGetTable(tableName);

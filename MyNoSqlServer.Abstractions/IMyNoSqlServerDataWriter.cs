@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,6 +13,11 @@ namespace MyNoSqlServer.Abstractions
         ValueTask BulkInsertOrReplaceAsync(IEnumerable<T> entity, DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5);
         ValueTask CleanAndBulkInsertAsync(IEnumerable<T> entity, DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5);
         ValueTask CleanAndBulkInsertAsync(string partitionKey, IEnumerable<T> entity, DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5);
+
+
+        ValueTask<OperationResult> ReplaceAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback);
+        ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey, Func<T, bool> updateCallback);
+        
         
         ValueTask<IEnumerable<T>> GetAsync();
         ValueTask<IEnumerable<T>> GetAsync(string partitionKey);
@@ -21,11 +27,9 @@ namespace MyNoSqlServer.Abstractions
         
         ValueTask<T> DeleteAsync(string partitionKey, string rowKey);
 
-
         ValueTask<IEnumerable<T>> QueryAsync(string query);
 
         ValueTask<IEnumerable<T>> GetHighestRowAndBelow(string partitionKey, string rowKeyFrom, int amount);
-
 
         ValueTask CleanAndKeepMaxPartitions( int maxAmount);
         ValueTask CleanAndKeepMaxRecords(string partitionKey, int maxAmount);

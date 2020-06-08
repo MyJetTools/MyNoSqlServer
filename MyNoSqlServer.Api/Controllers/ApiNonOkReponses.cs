@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -19,9 +20,9 @@ namespace MyNoSqlServer.Api.Controllers
             return new ValueTask<IActionResult>(theTask);
         }
 
-        public static IActionResult ResponseConflict(this Controller ctx, string message)
+        public static IActionResult ResponseConflict(this Controller ctx, OperationResult operationResult)
         {
-            return ctx.Conflict(message);
+            return ctx.Conflict(((int)operationResult).ToString());
         }
 
         public static IActionResult TableNameIsNull(this Controller ctx)
