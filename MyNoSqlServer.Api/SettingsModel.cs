@@ -20,9 +20,17 @@ namespace MyNoSqlServer.Api
 
                 if (!string.IsNullOrEmpty(connectionString))
                 {
-                    var conf = new SettingsModel() {BackupAzureConnectString = connectionString};
+                    var conf = new SettingsModel()
+                    {
+                        BackupAzureConnectString = connectionString
+                    };
+
+                    Console.WriteLine("Variable 'BackupAzureConnectString' is detected");
+
                     return conf;
                 }
+
+                Console.WriteLine("Variable 'BackupAzureConnectString' is NOT detected");
 
                 var homeFolder = Environment.GetEnvironmentVariable("HOME");
 

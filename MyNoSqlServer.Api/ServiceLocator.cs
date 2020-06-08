@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using MyDependencies;
@@ -14,8 +15,37 @@ namespace MyNoSqlServer.Api
 {
     public static class ServiceLocator
     {
-        public static string Version { get; private set; }
-        
+        static ServiceLocator()
+        {
+            StartedAt = DateTime.UtcNow;
+
+            var name = Assembly.GetEntryAssembly()?.GetName();
+
+            string appName = name?.Name ?? string.Empty;
+
+            var nameSegments = appName.Split('.', StringSplitOptions.RemoveEmptyEntries);
+
+            if (nameSegments.Length > 2)
+            {
+                appName = string.Join('.', nameSegments.Skip(1));
+            }
+
+            AppName = appName;
+            AppVersion = name?.Version?.ToString();
+
+            AspNetEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            Host = Environment.GetEnvironmentVariable("HOSTNAME");
+        }
+
+        public static string AppName { get; private set; }
+        public static string AppVersion { get; private set; }
+
+        public static DateTime StartedAt { get; private set; }
+
+        public static string AspNetEnvironment { get; private set; }
+
+        public static string Host { get; private set; }
+
         public static DbInstance DbInstance { get; private set; }
         
         public static GlobalVariables GlobalVariables { get; private set; }
@@ -47,24 +77,7 @@ namespace MyNoSqlServer.Api
             GlobalVariables = sr.GetService<GlobalVariables>();
 
             DbOperations = sr.GetService<DbOperations>();
-
-            PopulateAssembly();
         }
-
-        private static void PopulateAssembly()
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            var version = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
-            if (version != null)
-            {
-                Version = version.ToString();
-            }
-            else
-            {
-                Version = "unknown";
-            }
-        }
-
 
         public static void Start()
         {
