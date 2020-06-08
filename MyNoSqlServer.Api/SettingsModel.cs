@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Microsoft.Extensions.Configuration;
 using MyNoSqlServer.Common;
 
 namespace MyNoSqlServer.Api
@@ -13,41 +14,36 @@ namespace MyNoSqlServer.Api
     {
         public static SettingsModel LoadSettings()
         {
-
             try
             {
-                var connectionString = Environment.GetEnvironmentVariable("BackupAzureConnectString");
-
-                if (!string.IsNullOrEmpty(connectionString))
-                {
-                    var conf = new SettingsModel()
-                    {
-                        BackupAzureConnectString = connectionString
-                    };
-
-                    Console.WriteLine("Variable 'BackupAzureConnectString' is detected");
-
-                    return conf;
-                }
-
-                Console.WriteLine("Variable 'BackupAzureConnectString' is NOT detected");
+                var configBuilder = new ConfigurationBuilder();
 
                 var homeFolder = Environment.GetEnvironmentVariable("HOME");
+                if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, ".mynosqlserver")))
+                {
+                    FileStream fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
+                    configBuilder.AddJsonStream(fileStream);
+                }
 
-                var fileName = homeFolder.AddLastSymbolIfOneNotExists('/') + ".mynosqlserver";
+                homeFolder = Environment.GetEnvironmentVariable("HOMEDRIVE") + Environment.GetEnvironmentVariable("HOMEPATH");
+                if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, ".mynosqlserver")))
+                {
+                    FileStream fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
+                    configBuilder.AddJsonStream(fileStream);
+                }
 
-                var json = File.ReadAllText(fileName);
+                configBuilder.AddEnvironmentVariables();
 
-                var result = Newtonsoft.Json.JsonConvert.DeserializeObject<SettingsModel>(json);
+                var config = configBuilder.Build();
 
-                if (string.IsNullOrEmpty(result.BackupAzureConnectString))
+                var data = config.Get<SettingsModel>();
+
+                if (string.IsNullOrEmpty(data.BackupAzureConnectString))
                 {
                     Console.WriteLine("No connection string found. Backups are disabled");
                 }
-                //    throw new Exception("{ \"BackupAzureConnectString\":null } but it should not be null ");
 
-                return result;
-
+                return data;
             }
             catch (Exception e)
             {
