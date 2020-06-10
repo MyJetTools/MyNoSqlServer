@@ -35,6 +35,15 @@ namespace MyNoSqlServer.Api
 
             AspNetEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
             Host = Environment.GetEnvironmentVariable("HOSTNAME");
+
+            Console.WriteLine($"AppName: {AppName}");
+            Console.WriteLine($"AppVersion: {AppVersion}");
+            Console.WriteLine($"AspNetEnvironment: {AspNetEnvironment}");
+            Console.WriteLine($"Host: {Host}");
+            Console.WriteLine($"StartedAt: {StartedAt}");
+            Console.WriteLine($"Port http: 5123");
+            Console.WriteLine($"Port tcp: 5125");
+            Console.WriteLine();
         }
 
         public static string AppName { get; private set; }

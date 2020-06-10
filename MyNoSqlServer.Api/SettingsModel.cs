@@ -41,6 +41,7 @@ namespace MyNoSqlServer.Api
                 if (string.IsNullOrEmpty(data.BackupAzureConnectString))
                 {
                     Console.WriteLine("No connection string found. Backups are disabled");
+                    Console.WriteLine("In case to enable, please specify 'BackupAzureConnectString' in env variable or in json file: ~/.mynosqlserver");
                 }
 
                 return data;
