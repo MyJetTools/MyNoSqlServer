@@ -13,7 +13,7 @@
 
     <ItemGroup>
       <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
-      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer20.TcpContracts\MyNoSqlServer20.TcpContracts.csproj" />
+      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer.TcpContracts\MyNoSqlServer.TcpContracts.csproj" />
     </ItemGroup>
 
     <PropertyGroup>
