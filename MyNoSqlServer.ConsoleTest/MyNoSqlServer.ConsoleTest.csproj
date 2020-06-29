@@ -6,6 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
       <ProjectReference Include="..\MyNoSqlServer.DataWriter\MyNoSqlServer.DataWriter.csproj" />
     </ItemGroup>
 
