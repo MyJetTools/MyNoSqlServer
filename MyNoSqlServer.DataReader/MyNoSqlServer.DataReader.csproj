@@ -10,8 +10,21 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
-      <ProjectReference Include="..\MyNoSqlServer.TcpContracts\MyNoSqlServer.TcpContracts.csproj" />
+      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
+      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer.TcpContracts\MyNoSqlServer.TcpContracts.csproj" />
     </ItemGroup>
+
+
+    <PropertyGroup>
+        <TargetsForTfmSpecificBuildOutput>
+            $(TargetsForTfmSpecificBuildOutput);PackReferencedProjectOutputs
+        </TargetsForTfmSpecificBuildOutput>
+    </PropertyGroup>
+
+    <Target Name="PackReferencedProjectOutputs" DependsOnTargets="BuildOnlySettings;ResolveReferences">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+        </ItemGroup>
+    </Target>
 
 </Project>
