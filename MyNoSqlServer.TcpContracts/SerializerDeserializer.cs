@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 
@@ -33,13 +34,13 @@ namespace MyNoSqlServer.TcpContracts
             }
         }
 
-        public static async ValueTask<IMyNoSqlTcpContract> DeserializeAsync(TcpDataReader dataReader)
+        public static async ValueTask<IMyNoSqlTcpContract> DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            var command = (CommandType)await dataReader.ReadByteAsync();
+            var command = (CommandType)await dataReader.ReadByteAsync(ct);
 
             var instance = CommandToContractMapper[command]();
             
-            await instance.DeserializeAsync(dataReader);
+            await instance.DeserializeAsync(dataReader, ct);
 
             return instance;
         }

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using MyTcpSockets.Extensions;
 using NUnit.Framework;
 
@@ -28,9 +29,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
             dataReader.NewPackage(memStream.ToArray());
 
 
+            var tc = new CancellationTokenSource();
+            
             var result
                 = serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.IsTrue(typeof(PingContract) == result.GetType());
@@ -56,10 +59,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
             var dataReader = new TcpDataReader();
             dataReader.NewPackage(memStream.ToArray());
 
-
+            var tc = new CancellationTokenSource();
+            
             var result
                 = serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.IsTrue(typeof(PongContract) == result.GetType());
@@ -88,10 +92,12 @@ namespace MyNoSqlServer.TcpContracts.Tests
             var dataReader = new TcpDataReader();
             dataReader.NewPackage(memStream.ToArray());
 
+            
+            var tc = new CancellationTokenSource();
 
             var result
                 = (GreetingContract)serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.AreEqual(testContract.Name, result.Name);
@@ -123,9 +129,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
             dataReader.NewPackage(memStream.ToArray());
 
 
+            
+            var tc = new CancellationTokenSource();
             var result
                 = (InitTableContract) serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.AreEqual(testContract.TableName, result.TableName);
@@ -162,9 +170,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
             dataReader.NewPackage(memStream.ToArray());
 
 
+            var tc = new CancellationTokenSource();
             var result
                 = (InitPartitionContract) serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.AreEqual(testContract.TableName, result.TableName);
@@ -201,9 +210,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
             dataReader.NewPackage(memStream.ToArray());
 
 
+            var tc = new CancellationTokenSource();
             var result
                 = (UpdateRowsContract) serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.AreEqual(testContract.TableName, result.TableName);
@@ -238,9 +248,12 @@ namespace MyNoSqlServer.TcpContracts.Tests
             dataReader.NewPackage(memStream.ToArray());
 
 
+            
+            var tc = new CancellationTokenSource();
+            
             var result
                 = (SubscribeContract) serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.AreEqual(testContract.TableName, result.TableName);
@@ -271,10 +284,12 @@ namespace MyNoSqlServer.TcpContracts.Tests
             var dataReader = new TcpDataReader();
             dataReader.NewPackage(memStream.ToArray());
 
+            
+            var tc = new CancellationTokenSource();
 
             var result
                 = (DeleteRowsContract) serializer
-                    .DeserializeAsync(dataReader)
+                    .DeserializeAsync(dataReader, tc.Token)
                     .AsTestResult();
 
             Assert.AreEqual(testContract.TableName, result.TableName);

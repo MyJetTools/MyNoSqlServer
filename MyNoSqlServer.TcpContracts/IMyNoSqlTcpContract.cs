@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 
@@ -8,7 +9,7 @@ namespace MyNoSqlServer.TcpContracts
     public interface IMyNoSqlTcpContract
     {
         void Serialize(Stream stream);
-        ValueTask DeserializeAsync(TcpDataReader dataReader);
+        ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct);
     }
 
     public class PingContract : IMyNoSqlTcpContract
@@ -20,7 +21,7 @@ namespace MyNoSqlServer.TcpContracts
         {
         }
 
-        public ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
             return new ValueTask();
         }
@@ -36,7 +37,7 @@ namespace MyNoSqlServer.TcpContracts
 
         }
 
-        public ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
             return new ValueTask();
         }
@@ -52,9 +53,9 @@ namespace MyNoSqlServer.TcpContracts
             stream.WritePascalString(Name);
         }
 
-        public async ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public async ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            Name = await dataReader.ReadPascalStringAsync();
+           Name = await dataReader.ReadPascalStringAsync(ct);
         }
     }
 
@@ -70,10 +71,12 @@ namespace MyNoSqlServer.TcpContracts
 
         }
 
-        public async ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public async ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            TableName = await dataReader.ReadPascalStringAsync();
-            Data = (await dataReader.ReadByteArrayAsync()).ToArray();
+
+            TableName = await dataReader.ReadPascalStringAsync(ct);
+            Data = (await dataReader.ReadByteArrayAsync(ct)).ToArray();
+
         }
 
     }
@@ -91,11 +94,13 @@ namespace MyNoSqlServer.TcpContracts
 
         }
 
-        public async ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public async ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            TableName = await dataReader.ReadPascalStringAsync();
-            PartitionKey = await dataReader.ReadPascalStringAsync();
-            Data = (await dataReader.ReadByteArrayAsync()).ToArray();
+
+            TableName = await dataReader.ReadPascalStringAsync(ct);
+            PartitionKey = await dataReader.ReadPascalStringAsync(ct);
+            Data = (await dataReader.ReadByteArrayAsync(ct)).ToArray();
+      
         }
 
     }
@@ -112,10 +117,12 @@ namespace MyNoSqlServer.TcpContracts
             stream.WriteByteArray(Data);
         }
 
-        public async ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public async ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            TableName = await dataReader.ReadPascalStringAsync();
-            Data = (await dataReader.ReadByteArrayAsync()).ToArray();
+
+            TableName = await dataReader.ReadPascalStringAsync(ct);
+            Data = (await dataReader.ReadByteArrayAsync(ct)).ToArray();
+
         }
 
     }
@@ -129,9 +136,12 @@ namespace MyNoSqlServer.TcpContracts
             stream.WritePascalString(TableName);
         }
 
-        public async ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public async ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            TableName = await dataReader.ReadPascalStringAsync();
+
+            TableName = await dataReader.ReadPascalStringAsync(ct);
+            
+
         }
     }
 
@@ -152,23 +162,23 @@ namespace MyNoSqlServer.TcpContracts
             }
         }
 
-        public async ValueTask DeserializeAsync(TcpDataReader dataReader)
+        public async ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            TableName = await dataReader.ReadPascalStringAsync();
 
-            var count = await dataReader.ReadIntAsync();
+            TableName = await dataReader.ReadPascalStringAsync(ct);
+
+            var count = await dataReader.ReadIntAsync(ct);
 
             var result = new List<(string partitionKey, string rowKey)>();
             for (var i = 0; i < count; i++)
             {
-                var partitionKey = await dataReader.ReadPascalStringAsync();
-                var rowKey = await dataReader.ReadPascalStringAsync();
+                var partitionKey = await dataReader.ReadPascalStringAsync(ct);
+                var rowKey = await dataReader.ReadPascalStringAsync(ct);
                 result.Add((partitionKey, rowKey));
             }
 
             RowsToDelete = result;
+            
         }
-
-        
     }
 }

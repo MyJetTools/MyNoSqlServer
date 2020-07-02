@@ -73,7 +73,13 @@ namespace MyNoSqlServer.Api
             new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
                 .RegisterSerializer(()=> new MyNoSqlTcpSerializer())
                 .SetService(()=>new ChangesTcpService())
-                .AddLog(Console.WriteLine);
+                .AddLog((c, d)=>
+                {
+                    if (c == null)
+                        Console.WriteLine($"DateTime: {DateTime.UtcNow}. "+d);
+                    else
+                        Console.WriteLine($"DateTime: {DateTime.UtcNow}. ConnectionId:{c.Id}. "+d);
+                });
 
         public static void Init(IServiceResolver sr)
         {

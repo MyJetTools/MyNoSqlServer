@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Threading;
 using MyTcpSockets;
 using MyTcpSockets.Extensions;
 
@@ -8,9 +8,9 @@ namespace MyNoSqlServer.TcpContracts
 {
     public class MyNoSqlTcpSerializer : ITcpSerializer<IMyNoSqlTcpContract>
     {
-        public async IAsyncEnumerable<IMyNoSqlTcpContract> DeserializeAsync(TcpDataReader dataReader)
+        public async IAsyncEnumerable<IMyNoSqlTcpContract> DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
         {
-            var result = await SerializerDeserializer.DeserializeAsync(dataReader);
+            var result = await SerializerDeserializer.DeserializeAsync(dataReader, ct);
             yield return result;
         }
 
