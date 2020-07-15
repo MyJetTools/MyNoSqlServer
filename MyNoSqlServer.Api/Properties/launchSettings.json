@@ -6,7 +6,8 @@
       "launchBrowser": true,
       "launchUrl": "api/values",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BackupAzureConnectString": "DefaultEndpointsProtocol=https;AccountName=qweqwe1111;AccountKey=qVPKDPaFjs/7QdJkJ+1tBB4gW67BEZ6aGJ/QpMH6fSgI8Nv7g9dhA2hiQ6tsAG78tv5gtqL6aT0/yj8ZpBm9Ow==;EndpointSuffix=core.windows.net"
       },
       "applicationUrl": "https://localhost:5001;http://localhost:5000"
     }

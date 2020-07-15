@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic;
 using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.DataReader;
 using MyNoSqlServer.DataWriter;
 
 namespace MyNoSqlServer.ConsoleTest
@@ -91,4 +93,80 @@ namespace MyNoSqlServer.ConsoleTest
         }
         
     }
+
+    
+    public class TestDataReader
+    {
+        public class ReplaceEntity : MyNoSqlDbEntity
+        {
+            public string Value { get; set; }
+        }
+
+
+        public static async Task TestReplaceAsync(string hostPort, string serverUrl)
+        {
+            var dataWriter = new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test");
+
+            var client = new MyNoSqlTcpClient(() => hostPort, "test-app");
+            client.Start();
+            
+
+            var dataReader = new MyNoSqlReadRepository<ReplaceEntity>(client, "test");
+            await Task.Delay(3000);
+
+
+            dataReader.SubscribeToChanges();
+
+            GetData(dataReader);
+            await UpdateData(dataWriter);
+            await Task.Delay(3000);
+            GetData(dataReader);
+            await Task.Delay(3000);
+
+            GetData(dataReader);
+            await Task.Delay(3000);
+
+            GetData(dataReader);
+            await Task.Delay(3000);
+
+            GetData(dataReader);
+            await Task.Delay(3000);
+
+            GetData(dataReader);
+            await Task.Delay(3000);
+
+            GetData(dataReader);
+            await Task.Delay(3000);
+
+            //client.Stop();
+        }
+
+        private static async Task UpdateData(MyNoSqlServerDataWriter<ReplaceEntity> dataWriter)
+        {
+            var replaceEntity = new ReplaceEntity
+            {
+                PartitionKey = "test",
+                RowKey = "test",
+                Value = DateTime.Now.ToString("HH:mm:ss")
+            };
+
+            await dataWriter.InsertOrReplaceAsync(replaceEntity);
+            Console.WriteLine("Update Complite");
+        }
+
+        private static void GetData(MyNoSqlReadRepository<ReplaceEntity> dataReader)
+        {
+            Console.WriteLine("--------");
+            var data = dataReader.Get();
+            var i = 0;
+            foreach (ReplaceEntity item in data)
+            {
+                Console.WriteLine($"{++i} :{item.Value}");
+            }
+
+            Console.WriteLine("========");
+        }
+    }
+
+
 }
