@@ -6,11 +6,13 @@ using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataReader
 {
-public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyNoSqlDbEntity
+    
+    public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T : IMyNoSqlDbEntity
     {
-        
-        private readonly SortedDictionary<string, SortedDictionary<string, T>> _cache = new SortedDictionary<string, SortedDictionary<string, T>>();
-        
+
+        private SortedDictionary<string, DataReaderPartition<T>> _cache =
+            new SortedDictionary<string, DataReaderPartition<T>>();
+
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
         public MyNoSqlReadRepository(IMyNoSqlSubscriber subscriber, string tableName)
@@ -18,64 +20,83 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
             subscriber.Subscribe<T>(tableName, Init, InitPartition, Update, Delete);
         }
 
+
         private void Init(IReadOnlyList<T> items)
         {
+
             _lock.EnterWriteLock();
             try
-            {  
-                _cache.Clear();
+            {
+                var oldOne = _cache;
+                _cache = new SortedDictionary<string, DataReaderPartition<T>>();
 
                 foreach (var item in items)
                 {
                     if (!_cache.ContainsKey(item.PartitionKey))
-                        _cache.Add(item.PartitionKey, new SortedDictionary<string, T>());
+                        _cache.Add(item.PartitionKey, new DataReaderPartition<T>());
 
-                    var dict = _cache[item.PartitionKey];
-
-                    if (dict.ContainsKey(item.RowKey))
-                        dict[item.RowKey] = item;
-                    else
-                        dict.Add(item.RowKey, item);
+                    var partition = _cache[item.PartitionKey];
+                    
+                    partition.Update(item);
                 }
+
+                var (updated, deleted) = oldOne.GetTotalDifference(_cache);
+                
+                NotifyChanged(updated);
+            
+                NotifyDeleted(deleted);
 
             }
             finally
             {
                 _lock.ExitWriteLock();
             }
+
+
         }
-        
+
         private void InitPartition(string partitionKey, IReadOnlyList<T> items)
         {
+
             _lock.EnterWriteLock();
             try
-            {  
-                if (_cache.ContainsKey(partitionKey))
-                    _cache[partitionKey].Clear();
+            {
+
+                var oldPartition = _cache.ContainsKey(partitionKey)
+                    ? _cache[partitionKey]
+                    : null;
+
+                _cache[partitionKey] = new DataReaderPartition<T>();
 
                 foreach (var item in items)
                 {
                     if (!_cache.ContainsKey(item.PartitionKey))
-                        _cache.Add(item.PartitionKey, new SortedDictionary<string, T>());
+                        _cache.Add(item.PartitionKey, new DataReaderPartition<T>());
 
-                    var dict = _cache[item.PartitionKey];
+                    var partition = _cache[item.PartitionKey];
 
-                    if (dict.ContainsKey(item.RowKey))
-                        dict[item.RowKey] = item;
-                    else
-                        dict.Add(item.RowKey, item);
-                    
+                    partition.Update(item);
                 }
-                
 
+                if (oldPartition == null)
+                {
+                    NotifyChanged(_cache[partitionKey].GetRows().ToList());
+                    return;
+                }
+
+                var (updated, deleted) = oldPartition.FindDifference(_cache[partitionKey]);
+
+                NotifyChanged(updated);
+
+                NotifyDeleted(deleted);
 
             }
             finally
             {
                 _lock.ExitWriteLock();
             }
-            
-            NotifyChanged(items);
+
+
         }
 
         private void Update(IReadOnlyList<T> items)
@@ -86,15 +107,14 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
                 foreach (var item in items)
                 {
                     if (!_cache.ContainsKey(item.PartitionKey))
-                        _cache.Add(item.PartitionKey, new SortedDictionary<string, T>());
+                        _cache.Add(item.PartitionKey, new DataReaderPartition<T>());
 
-                    var dict = _cache[item.PartitionKey];
-
-                    if (dict.ContainsKey(item.RowKey))
-                        dict[item.RowKey] = item;
-                    else
-                        dict.Add(item.RowKey, item);
+                    var partition = _cache[item.PartitionKey];
+                    
+                    partition.Update(item);
                 }
+                
+                NotifyChanged(items);
 
             }
             catch (Exception ex)
@@ -105,8 +125,7 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
             {
                 _lock.ExitWriteLock();
             }
-            
-            NotifyChanged(items);
+
         }
 
 
@@ -114,21 +133,27 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
         {
             _lock.EnterWriteLock();
             try
-            {  
+            {
+                List<T> deleted = null;
                 foreach (var (partitionKey, rowKey) in dataToDelete)
                 {
                     if (!_cache.ContainsKey(partitionKey))
                         continue;
 
-                    var dict = _cache[partitionKey];
+                    var partition = _cache[partitionKey];
 
-                    if (dict.ContainsKey(rowKey))
-                        dict.Remove(rowKey);
 
-                    if (dict.Count == 0)
+                    if (partition.TryDelete(rowKey, out var deletedItem))
+                    {
+                        deleted ??= new List<T>();
+                        deleted.Add(deletedItem); 
+                    }
+
+                    if (partition.Count == 0)
                         _cache.Remove(partitionKey);
                 }
 
+                NotifyDeleted(deleted);
             }
             finally
             {
@@ -146,20 +171,17 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
                 if (!_cache.ContainsKey(partitionKey))
                     return default(T);
 
-                var dict = _cache[partitionKey];
+                var partition = _cache[partitionKey];
 
-                if (dict.ContainsKey(rowKey))
-                    return dict[rowKey];
+                return partition.TryGetRow(rowKey);
 
             }
             finally
             {
                 _lock.ExitReadLock();
             }
-
-            return default(T);
         }
-        
+
         public IReadOnlyList<T> Get(string partitionKey)
         {
             _lock.EnterReadLock();
@@ -168,8 +190,7 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
                 if (!_cache.ContainsKey(partitionKey))
                     return Array.Empty<T>();
 
-                return _cache[partitionKey].Values.ToList();
-
+                return _cache[partitionKey].GetRows().ToList();
             }
             finally
             {
@@ -187,7 +208,7 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
                 if (!_cache.ContainsKey(partitionKey))
                     return Array.Empty<T>();
 
-                return _cache[partitionKey].Values.Skip(skip).Take(take).ToList();
+                return _cache[partitionKey].GetRows().Skip(skip).Take(take).ToList();
 
             }
             finally
@@ -204,7 +225,7 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
                 if (!_cache.ContainsKey(partitionKey))
                     return Array.Empty<T>();
 
-                return _cache[partitionKey].Values.Where(condition).Skip(skip).Take(take).ToList();
+                return _cache[partitionKey].GetRows().Where(condition).Skip(skip).Take(take).ToList();
 
             }
             finally
@@ -221,7 +242,7 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
                 if (!_cache.ContainsKey(partitionKey))
                     return Array.Empty<T>();
 
-                return _cache[partitionKey].Values.Where(condition).ToList();
+                return _cache[partitionKey].GetRows().Where(condition).ToList();
 
             }
             finally
@@ -235,18 +256,18 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
 
             var result = new List<T>();
             _lock.EnterReadLock();
-            
+
             try
             {
                 if (condition == null)
                 {
                     foreach (var rows in _cache.Values)
-                        result.AddRange(rows.Values);
+                        result.AddRange(rows.GetRows());
                 }
                 else
                 {
                     foreach (var rows in _cache.Values)
-                        result.AddRange(rows.Values.Where(condition));
+                        result.AddRange(rows.GetRows().Where(condition));
                 }
             }
             finally
@@ -295,7 +316,7 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
             _lock.EnterReadLock();
             try
             {
-                return _cache.ContainsKey(partitionKey) ? _cache[partitionKey].Values.Count(condition) : 0;
+                return _cache.ContainsKey(partitionKey) ? _cache[partitionKey].GetRows().Count(condition) : 0;
             }
             finally
             {
@@ -304,16 +325,43 @@ public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T:IMyN
         }
 
 
+
+
         private readonly List<Action<IReadOnlyList<T>>> _changedActions = new List<Action<IReadOnlyList<T>>>();
-        public void SubscribeToChanges(Action<IReadOnlyList<T>> changed)
+
+        public void SubscribeToUpdateEvents(Action<IReadOnlyList<T>> updateSubscriber, Action<IReadOnlyList<T>> deleteSubscriber)
         {
-            _changedActions.Add(changed);
+            _changedActions.Add(updateSubscriber);
+            _deletedActions.Add(deleteSubscriber);
         }
 
-        private void NotifyChanged(IReadOnlyList<T> item)
+        private void NotifyChanged(IReadOnlyList<T> items)
         {
+            if (items == null)
+                return;
+            
+            if (items.Count == 0)
+                return;
+            
             foreach (var changedAction in _changedActions)
-                changedAction(item);
+                changedAction(items);
+        }
+
+
+        private readonly List<Action<IReadOnlyList<T>>> _deletedActions = new List<Action<IReadOnlyList<T>>>();
+
+
+
+        private void NotifyDeleted(IReadOnlyList<T> items)
+        {
+            if (items == null)
+                return;
+            
+            if (items.Count == 0)
+                return;
+            
+            foreach (var changedAction in _deletedActions)
+                changedAction(items);
         }
     }
 

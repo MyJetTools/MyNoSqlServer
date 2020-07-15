@@ -18,7 +18,7 @@ namespace MyNoSqlServer.Abstractions
         int Count();
         int Count(string partitionKey);
         int Count(string partitionKey, Func<T, bool> condition);
-        void SubscribeToChanges(Action<IReadOnlyList<T>> changed);
+        void SubscribeToUpdateEvents(Action<IReadOnlyList<T>> updateSubscriber, Action<IReadOnlyList<T>> deleteSubscriber);
     }
     
 }

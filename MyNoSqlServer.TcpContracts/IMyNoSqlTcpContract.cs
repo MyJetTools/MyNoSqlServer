@@ -30,7 +30,6 @@ namespace MyNoSqlServer.TcpContracts
     public class PongContract : IMyNoSqlTcpContract
     {
         public static readonly PongContract Instance = new PongContract();
-        private static readonly byte[] Data = { (byte)CommandType.Pong };
 
         public void Serialize(Stream stream)
         {

@@ -5,7 +5,7 @@ using MyTcpSockets;
 
 namespace MyNoSqlServer.DataReader
 {
-  public class MyNoSqlServerClientTcpContext : ClientTcpContext<IMyNoSqlTcpContract>
+    public class MyNoSqlServerClientTcpContext : ClientTcpContext<IMyNoSqlTcpContract>
     {
         private readonly MyNoSqlSubscriber _subscriber;
         private readonly string _appName;
@@ -15,17 +15,17 @@ namespace MyNoSqlServer.DataReader
             _subscriber = subscriber;
             _appName = appName;
         }
-        
+
         protected override ValueTask OnConnectAsync()
         {
-            
+
             var greetingsContract = new GreetingContract
             {
                 Name = _appName
             };
-            
+
             SendPacket(greetingsContract);
-            
+
             foreach (var tableToSubscribe in _subscriber.GetTablesToSubscribe())
             {
                 var subscribePacket = new SubscribeContract
@@ -37,7 +37,7 @@ namespace MyNoSqlServer.DataReader
 
                 Console.WriteLine("Subscribed to MyNoSql table: " + tableToSubscribe);
             }
-            
+
             return new ValueTask();
         }
 
@@ -56,29 +56,29 @@ namespace MyNoSqlServer.DataReader
                     case InitTableContract initTableContract:
                         _subscriber.HandleInitTableEvent(initTableContract.TableName, initTableContract.Data);
                         break;
-                
+
                     case InitPartitionContract initPartitionContract:
-                        _subscriber.HandleInitPartitionEvent(initPartitionContract.TableName, initPartitionContract.PartitionKey,
+                        _subscriber.HandleInitPartitionEvent(initPartitionContract.TableName,
+                            initPartitionContract.PartitionKey,
                             initPartitionContract.Data);
                         break;
-                
+
                     case UpdateRowsContract updateRowsContract:
                         _subscriber.HandleUpdateRowEvent(updateRowsContract.TableName, updateRowsContract.Data);
                         break;
-                
+
                     case DeleteRowsContract deleteRowsContract:
                         _subscriber.HandleDeleteRowEvent(deleteRowsContract.TableName, deleteRowsContract.RowsToDelete);
                         break;
-                
+
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("There is a problem with Packet: "+data.GetType());
+                Console.WriteLine("There is a problem with Packet: " + data.GetType());
                 Console.WriteLine(e);
                 throw;
             }
-
 
             return new ValueTask();
         }

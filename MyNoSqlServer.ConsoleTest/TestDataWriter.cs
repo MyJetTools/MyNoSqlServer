@@ -115,7 +115,6 @@ namespace MyNoSqlServer.ConsoleTest
             await Task.Delay(3000);
 
 
-            dataReader.SubscribeToChanges();
 
             GetData(dataReader);
             await UpdateData(dataWriter);
