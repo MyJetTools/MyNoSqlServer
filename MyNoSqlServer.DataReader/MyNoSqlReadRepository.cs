@@ -6,7 +6,7 @@ using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataReader
 {
-    
+
     public class MyNoSqlReadRepository<T> : IMyNoSqlServerDataReader<T> where T : IMyNoSqlDbEntity
     {
 
@@ -36,14 +36,14 @@ namespace MyNoSqlServer.DataReader
                         _cache.Add(item.PartitionKey, new DataReaderPartition<T>());
 
                     var partition = _cache[item.PartitionKey];
-                    
+
                     partition.Update(item);
                 }
 
                 var (updated, deleted) = oldOne.GetTotalDifference(_cache);
-                
+
                 NotifyChanged(updated);
-            
+
                 NotifyDeleted(deleted);
 
             }
@@ -110,10 +110,10 @@ namespace MyNoSqlServer.DataReader
                         _cache.Add(item.PartitionKey, new DataReaderPartition<T>());
 
                     var partition = _cache[item.PartitionKey];
-                    
+
                     partition.Update(item);
                 }
-                
+
                 NotifyChanged(items);
 
             }
@@ -146,7 +146,7 @@ namespace MyNoSqlServer.DataReader
                     if (partition.TryDelete(rowKey, out var deletedItem))
                     {
                         deleted ??= new List<T>();
-                        deleted.Add(deletedItem); 
+                        deleted.Add(deletedItem);
                     }
 
                     if (partition.Count == 0)
@@ -278,23 +278,13 @@ namespace MyNoSqlServer.DataReader
             return result;
         }
 
+        private int _count;
+        
         public int Count()
         {
-            var result = 0;
-            _lock.EnterReadLock();
-
-            try
-            {
-                foreach (var rows in _cache.Values)
-                    result += rows.Count;
-            }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
-
-            return result;
+            return _count;
         }
+        
 
         public int Count(string partitionKey)
         {
@@ -310,7 +300,7 @@ namespace MyNoSqlServer.DataReader
             }
 
         }
-
+        
         public int Count(string partitionKey, Func<T, bool> condition)
         {
             _lock.EnterReadLock();
@@ -325,26 +315,40 @@ namespace MyNoSqlServer.DataReader
         }
 
 
-
-
         private readonly List<Action<IReadOnlyList<T>>> _changedActions = new List<Action<IReadOnlyList<T>>>();
 
-        public void SubscribeToUpdateEvents(Action<IReadOnlyList<T>> updateSubscriber, Action<IReadOnlyList<T>> deleteSubscriber)
+        public IMyNoSqlServerDataReader<T> SubscribeToUpdateEvents(Action<IReadOnlyList<T>> updateSubscriber, Action<IReadOnlyList<T>> deleteSubscriber)
         {
             _changedActions.Add(updateSubscriber);
             _deletedActions.Add(deleteSubscriber);
+            return this;
         }
 
+
+        private void UpdateCount()
+        {
+            _count = 0;
+            
+            foreach (var rows in _cache.Values)
+                _count += rows.Count;
+        }
+        
         private void NotifyChanged(IReadOnlyList<T> items)
         {
+            UpdateCount();
+            
             if (items == null)
                 return;
-            
+
             if (items.Count == 0)
                 return;
+
             
+
             foreach (var changedAction in _changedActions)
                 changedAction(items);
+            
+
         }
 
 
@@ -354,14 +358,26 @@ namespace MyNoSqlServer.DataReader
 
         private void NotifyDeleted(IReadOnlyList<T> items)
         {
+            UpdateCount();
+            
             if (items == null)
                 return;
-            
+
             if (items.Count == 0)
                 return;
-            
+
             foreach (var changedAction in _deletedActions)
                 changedAction(items);
+        }
+    }
+
+
+    public static class MyNoSqlReadRepositoryExtensions
+    {
+        public static MyNoSqlReadRepository<T> SubscribeToTable<T>(
+            this IMyNoSqlSubscriber subscriber, string tableName) where T : IMyNoSqlDbEntity
+        {
+            return new MyNoSqlReadRepository<T>(subscriber, tableName);
         }
     }
 

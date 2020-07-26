@@ -7,7 +7,6 @@ using MyDependencies;
 using MyNoSqlServer.Api.Hubs;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
-using SimpleTrading.ServiceStatusReporterConnector;
 
 
 namespace MyNoSqlServer.Api
