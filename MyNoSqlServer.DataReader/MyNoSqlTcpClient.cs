@@ -12,11 +12,27 @@ namespace MyNoSqlServer.DataReader
         public MyNoSqlTcpClient(Func<string> getHostPort, string appName)
         {
             _tcpClient = new MyClientTcpSocket<IMyNoSqlTcpContract>(getHostPort, TimeSpan.FromSeconds(3));
-  
+
             _tcpClient
                 .RegisterTcpContextFactory(() => new MyNoSqlServerClientTcpContext(this, appName))
-                .AddLog((c, m)=> Console.WriteLine("MyNoSql: "+m))
+                .AddLog((c, m) => Console.WriteLine("MyNoSql: " + m))
                 .RegisterTcpSerializerFactory(() => new MyNoSqlTcpSerializer());
+        }
+
+
+        public bool Connected => _tcpClient.Connected;
+
+        public long ConnectionId
+        {
+            get
+            {
+                var currentContext = _tcpClient.CurrentTcpContext;
+
+                if (currentContext == null)
+                    return -1;
+
+                return currentContext.Id;
+            }
         }
 
         public void Start()
