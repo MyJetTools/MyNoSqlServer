@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Json;
@@ -10,7 +9,7 @@ namespace MyNoSqlServer.Domains.Db.Rows
 {
     public class DbRow
     {
-        private DbRow(string partitionKey, string rowKey, string timestamp, byte[] data)
+        private DbRow(string partitionKey, string rowKey, string timestamp, DateTime? expires, byte[] data)
         {
             if (string.IsNullOrEmpty(partitionKey))
                 throw new Exception("Partition key can not be empty");
@@ -22,6 +21,7 @@ namespace MyNoSqlServer.Domains.Db.Rows
             RowKey = rowKey;
             TimeStamp = timestamp;
             Data = data;
+            Expires = expires;
         }
         
         public string PartitionKey { get; }
@@ -29,20 +29,22 @@ namespace MyNoSqlServer.Domains.Db.Rows
         public string RowKey { get; }
         public string TimeStamp { get; private set; }
         public byte[] Data { get; private set; }
+        
+        public DateTime? Expires { get; private set; }
 
 
         
 
         public static DbRow RestoreSnapshot(IMyNoSqlDbEntity techData, IMyMemory data)
         {
-            return new DbRow(techData.PartitionKey, techData.RowKey, techData.TimeStamp, data.AsArray());
+            return new DbRow(techData.PartitionKey, techData.RowKey, techData.TimeStamp, techData.Expires, data.AsArray());
         }
         
         public static DbRow CreateNew(DynamicEntity entity, DateTime now)
         {
             var timeStamp = now.ToTimeStampString();
             entity.UpdateTimeStamp(timeStamp);
-            return new DbRow(entity.PartitionKey, entity.RowKey, timeStamp, entity.AsDbRowJson());
+            return new DbRow(entity.PartitionKey, entity.RowKey, timeStamp, entity.Expires, entity.AsDbRowJson());
         }
         
         public void Replace(DynamicEntity entity, DateTime now)

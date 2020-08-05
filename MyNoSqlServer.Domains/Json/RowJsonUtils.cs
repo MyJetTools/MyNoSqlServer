@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
-using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
 
 namespace MyNoSqlServer.Domains.Json
@@ -12,7 +10,7 @@ namespace MyNoSqlServer.Domains.Json
         public const string PartitionKeyFieldName = "PartitionKey";
         public const string RowKeyFieldName = "RowKey";
         public const string TimeStampFieldName = "TimeStamp";
-
+        public const string ExpiresFieldName = "Expires";
         public static string ToTimeStampString(this DateTime timeStamp)
         {
             return timeStamp.ToString("O");

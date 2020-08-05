@@ -21,6 +21,21 @@ namespace MyNoSqlServer.Domains.Json
             
             if (Raw.ContainsKey(RowJsonUtils.TimeStampFieldName))
                 TimeStamp = Raw[RowJsonUtils.TimeStampFieldName].Value.AsJsonString();
+
+            if (Raw.ContainsKey(RowJsonUtils.ExpiresFieldName))
+            {
+                var expiresAsString = Raw[RowJsonUtils.ExpiresFieldName].Value.AsJsonString();
+                if (expiresAsString != null)
+                    try
+                    {
+                        Expires = DateTime.Parse(expiresAsString);
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine($"Can not parse expires field: {expiresAsString}");
+                    }
+            }
+
         }
 
         public DynamicEntity UpdateTimeStamp(string timeStamp)

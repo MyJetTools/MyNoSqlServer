@@ -16,12 +16,30 @@ namespace MyNoSqlServer.DataReader
             _appName = appName;
         }
 
+        
+        private static readonly Lazy<string> GetReaderVersion = new Lazy<string>(() =>
+        {
+            try
+            {
+                return typeof(MyNoSqlServerClientTcpContext).Assembly.GetName().Version.ToString();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        });
+        
+        
         protected override ValueTask OnConnectAsync()
         {
 
+            var readerVersion = GetReaderVersion.Value;
+
+            readerVersion = readerVersion == null ? "" : ";ReaderVersion:" + readerVersion;
+
             var greetingsContract = new GreetingContract
             {
-                Name = _appName
+                Name = _appName + readerVersion
             };
 
             SendPacket(greetingsContract);
