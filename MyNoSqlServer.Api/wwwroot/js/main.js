@@ -9,11 +9,20 @@ var main = /** @class */ (function () {
         }
         return result;
     };
+    main.renderName = function (name) {
+        var lines = name.split(';');
+        var result = "";
+        for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
+            var line = lines_1[_i];
+            result += "<div>" + line + "</div>";
+        }
+        return result;
+    };
     main.renderHtml = function (data) {
         var html = "<table class=\"table table-striped\"><tr><th>Id</th><th>Client</th><th>Ip</th><th>tables</th><th>Connected</th><th>Last Incoming</th></tr>";
         for (var _i = 0, data_2 = data; _i < data_2.length; _i++) {
             var itm = data_2[_i];
-            html += '<tr><td>' + itm.id + '</td><td>' + itm.name + '</td><td>' + itm.ip + '</td><td>' + this.renderTables(itm.tables) + '</td>' +
+            html += '<tr><td>' + itm.id + '</td><td>' + this.renderName(itm.name) + '</td><td>' + itm.ip + '</td><td>' + this.renderTables(itm.tables) + '</td>' +
                 '<td>' + itm.connectedTime + '</td><td>' + itm.lastIncomingTime + '</td></tr>';
         }
         html += '</table>';
