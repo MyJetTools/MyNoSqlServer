@@ -42,8 +42,7 @@ namespace MyNoSqlServer.Api.Controllers
                     connectedTime = itm.SocketStatistic.ConnectionTime.ToString("s"),
                     lastIncomingTime = itm.SocketStatistic.LastReceiveTime.ToString("s"),
                     id = itm.Id
-                });
-            
+                }).OrderBy(iym => iym.id);
             
             return Json(result);
         }
