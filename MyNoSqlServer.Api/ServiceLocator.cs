@@ -96,7 +96,7 @@ namespace MyNoSqlServer.Api
 
         public static void Start()
         {
-            SnapshotSaverEngine.LoadSnapshotsAsync();
+            SnapshotSaverEngine.LoadSnapshotsAsync().Wait();
             SnapshotSaverEngine.Start();
             TcpServer.Start();
         }
