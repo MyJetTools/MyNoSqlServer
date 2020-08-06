@@ -122,9 +122,11 @@ namespace MyNoSqlServer.Api
                 case PingContract _:
                     SendPacket(PongContract.Instance);
                     if (ContextName.Contains("test"))
+                    {
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine(DateTime.UtcNow.ToString("s")+" Send pong to the "+ContextName);
                         Console.ResetColor();
+                    }
                     break;
                 
                 case GreetingContract greetingContract:

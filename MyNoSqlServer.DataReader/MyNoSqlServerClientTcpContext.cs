@@ -71,6 +71,13 @@ namespace MyNoSqlServer.DataReader
             {
                 switch (data)
                 {
+                    case PongContract _:
+                        Console.WriteLine("PONG");
+                        Console.WriteLine(SocketStatistic.LastReceiveTime);
+                        Console.WriteLine(DateTime.UtcNow);
+                        break;
+
+
                     case InitTableContract initTableContract:
                         _subscriber.HandleInitTableEvent(initTableContract.TableName, initTableContract.Data);
                         break;
