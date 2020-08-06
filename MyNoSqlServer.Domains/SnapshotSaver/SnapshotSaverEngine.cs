@@ -26,7 +26,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
         
         
-        private async Task LoadSnapshotsAsync()
+        public async Task LoadSnapshotsAsync()
         {
 
             await foreach (var snapshot in _snapshotStorage.LoadSnapshotsAsync())
@@ -51,7 +51,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
 
         public async Task TheLoop()
         {
-            await LoadSnapshotsAsync();
+
             
             while (!_appIsShuttingDown || _snapshotSaverScheduler.TasksToSyncCount()>0)
                 try
