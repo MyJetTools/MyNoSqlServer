@@ -121,6 +121,8 @@ namespace MyNoSqlServer.Api
             {
                 case PingContract _:
                     SendPacket(PongContract.Instance);
+                    if (ContextName.Contains("test"))
+                        Console.WriteLine("Send pong to the "+ContextName);
                     break;
                 
                 case GreetingContract greetingContract:
