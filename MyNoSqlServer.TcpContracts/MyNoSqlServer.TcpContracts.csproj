@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="MyTcpSockets" Version="1.3.12-rc8" />
+      <PackageReference Include="MyTcpSockets" Version="1.3.12" />
     </ItemGroup>
 
 </Project>
