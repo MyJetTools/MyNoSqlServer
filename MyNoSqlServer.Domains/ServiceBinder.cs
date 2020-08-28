@@ -1,4 +1,5 @@
 using MyDependencies;
+using MyNoSqlServer.Domains.ChangesBroadcasting;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
@@ -20,6 +21,8 @@ namespace MyNoSqlServer.Domains
             sr.Register<GlobalVariables>();
             
             sr.Register<DbOperations>();
+            
+            sr.Register<ChangesSubscribers>();
         }
     }
 }

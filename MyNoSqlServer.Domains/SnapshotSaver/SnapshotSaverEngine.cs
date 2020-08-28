@@ -11,17 +11,15 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     {
         private readonly DbInstance _dbInstance;
         private readonly ISnapshotStorage _snapshotStorage;
-        private readonly IReplicaSynchronizationService _replicaSynchronizationService;
+  
         private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
 
 
         public SnapshotSaverEngine(DbInstance dbInstance, ISnapshotStorage snapshotStorage, 
-            IReplicaSynchronizationService replicaSynchronizationService, 
             ISnapshotSaverScheduler snapshotSaverScheduler)
         {
             _dbInstance = dbInstance;
             _snapshotStorage = snapshotStorage;
-            _replicaSynchronizationService = replicaSynchronizationService;
             _snapshotSaverScheduler = snapshotSaverScheduler;
         }
         
@@ -34,10 +32,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                 try
                 {
                     var table = _dbInstance.CreateTableIfNotExists(snapshot.TableName);
-                    var partition = table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
-
-                    if (partition != null)
-                        _replicaSynchronizationService.PublishInitPartition(table, partition);
+                    table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
                 }
                 catch (Exception e)
                 {
@@ -46,7 +41,6 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                         e.Message);
                 } 
             }
-            
         }
 
         public async Task TheLoop()

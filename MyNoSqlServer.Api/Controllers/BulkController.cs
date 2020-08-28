@@ -41,7 +41,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var (dbPartitions, dbRows) = table.BulkInsertOrReplace(entitiesToInsert);
 
-            ServiceLocator.DataSynchronizer.SynchronizeUpdate(table, dbRows);
+            ServiceLocator.ChangesSubscribers.UpdateRows(table, dbRows);
             
             foreach (var dbPartition in dbPartitions)
                 ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition, theSyncPeriod);
@@ -58,7 +58,7 @@ namespace MyNoSqlServer.Api.Controllers
             foreach (var dbPartition in partitionsToSynchronize)
             {
                 ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition, syncPeriod);
-                ServiceLocator.DataSynchronizer?.PublishInitPartition(table, dbPartition); 
+                ServiceLocator.ChangesSubscribers.InitPartition(table, dbPartition); 
             }
         }
         
@@ -69,7 +69,7 @@ namespace MyNoSqlServer.Api.Controllers
             table.CleanAndBulkInsert(entitiesToInsert);
             
             ServiceLocator.SnapshotSaverScheduler.SynchronizeTable(table, syncPeriod);
-            ServiceLocator.DataSynchronizer?.PublishInitTable(table);
+            ServiceLocator.ChangesSubscribers.InitTable(table);
         }
 
 

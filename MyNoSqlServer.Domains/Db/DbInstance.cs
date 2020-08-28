@@ -17,11 +17,13 @@ namespace MyNoSqlServer.Domains.Db
         private DbTable CreateTableAndUpdateDictionary(string tableName)
         {
             var tableInstance = DbTable.CreateByRequest(tableName);
-            
-            var tables = new Dictionary<string, DbTable>(_tables);
 
-            tables.Add(tableInstance.Name, tableInstance);
-            
+            var tables = new Dictionary<string, DbTable>(_tables)
+            {
+                {tableInstance.Name, tableInstance}
+            };
+
+
             _tables = tables;
 
             _tableNames = _tables.Keys.ToList();

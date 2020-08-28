@@ -2,7 +2,7 @@ using System;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
 
-namespace MyNoSqlServer.DataReader
+namespace MyNoSqlServer.DataReader.TcpClient
 {
     public class MyNoSqlTcpClient : MyNoSqlSubscriber
     {

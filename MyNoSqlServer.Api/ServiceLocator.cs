@@ -3,8 +3,9 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using MyDependencies;
-using MyNoSqlServer.Api.Services;
+using MyNoSqlServer.Api.Tcp;
 using MyNoSqlServer.Domains;
+using MyNoSqlServer.Domains.ChangesBroadcasting;
 using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.SnapshotSaver;
@@ -61,7 +62,7 @@ namespace MyNoSqlServer.Api
 
         public static ISnapshotStorage SnapshotStorage { get; private set; }
         
-        public static IReplicaSynchronizationService DataSynchronizer { get; private set; }
+        public static ChangesSubscribers ChangesSubscribers { get; private set; }
 
         public static SnapshotSaverEngine SnapshotSaverEngine { get; private set; }
         
@@ -86,7 +87,7 @@ namespace MyNoSqlServer.Api
             DbInstance = sr.GetService<DbInstance>();
             SnapshotStorage = sr.GetService<ISnapshotStorage>();
             
-            DataSynchronizer = new ChangesPublisherToSocket();
+            ChangesSubscribers = sr.GetService<ChangesSubscribers>();
             SnapshotSaverEngine = sr.GetService<SnapshotSaverEngine>();
 
             GlobalVariables = sr.GetService<GlobalVariables>();

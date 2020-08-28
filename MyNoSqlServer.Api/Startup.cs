@@ -4,9 +4,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MyDependencies;
-using MyNoSqlServer.Api.Hubs;
+using MyNoSqlServer.Api.Grpc;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
+using ProtoBuf.Grpc.Server;
 
 
 namespace MyNoSqlServer.Api
@@ -32,14 +33,14 @@ namespace MyNoSqlServer.Api
 
             services.AddSignalR();
 
+            services.AddCodeFirstGrpc();
+
             services.AddSwaggerDocument(o => { o.Title = "MyNoSqlServer"; });
 
             var settings = SettingsLoader.LoadSettings();
             
             IoC.BindDomainsServices();
             IoC.BindAzureStorage(settings.BackupAzureConnectString);
-            IoC.BindApiServices();
-            
             
             ServiceLocator.Init(IoC);
 
@@ -81,7 +82,7 @@ namespace MyNoSqlServer.Api
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapHub<ChangesHub>("/changes");
+                endpoints.MapGrpcService<MyNoSqlServerReaderGrpcConnection>();
             });
             
             ServiceLocator.Start();

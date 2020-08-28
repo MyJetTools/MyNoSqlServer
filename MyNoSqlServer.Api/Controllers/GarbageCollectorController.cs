@@ -49,7 +49,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             if (dbPartition != null)
             {
-                ServiceLocator.DataSynchronizer.SynchronizeDelete(table, dbRows);
+                ServiceLocator.ChangesSubscribers.DeleteRows(table, dbRows);
 
                 return await this.ResponseOk()
                     .SynchronizePartitionAsync(table, dbPartition, syncPeriod.ParseSynchronizationPeriodContract());

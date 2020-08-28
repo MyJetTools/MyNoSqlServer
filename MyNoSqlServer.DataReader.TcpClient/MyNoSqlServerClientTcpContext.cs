@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
 
-namespace MyNoSqlServer.DataReader
+namespace MyNoSqlServer.DataReader.TcpClient
 {
     public class MyNoSqlServerClientTcpContext : ClientTcpContext<IMyNoSqlTcpContract>
     {
@@ -93,7 +95,7 @@ namespace MyNoSqlServer.DataReader
                         break;
 
                     case DeleteRowsContract deleteRowsContract:
-                        _subscriber.HandleDeleteRowEvent(deleteRowsContract.TableName, deleteRowsContract.RowsToDelete);
+                        _subscriber.HandleDeleteRowsEvent(deleteRowsContract.TableName, ConvertDelete(deleteRowsContract.RowsToDelete));
                         break;
 
                 }
@@ -106,6 +108,15 @@ namespace MyNoSqlServer.DataReader
             }
 
             return new ValueTask();
+        }
+
+        private static IEnumerable<(string partitionKey, string[] rowKeys)> ConvertDelete(IReadOnlyList<(string PartitionKey, string RowKey)> itemsToDelete)
+        {
+            var grouped = itemsToDelete.GroupBy(itm => itm.PartitionKey);
+
+            foreach (var group in grouped)
+                yield return (group.Key, group.Select(itm => itm.RowKey).ToArray());
+  
         }
 
         protected override IMyNoSqlTcpContract GetPingPacket()

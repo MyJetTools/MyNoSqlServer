@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataReader
 {
@@ -22,8 +21,8 @@ namespace MyNoSqlServer.DataReader
         private readonly Dictionary<string, Action<IEnumerable<object>>> _updateCallbacks
             = new Dictionary<string, Action<IEnumerable<object>>>();
 
-        private readonly Dictionary<string, Action<IEnumerable<(string partitionKey, string rowKey)>>> _deleteCallbacks
-            = new Dictionary<string, Action<IEnumerable<(string partitionKey, string rowKey)>>>();
+        private readonly Dictionary<string, Action<IEnumerable<(string partitionKey, string[] rowKeys)>>> _deleteCallbacks
+            = new Dictionary<string, Action<IEnumerable<(string partitionKey, string[] rowKeys)>>>();
 
 
         public IEnumerable<string> GetTablesToSubscribe()
@@ -31,7 +30,7 @@ namespace MyNoSqlServer.DataReader
             return Deserializers.Keys;
         }
         public void Subscribe<T>(string tableName, Action<IReadOnlyList<T>> initAction, Action<string, IReadOnlyList<T>> initPartitionAction, Action<IReadOnlyList<T>> updateAction,
-            Action<IEnumerable<(string partitionKey, string rowKey)>> deleteActions)
+            Action<IEnumerable<(string partitionKey, string[] rowKeys)>> deleteActions)
         {
             if (tableName == SystemAction)
                 throw new Exception("Table can not have name: " + SystemAction);
@@ -70,7 +69,7 @@ namespace MyNoSqlServer.DataReader
 
         }
 
-        public void HandleDeleteRowEvent(string tableName, IEnumerable<(string partitionKey, string rowKey)> items)
+        public void HandleDeleteRowsEvent(string tableName, IEnumerable<(string partitionKey, string[] rowKeys)> items)
         {
             _deleteCallbacks[tableName](items);
         }

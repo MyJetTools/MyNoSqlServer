@@ -13,8 +13,8 @@ namespace MyNoSqlServer.Api.Controllers
         {
             Name = ServiceLocator.AppName,
             Version = ServiceLocator.AppVersion,
-            StartedAt = ServiceLocator.StartedAt,
-            Host = ServiceLocator.Host,
+            ServiceLocator.StartedAt,
+            ServiceLocator.Host,
             Environment = ServiceLocator.AspNetEnvironment
         });
 
@@ -30,18 +30,17 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("/api/status")]
         public IActionResult Status()
         {
-            var connections = ServiceLocator.TcpServer.GetConnections();
+            var tableNames = ServiceLocator.ChangesSubscribers.GetAll();
 
-
-            var result = connections.Cast<ChangesTcpService>().Select(itm =>
+            var result = tableNames.Select(itm =>
                 new
                 {
-                    name = itm.ContextName,
-                    ip = itm.TcpClient.Client.RemoteEndPoint.ToString(),
-                    tables = itm.Tables,
-                    connectedTime = itm.SocketStatistic.ConnectionTime.ToString("s"),
-                    lastIncomingTime = itm.SocketStatistic.LastReceiveTime.ToString("s"),
-                    id = itm.Id
+                    id = itm.Id,
+                    name = itm.Name,
+                    ip = itm.Ip,
+                    tables = itm,
+                    connectedTime = itm.Created.ToString("s"),
+                    lastIncomingTime = itm.Created.ToString("s"),
                 }).OrderBy(iym => iym.id);
             
             return Json(result);

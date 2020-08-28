@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MyDependencies;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains;
+using MyNoSqlServer.Domains.ChangesBroadcasting;
 using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
@@ -20,8 +21,6 @@ namespace MyNoSqlServer.Tests
             result.BindDomainsServices();
             result.Register<ISnapshotStorage>(new SnapshotStorageMock());
             
-            result.Register<IReplicaSynchronizationService>(new ReplicaSynchronizationServiceMock());
-
             return result;
         }
 
@@ -59,27 +58,6 @@ namespace MyNoSqlServer.Tests
         public IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync()
         {
             throw new System.NotImplementedException();
-        }
-    }
-
-
-    public class ReplicaSynchronizationServiceMock : IReplicaSynchronizationService
-    {
-        public void PublishInitTable(DbTable dbTable)
-        {
-            
-        }
-
-        public void PublishInitPartition(DbTable dbTable, DbPartition partition)
-        {
-        }
-
-        public void SynchronizeUpdate(DbTable dbTable, IReadOnlyList<DbRow> dbRow)
-        {
-        }
-
-        public void SynchronizeDelete(DbTable dbTable, IReadOnlyList<DbRow> dbRows)
-        {
         }
     }
 

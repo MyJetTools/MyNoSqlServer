@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
-using MyNoSqlServer.Domains.DataSynchronization;
+using MyNoSqlServer.Domains.ChangesBroadcasting;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Persistence;
@@ -11,13 +11,13 @@ namespace MyNoSqlServer.Domains
 {
     public class DbOperations
     {
-        private readonly IReplicaSynchronizationService _dataSynchronizer;
         private readonly PersistenceHandler _persistenceHandler;
+        private readonly ChangesSubscribers _changesSubscribers;
 
-        public DbOperations(IReplicaSynchronizationService dataSynchronizer, PersistenceHandler persistenceHandler)
+        public DbOperations(PersistenceHandler persistenceHandler, ChangesSubscribers changesSubscribers)
         {
-            _dataSynchronizer = dataSynchronizer;
             _persistenceHandler = persistenceHandler;
+            _changesSubscribers = changesSubscribers;
         }
 
 
@@ -42,7 +42,7 @@ namespace MyNoSqlServer.Domains
             if (result != OperationResult.Ok)
                 return new ValueTask<OperationResult>(result);
             
-            _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
+            _changesSubscribers.UpdateRow(table, dbRow);
 
             return _persistenceHandler.SynchronizePartitionAsync(table, dbPartition, synchronizationPeriod);
         }
@@ -62,7 +62,7 @@ namespace MyNoSqlServer.Domains
             
             var (dbPartition, dbRow) = table.InsertOrReplace(entity, now);
             
-            _dataSynchronizer.SynchronizeUpdate(table, new[]{dbRow});
+            _changesSubscribers.UpdateRow(table, dbRow);
 
             return _persistenceHandler.SynchronizePartitionAsync(table, dbPartition, synchronizationPeriod);
             
@@ -80,7 +80,7 @@ namespace MyNoSqlServer.Domains
             if (result != OperationResult.Ok)
                 return new ValueTask<OperationResult>(result);
             
-            _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
+            _changesSubscribers.UpdateRow(table, dbRow);
 
             return _persistenceHandler.SynchronizePartitionAsync(table, partition, synchronizationPeriod);
         }
@@ -95,7 +95,7 @@ namespace MyNoSqlServer.Domains
             if (result != OperationResult.Ok)
                 return new ValueTask<OperationResult>(result);
             
-            _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
+            _changesSubscribers.UpdateRow(table, dbRow);
 
             return _persistenceHandler.SynchronizePartitionAsync(table, partition, synchronizationPeriod);
 
@@ -109,7 +109,7 @@ namespace MyNoSqlServer.Domains
             if (dbPartition == null) 
                 return new ValueTask<OperationResult>(OperationResult.RowNotFound);
          
-            _dataSynchronizer.SynchronizeDelete(table, new[]{dbRow});
+            _changesSubscribers.UpdateRow(table, dbRow);
             
             return _persistenceHandler.SynchronizeDeletePartitionAsync(table, dbPartition, synchronizationPeriod);
         }
@@ -122,8 +122,7 @@ namespace MyNoSqlServer.Domains
 
             if (dbPartition != null)
             {
-                _dataSynchronizer.SynchronizeDelete(table, dbRows);
-                
+                _changesSubscribers.DeleteRows(table, dbRows);
                 return _persistenceHandler.SynchronizePartitionAsync(table, dbPartition, synchronizationPeriod);
             }
             

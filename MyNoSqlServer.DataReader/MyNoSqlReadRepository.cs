@@ -129,13 +129,13 @@ namespace MyNoSqlServer.DataReader
         }
 
 
-        private void Delete(IEnumerable<(string partitionKey, string rowKey)> dataToDelete)
+        private void Delete(IEnumerable<(string partitionKey, string[] rowKeys)> dataToDelete)
         {
             _lock.EnterWriteLock();
             try
             {
                 List<T> deleted = null;
-                foreach (var (partitionKey, rowKey) in dataToDelete)
+                foreach (var (partitionKey, rowKeys) in dataToDelete)
                 {
                     if (!_cache.ContainsKey(partitionKey))
                         continue;
@@ -143,10 +143,14 @@ namespace MyNoSqlServer.DataReader
                     var partition = _cache[partitionKey];
 
 
-                    if (partition.TryDelete(rowKey, out var deletedItem))
+
+                    foreach (var rowKey in rowKeys)
                     {
-                        deleted ??= new List<T>();
-                        deleted.Add(deletedItem);
+                        if (partition.TryDelete(rowKey, out var deletedItem))
+                        {
+                            deleted ??= new List<T>();
+                            deleted.Add(deletedItem);
+                        } 
                     }
 
                     if (partition.Count == 0)

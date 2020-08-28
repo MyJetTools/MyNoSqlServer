@@ -64,7 +64,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             table.Clean();
 
-            ServiceLocator.DataSynchronizer.PublishInitTable(table);
+            ServiceLocator.ChangesSubscribers.InitTable(table);
 
             return await Ok().SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
 
