@@ -1,4 +1,5 @@
 ﻿using System;
+using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,8 @@ namespace MyNoSqlServer.Api
                                 logging.ClearProviders();
                         });
 
-                });
+                })
+                .UseServiceProviderFactory(new AutofacServiceProviderFactory());
         
     }
 }

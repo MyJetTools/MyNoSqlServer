@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,8 @@ namespace MyNoSqlServer.Api
         
         public static MyIoc IoC = new MyIoc();
 
+        public SettingsModel _settings;
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -34,15 +37,39 @@ namespace MyNoSqlServer.Api
 
             services.AddSwaggerDocument(o => { o.Title = "MyNoSqlServer"; });
 
-            var settings = SettingsLoader.LoadSettings();
+            _settings = SettingsLoader.LoadSettings();
             
             IoC.BindDomainsServices();
-            IoC.BindAzureStorage(settings.BackupAzureConnectString);
+            IoC.BindAzureStorage(_settings.BackupAzureConnectString);
             IoC.BindApiServices();
             
             
             ServiceLocator.Init(IoC);
 
+        }
+
+        public void ConfigureContainer(ContainerBuilder builder)
+        {
+
+            /* FOR EXAMPLE
+             
+            register instance 
+             
+            builder
+                .RegisterInstance(new AzureBlobSnapshotStorage(_settings.BackupAzureConnectString))
+                .As<ISnapshotStorage>()
+                .SingleInstance();
+
+            register class
+            link to class you can claim in constructor
+            if class has dependency then all dependencies resolve from container
+
+            builder
+                .RegisterType<AzureBlobSnapshotStorage>()
+                .As<ISnapshotStorage>()
+                .SingleInstance();
+
+            */
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -96,3 +123,5 @@ namespace MyNoSqlServer.Api
         }
     }
 }
+ 
+ 
