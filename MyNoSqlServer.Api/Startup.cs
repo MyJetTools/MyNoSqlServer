@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MyDependencies;
 using MyNoSqlServer.Api.Hubs;
+using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
 
@@ -50,26 +51,7 @@ namespace MyNoSqlServer.Api
 
         public void ConfigureContainer(ContainerBuilder builder)
         {
-
-            /* FOR EXAMPLE
-             
-            register instance 
-             
-            builder
-                .RegisterInstance(new AzureBlobSnapshotStorage(_settings.BackupAzureConnectString))
-                .As<ISnapshotStorage>()
-                .SingleInstance();
-
-            register class
-            link to class you can claim in constructor
-            if class has dependency then all dependencies resolve from container
-
-            builder
-                .RegisterType<AzureBlobSnapshotStorage>()
-                .As<ISnapshotStorage>()
-                .SingleInstance();
-
-            */
+            builder.RegisterModule(new ServiceModule(_settings.BackupAzureConnectString));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
