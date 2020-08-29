@@ -14,12 +14,12 @@ jobs:
         with:
           dotnet-version: 3.1.100
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release  /p:AssemblyVersion=${GITHUB_REF#refs/tags/Server-}
       - name: Test
-        run: dotnet test --configuration Release
+        run: dotnet test --no-build --configuration Release
 
       - name: Publish Server
-        run: dotnet publish --no-build ./MyNoSqlServer.Api/MyNoSqlServer.Api.csproj --output ./publish-api --configuration Release /p:AssemblyVersion=${GITHUB_REF#refs/tags/Server-}
+        run: dotnet publish --no-build ./MyNoSqlServer.Api/MyNoSqlServer.Api.csproj --output ./publish-api --configuration Release
 
       - name: ls
         run: ls ./publish-api
