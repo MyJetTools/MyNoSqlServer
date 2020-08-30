@@ -58,7 +58,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                    connection.SendPacket(packetToBroadcast);
+                    connection.SendPacketAsync(packetToBroadcast);
         }
 
         public static void BroadcastInitPartition(DbTable dbTable, DbPartition partition)
@@ -77,7 +77,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                connection.SendPacket(packetToBroadcast);
+                connection.SendPacketAsync(packetToBroadcast);
         }
 
         public static void BroadcastRowsUpdate(DbTable dbTable, IReadOnlyList<DbRow> entities)
@@ -95,7 +95,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                    connection.SendPacket(packetToBroadcast);
+                    connection.SendPacketAsync(packetToBroadcast);
         }
 
         public static void BroadcastRowsDelete(DbTable dbTable, IReadOnlyList<DbRow> dbRows)
@@ -112,7 +112,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                connection.SendPacket(packetToBroadcast);
+                connection.SendPacketAsync(packetToBroadcast);
         }
 
         protected override ValueTask HandleIncomingDataAsync(IMyNoSqlTcpContract data)
@@ -120,7 +120,7 @@ namespace MyNoSqlServer.Api
             switch (data)
             {
                 case PingContract _:
-                    SendPacket(PongContract.Instance);
+                    SendPacketAsync(PongContract.Instance);
                     if (ContextName.Contains("test"))
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
@@ -175,7 +175,7 @@ namespace MyNoSqlServer.Api
                 Data = rows.ToHubUpdateContract() 
             };
 
-            SendPacket(initContract);
+            SendPacketAsync(initContract);
         }
         
     }
