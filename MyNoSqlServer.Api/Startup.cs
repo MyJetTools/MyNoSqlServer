@@ -1,10 +1,12 @@
 ﻿using System.Threading.Tasks;
+using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MyDependencies;
 using MyNoSqlServer.Api.Hubs;
+using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
 
@@ -22,6 +24,8 @@ namespace MyNoSqlServer.Api
         
         public static MyIoc IoC = new MyIoc();
 
+        public SettingsModel _settings;
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -34,15 +38,20 @@ namespace MyNoSqlServer.Api
 
             services.AddSwaggerDocument(o => { o.Title = "MyNoSqlServer"; });
 
-            var settings = SettingsLoader.LoadSettings();
+            _settings = SettingsLoader.LoadSettings();
             
             IoC.BindDomainsServices();
-            IoC.BindAzureStorage(settings.BackupAzureConnectString);
+            IoC.BindAzureStorage(_settings.BackupAzureConnectString);
             IoC.BindApiServices();
             
             
             ServiceLocator.Init(IoC);
 
+        }
+
+        public void ConfigureContainer(ContainerBuilder builder)
+        {
+            builder.RegisterModule(new ServiceModule(_settings.BackupAzureConnectString));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -96,3 +105,5 @@ namespace MyNoSqlServer.Api
         }
     }
 }
+ 
+ 
