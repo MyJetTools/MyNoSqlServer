@@ -13,8 +13,8 @@ namespace MyNoSqlServer.Api.Controllers
         {
             Name = ServiceLocator.AppName,
             Version = ServiceLocator.AppVersion,
-            StartedAt = ServiceLocator.StartedAt,
-            Host = ServiceLocator.Host,
+            ServiceLocator.StartedAt,
+            ServiceLocator.Host,
             Environment = ServiceLocator.AspNetEnvironment
         });
 
@@ -32,6 +32,7 @@ namespace MyNoSqlServer.Api.Controllers
         {
             var connections = ServiceLocator.TcpServer.GetConnections();
 
+            var dt = DateTime.UtcNow;
 
             var result = connections.Cast<ChangesTcpService>().Select(itm =>
                 new
@@ -39,8 +40,8 @@ namespace MyNoSqlServer.Api.Controllers
                     name = itm.ContextName,
                     ip = itm.TcpClient.Client.RemoteEndPoint.ToString(),
                     tables = itm.Tables,
-                    connectedTime = itm.SocketStatistic.ConnectionTime.ToString("s"),
-                    lastIncomingTime = itm.SocketStatistic.LastReceiveTime.ToString("s"),
+                    connectedTime = (dt - itm.SocketStatistic.ConnectionTime).ToString("g"),
+                    lastIncomingTime = (dt -itm.SocketStatistic.LastReceiveTime).ToString("g"),
                     id = itm.Id
                 }).OrderBy(iym => iym.id);
             
