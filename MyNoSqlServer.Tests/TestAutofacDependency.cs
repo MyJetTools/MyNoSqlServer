@@ -1,5 +1,4 @@
-﻿using System;
-using Autofac.Core;
+﻿using Autofac.Core;
 using MyAutofacExtensions;
 using MyNoSqlServer.Api.Models;
 using NUnit.Framework;

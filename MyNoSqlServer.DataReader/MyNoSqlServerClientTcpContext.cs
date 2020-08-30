@@ -28,9 +28,9 @@ namespace MyNoSqlServer.DataReader
                 return null;
             }
         });
-        
-        
-        protected override ValueTask OnConnectAsync()
+
+
+        protected override async ValueTask OnConnectAsync()
         {
 
             var readerVersion = GetReaderVersion.Value;
@@ -42,7 +42,7 @@ namespace MyNoSqlServer.DataReader
                 Name = _appName + readerVersion
             };
 
-            SendPacket(greetingsContract);
+            await SendPacketAsync(greetingsContract);
 
             foreach (var tableToSubscribe in _subscriber.GetTablesToSubscribe())
             {
@@ -51,12 +51,11 @@ namespace MyNoSqlServer.DataReader
                     TableName = tableToSubscribe
                 };
 
-                SendPacket(subscribePacket);
+                await SendPacketAsync(subscribePacket);
 
                 Console.WriteLine("Subscribed to MyNoSql table: " + tableToSubscribe);
             }
 
-            return new ValueTask();
         }
 
         protected override ValueTask OnDisconnectAsync()
