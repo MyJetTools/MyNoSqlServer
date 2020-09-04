@@ -9,6 +9,7 @@ using MyNoSqlServer.Api.Hubs;
 using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
+using Prometheus;
 
 
 namespace MyNoSqlServer.Api
@@ -91,6 +92,7 @@ namespace MyNoSqlServer.Api
             {
                 endpoints.MapControllers();
                 endpoints.MapHub<ChangesHub>("/changes");
+                endpoints.MapMetrics();
             });
             
             ServiceLocator.Start();
