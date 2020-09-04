@@ -17,6 +17,7 @@ namespace MyNoSqlServer.DataReader
 
         public MyNoSqlReadRepository(IMyNoSqlSubscriber subscriber, string tableName)
         {
+            tableName = tableName.ToLower();
             subscriber.Subscribe<T>(tableName, Init, InitPartition, Update, Delete);
         }
 
