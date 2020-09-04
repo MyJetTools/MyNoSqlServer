@@ -19,6 +19,8 @@
         <PackageReference Include="NSwag.AspNetCore" Version="13.7.0" />
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
         <PackageReference Include="prometheus-net.AspNetCore" Version="3.6.0" />
+        <PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
+        
     </ItemGroup>
 
     <ItemGroup>
@@ -36,6 +38,7 @@
 
     <ItemGroup>
       <TypeScriptCompile Include="TypeScript\contracts.d.ts" />
+      <TypeScriptCompile Include="TypeScript\HtmlSubscribersGenerator.ts" />
       <TypeScriptCompile Include="TypeScript\main.ts" />
     </ItemGroup>
      

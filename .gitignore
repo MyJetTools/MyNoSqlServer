@@ -4,7 +4,7 @@
 .DS_Store
 *.user
 **/*.min.css
-**/*.js.css
+**/*.min.js
 
 **/bin
 **/obj
