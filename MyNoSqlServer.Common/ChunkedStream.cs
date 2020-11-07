@@ -80,7 +80,7 @@ namespace MyNoSqlServer.Common
 
             var len = _items.Sum(itm => itm.Length);
 
-            var result = new byte[len];
+            var result = MyNoSqlServerMemory.AllocateByteArray(len);
             var i = 0;
 
             foreach (var item in _items)

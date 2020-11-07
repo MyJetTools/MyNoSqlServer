@@ -14,18 +14,28 @@ namespace MyNoSqlServer.Domains.Db.Partitions
     /// </summary>
     public class DbPartition 
     {
+        public int DataSize { get; private set; }
+        
         public string PartitionKey { get; }
         
         private readonly SortedList<string, DbRow> _rows = new SortedList<string, DbRow>();
         
         private readonly PartitionIndex _expirationIndex = new PartitionIndex(dbRow => dbRow.Expires != null);
 
-        
         public DateTime LastAccessTime { get; private set; }
 
         public DbPartition(string partitionKey)
         {
             PartitionKey = partitionKey;
+        }
+
+        private void UpdatePartitionDataSize(DbRow oldRow, DbRow newRow)
+        {
+            if (oldRow != null)
+                DataSize -= oldRow.Data.Length;
+
+            if (newRow != null)
+                DataSize += newRow.Data.Length;
         }
 
         public bool Insert(DbRow row, DateTime now)
@@ -38,12 +48,14 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             
             _expirationIndex.Insert(row);
             
+            UpdatePartitionDataSize(null, row);
+            
             return true;
         }
 
         public void InsertOrReplace(DbRow row)
         {
-            if (_rows.ContainsKey(row.RowKey))
+            if (_rows.TryGetValue(row.RowKey, out var oldRow))
             {
                 _rows[row.RowKey] = row;
                 _expirationIndex.Update(row);
@@ -54,6 +66,8 @@ namespace MyNoSqlServer.Domains.Db.Partitions
                 _expirationIndex.Insert(row);  
             }
             
+            UpdatePartitionDataSize(oldRow, row);
+            
             LastAccessTime = DateTime.UtcNow;
         }
 
@@ -61,7 +75,9 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         internal DbRow TryGetRow(string rowKey)
         {
             LastAccessTime = DateTime.UtcNow;
-            return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;
+            return _rows.TryGetValue(rowKey, out var result) 
+                ? result 
+                : null;
         }
 
         internal void UpdateExpirationTime(string rowKey, DateTime expires)
@@ -121,6 +137,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             var result = _rows[rowKey];
             _rows.Remove(rowKey);
             _expirationIndex.Delete(result);
+            UpdatePartitionDataSize(result, null);
             return result;
         }
 
@@ -184,6 +201,9 @@ namespace MyNoSqlServer.Domains.Db.Partitions
                 result.Add(item.Value);
                 _rows.Remove(item.Key);
             }
+
+            foreach (var dbRow in result)
+                UpdatePartitionDataSize(dbRow, null);
 
             return result;
         }

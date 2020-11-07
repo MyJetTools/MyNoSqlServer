@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
 
 namespace MyNoSqlServer.Domains.Json
@@ -41,7 +42,7 @@ namespace MyNoSqlServer.Domains.Json
 
         internal static ReadOnlyMemory<byte> ToJsonReadOnlyMemory(this string src)
         {
-            var result = new byte[src.Length + 2];
+            var result = MyNoSqlServerMemory.AllocateByteArray(src.Length + 2);
 
             result[0] = JsonByteArrayReader.DoubleQuote;
 

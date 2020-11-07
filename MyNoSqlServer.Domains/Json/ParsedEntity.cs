@@ -7,7 +7,6 @@ namespace MyNoSqlServer.Domains.Json
     
     public class DynamicEntity : IMyNoSqlDbEntity
     {
-        
         public Dictionary<string, IJsonFirstLine> Raw { get; }
         public DynamicEntity(Dictionary<string, IJsonFirstLine> raw)
         {

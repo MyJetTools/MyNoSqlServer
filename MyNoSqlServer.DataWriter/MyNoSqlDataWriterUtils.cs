@@ -1,6 +1,5 @@
 using System;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
@@ -38,32 +37,32 @@ namespace MyNoSqlServer.DataWriter
         }
         
         
-        public static async ValueTask<T> ReadAsJsonAsync<T>(this Task<HttpResponseMessage> responseTask)
+        public static async ValueTask<T> ReadAsJsonAsync<T>(this Task<IFlurlResponse> responseTask)
         {
             var response = await responseTask;
             return await response.ReadAsJsonAsync<T>();
         }
 
-        public static async ValueTask<T> ReadAsJsonAsync<T>(this HttpResponseMessage response)
+        public static async ValueTask<T> ReadAsJsonAsync<T>(this IFlurlResponse response)
         {
-            var json = await response.Content.ReadAsStringAsync();
+            var json = await response.GetStringAsync();
             return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json);
         }
 
         internal static async ValueTask<OperationResult> GetOperationResultCodeAsync(
-            this HttpResponseMessage httpResponseMessage)
+            this IFlurlResponse httpResponseMessage)
         {
             switch (httpResponseMessage.StatusCode)
             {
-                case HttpStatusCode.OK:
+                case (int)HttpStatusCode.OK:
                     return OperationResult.Ok;
 
-                case HttpStatusCode.Conflict:
-                    var message = await httpResponseMessage.Content.ReadAsStringAsync();
+                case (int)HttpStatusCode.Conflict:
+                    var message = await httpResponseMessage.GetStringAsync();
                     return (OperationResult) int.Parse(message);
 
                 default:
-                    var messageUnknown = await httpResponseMessage.Content.ReadAsStringAsync();
+                    var messageUnknown = await httpResponseMessage.GetStringAsync();
                     throw new Exception(
                         $"Unknown HTTP result Code{httpResponseMessage.StatusCode}. Message: {messageUnknown}");
             }

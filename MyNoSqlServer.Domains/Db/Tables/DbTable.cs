@@ -43,13 +43,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
         public string Name { get; }
 
         private readonly ReaderWriterLockSlim _readerWriterLockSlim = new ReaderWriterLockSlim();
-        
+
         private readonly SortedList<string, DbPartition> _partitions = new SortedList<string, DbPartition>();
 
         SortedList<string, DbPartition> IDbTableReader.Partitions => _partitions;
 
         private IReadOnlyList<DbPartition> _partitionsAsList;
-        
+
         public IReadOnlyList<DbPartition> AllPartitions
         {
             get
@@ -64,7 +64,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 {
                     _readerWriterLockSlim.ExitReadLock();
                 }
-                
+
                 _readerWriterLockSlim.EnterWriteLock();
                 try
                 {
@@ -74,9 +74,9 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 {
                     _readerWriterLockSlim.ExitWriteLock();
                 }
-                
+
             }
-        } 
+        }
 
 
         IEnumerable<DbRow> IDbTableReader.GetRows()
@@ -88,7 +88,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
         {
             if (_partitions.ContainsKey(partitionKey))
                 return _partitions[partitionKey];
-            
+
             var partition = DbPartition.Create(partitionKey);
             _partitions.Add(partition.PartitionKey, partition);
 
@@ -96,7 +96,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
             return partition;
         }
-        
+
         bool IDbTableWriter.RemovePartition(string partitionKey)
         {
             if (_partitions.ContainsKey(partitionKey))
@@ -104,7 +104,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
             _partitions.Remove(partitionKey);
             _partitionsAsList = null;
-            
+
             return true;
         }
 
@@ -120,7 +120,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
         }
 
         DbPartition IDbTableReader.TryGetPartition(string partitionKey) => TryGetPartition(partitionKey);
-        
+
         public void GetAccessWithReadLock(Action<IDbTableReader> dbTableReader)
         {
             _readerWriterLockSlim.EnterReadLock();
@@ -133,7 +133,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitReadLock();
             }
         }
-        
+
         public void GetAccessWithWriteLock(Action<IDbTableWriter> dbTableWriter)
         {
             _readerWriterLockSlim.EnterWriteLock();
@@ -146,7 +146,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitWriteLock();
             }
         }
-        
+
         public ValueTask GetAccessWithWriteLockAsync(Func<IDbTableWriter, ValueTask> dbTableWriterAsync)
         {
             _readerWriterLockSlim.EnterWriteLock();
@@ -176,7 +176,8 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-        public int GetRecordsCount(string partitionKey)
+
+        public int GetRecordsCount(string partitionKey = null)
         {
             _readerWriterLockSlim.EnterReadLock();
             try
@@ -192,5 +193,37 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
+        public int GetDataSize(string partitionKey = null)
+        {
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                if (string.IsNullOrEmpty(partitionKey))
+                    return _partitions.Sum(itm => itm.Value.DataSize);
+
+                return _partitions.ContainsKey(partitionKey) ? _partitions[partitionKey].DataSize : 0;
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+        }
+
+
+        public int GetPartitionsCount()
+        {
+            {
+                _readerWriterLockSlim.EnterReadLock();
+                try
+                {
+                    return _partitions.Count;
+                }
+                finally
+                {
+                    _readerWriterLockSlim.ExitReadLock();
+                }
+            }
+
+        }
     }
 }

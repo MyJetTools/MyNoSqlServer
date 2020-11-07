@@ -329,7 +329,7 @@ namespace MyNoSqlServer.Domains.Json
                             + list[0].Length - startIndex
                                                          + endIndex+1;
 
-            var result = new byte[resultLen];
+            var result = MyNoSqlServerMemory.AllocateByteArray(resultLen);
 
             var i = 0;
 
@@ -443,7 +443,7 @@ namespace MyNoSqlServer.Domains.Json
                 len += fieldData.Name.Length + fieldData.Value.Length + 1;
             }
 
-            var result = new byte[len];
+            var result = MyNoSqlServerMemory.AllocateByteArray(len);
 
             var i = 0;
 

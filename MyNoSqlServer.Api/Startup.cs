@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -8,7 +9,9 @@ using MyDependencies;
 using MyNoSqlServer.Api.Hubs;
 using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
+using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains;
+using MyTcpSockets;
 using Prometheus;
 
 
@@ -44,6 +47,9 @@ namespace MyNoSqlServer.Api
             IoC.BindDomainsServices();
             IoC.BindAzureStorage(_settings.BackupAzureConnectString);
             IoC.BindApiServices();
+
+            MyNoSqlServerMemory.AllocateByteArray = size => GC.AllocateUninitializedArray<byte>(size);
+            SocketMemoryUtils.AllocateByteArray = size => GC.AllocateUninitializedArray<byte>(size);
             
             
             ServiceLocator.Init(IoC);

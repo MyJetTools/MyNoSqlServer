@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Api.Extensions;
 using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -30,12 +29,12 @@ namespace MyNoSqlServer.Api.Controllers
                     return new
                     {
                         Name = name,
-                        RecordsCount = dbTable.RecordsCount(),
-                        PartitionsCount = dbTable.PartitionsCount()
+                        RecordsCount = dbTable.GetRecordsCount(),
+                        PartitionsCount = dbTable.GetPartitionsCount(),
+                        DataSize = dbTable.GetDataSize()
                     };
                 }
             );
-
 
             return Json(result);
         }
