@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading;
 using MyTcpSockets.Extensions;
@@ -124,11 +125,8 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Position = 0
             };
 
-
             var dataReader = new TcpDataReader();
             dataReader.NewPackage(memStream.ToArray());
-
-
             
             var tc = new CancellationTokenSource();
             var result
@@ -303,6 +301,54 @@ namespace MyNoSqlServer.TcpContracts.Tests
             }
 
         }        
+        
+        
+        
+        [Test]
+        public void TestUpdateExpirationsContract()
+        {
+
+            var serializer = new MyNoSqlTcpSerializer();
+
+            var testContract = new UpdateExpiresTimeTcpContract
+            {
+                TableName= "TableName",
+                PartitionKey = "PartitionKey",
+                Expires = DateTime.UtcNow,
+                RowKeys = new[]{"rk1", "rk2"}
+            };
+
+            var rawData = serializer.Serialize(testContract);
+
+            var memStream = new MemoryStream(rawData.ToArray())
+            {
+                Position = 0
+            };
+
+
+            var dataReader = new TcpDataReader();
+            dataReader.NewPackage(memStream.ToArray());
+
+            
+            var tc = new CancellationTokenSource();
+
+            var result
+                = (UpdateExpiresTimeTcpContract) serializer
+                    .DeserializeAsync(dataReader, tc.Token)
+                    .AsTestResult();
+
+            Assert.AreEqual(testContract.TableName, result.TableName);
+            
+            Assert.AreEqual(testContract.PartitionKey, result.PartitionKey);
+            Assert.AreEqual(testContract.Expires.ToString("s"), result.Expires.ToString("s"));
+            
+            Assert.AreEqual(testContract.RowKeys.Length, result.RowKeys.Length);
+            for (var i = 0; i < testContract.RowKeys.Length; i++)
+            {
+                Assert.AreEqual(testContract.RowKeys[i], result.RowKeys[i]);
+            }
+
+        }   
         
         
 

@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -25,7 +27,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var conditions = query.ParseQueryConditions();
 
-            var result = table.ApplyQuery(conditions);
+            var result = table.ExecQuery(conditions);
             
             return this.ToDbRowsResult(result);
         }

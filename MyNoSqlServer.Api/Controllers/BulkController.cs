@@ -1,11 +1,9 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
-using MyNoSqlServer.Common;
-using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -20,56 +18,25 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery]string syncPeriod)
         {
             
-            
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
                 return shutDown;
-            
-            if (string.IsNullOrEmpty(tableName))
-                return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
+            var (result, dbTable) = this.GetTable(tableName);
 
-            if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
-                return Conflict("Bulk insert does not support immediate persistence");
-            
-            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
+            if (result != null)
+                return result;
 
             var body = await Request.BodyAsIMemoryAsync();
 
-            var entitiesToInsert = body.SplitJsonArrayToObjects();
+            var entitiesToInsert = body
+                .SplitJsonArrayToObjects()
+                .Select(itm => itm.ParseDynamicEntity());
 
-            var (dbPartitions, dbRows) = table.BulkInsertOrReplace(entitiesToInsert);
-
-            ServiceLocator.DataSynchronizer.SynchronizeUpdate(table, dbRows);
-            
-            foreach (var dbPartition in dbPartitions)
-                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition, theSyncPeriod);
+            await ServiceLocator.DbTableWriteOperations.BulkInsertOrReplaceAsync(dbTable, entitiesToInsert, 
+                syncPeriod.ParseDataSynchronizationPeriod(DataSynchronizationPeriod.Sec5));
             
             return this.ResponseOk();
-
-        }
-
-        private static void CleanPartitionAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, string partitionKey, 
-            DataSynchronizationPeriod syncPeriod)
-        {
-            var partitionsToSynchronize = table.CleanAndBulkInsert(partitionKey, entitiesToInsert);
-
-            foreach (var dbPartition in partitionsToSynchronize)
-            {
-                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition, syncPeriod);
-                ServiceLocator.DataSynchronizer?.PublishInitPartition(table, dbPartition); 
-            }
-        }
-        
-        
-        private static void CleanTableAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, 
-            DataSynchronizationPeriod syncPeriod)
-        {
-            table.CleanAndBulkInsert(entitiesToInsert);
-            
-            ServiceLocator.SnapshotSaverScheduler.SynchronizeTable(table, syncPeriod);
-            ServiceLocator.DataSynchronizer?.PublishInitTable(table);
         }
 
 
@@ -78,24 +45,26 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery] string partitionKey,
             [FromQuery] string syncPeriod)
         {
-            var (getTableResult, table) = this.GetTable(tableName, partitionKey);
+            var (getTableResult, dbTable) = this.GetTable(tableName, partitionKey);
             
             if (getTableResult != null)
                 return getTableResult;
             
             var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
 
-            if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
-                return Conflict("CleanAndBulkInsert insert does not support immediate persistence");
-
             var body = await Request.BodyAsIMemoryAsync();
             
-            var entitiesToInsert = body.SplitJsonArrayToObjects();
+            var entitiesToInsert = body
+                .SplitJsonArrayToObjects()
+                .Select(arraySpan => arraySpan.ParseDynamicEntity())
+                .ToList();
 
             if (string.IsNullOrEmpty(partitionKey))
-                CleanTableAndBulkInsert(table, entitiesToInsert, theSyncPeriod);
+                await ServiceLocator.DbTableWriteOperations.ClearTableAndBulkInsertAsync(dbTable, entitiesToInsert,
+                    theSyncPeriod);
             else
-                CleanPartitionAndBulkInsert(table, entitiesToInsert, partitionKey, theSyncPeriod);
+                await ServiceLocator.DbTableWriteOperations.ClearPartitionAndBulkInsertOrUpdateAsync(dbTable,
+                    partitionKey, entitiesToInsert, theSyncPeriod);
 
             return this.ResponseOk();
         }

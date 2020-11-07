@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.Api.Hubs;
-using MyNoSqlServer.Domains.Db.Partitions;
+using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.TcpContracts;
@@ -54,14 +54,14 @@ namespace MyNoSqlServer.Api
             var packetToBroadcast = new InitTableContract
             {
                 TableName = dbTable.Name,
-                Data = dbTable.GetAllRecords(null).ToHubUpdateContract()
+                Data = dbTable.GetRows().ToHubUpdateContract()
             };
 
             foreach (var connection in connections)
                     connection.SendPacketAsync(packetToBroadcast);
         }
 
-        public static void BroadcastInitPartition(DbTable dbTable, DbPartition partition)
+        public static void BroadcastInitPartition(DbTable dbTable, string partitionKey)
         {
 
             var connections = TableSubscribers.GetConnections(dbTable.Name);
@@ -72,8 +72,8 @@ namespace MyNoSqlServer.Api
             var packetToBroadcast = new InitPartitionContract
             {
                 TableName = dbTable.Name,
-                PartitionKey = partition.PartitionKey,
-                Data = partition.GetAllRows().ToHubUpdateContract()
+                PartitionKey = partitionKey,
+                Data = dbTable.GetRows(partitionKey).ToHubUpdateContract()
             };
 
             foreach (var connection in connections)
@@ -137,6 +137,16 @@ namespace MyNoSqlServer.Api
                     HandleSubscribe(subscribeContract);
                     break;
                 
+                
+                case UpdateExpiresTimeTcpContract expiresTimeTcpContract:
+                    var dbTable = ServiceLocator.DbInstance.TryGetTable(expiresTimeTcpContract.TableName);
+                    if (dbTable != null)
+                        ServiceLocator.DbTableWriteOperations.UpdateExpirationTime(dbTable, 
+                            expiresTimeTcpContract.PartitionKey, 
+                            expiresTimeTcpContract.RowKeys, 
+                            expiresTimeTcpContract.Expires);
+                    break;
+                
             }
             
             return new ValueTask();
@@ -165,7 +175,7 @@ namespace MyNoSqlServer.Api
             
             TableSubscribers.Subscribe(subscribeContract.TableName, this);
             
-            var rows = table.GetAllRecords(null);
+            var rows = table.GetRows();
             
             Console.WriteLine($"Socket {Id} is subscribed to the table {subscribeContract.TableName}. Initialized records: {rows.Count}");
 

@@ -13,6 +13,13 @@ namespace MyNoSqlServer.Api.Controllers
         {
             return ctx.Content("OK");
         }
+        
+        public static async ValueTask<IActionResult> GetResponseOkAsync(this ValueTask task, Controller ctx)
+        {
+            await task;
+            return ctx.Content("OK");
+        }
+
 
         public static ValueTask<IActionResult> ResponseWithActionAsync(this IActionResult actionResult, Func<Task> callback)
         {

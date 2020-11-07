@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -178,6 +179,41 @@ namespace MyNoSqlServer.TcpContracts
 
             RowsToDelete = result;
             
+        }
+    }
+
+
+    public class UpdateExpiresTimeTcpContract : IMyNoSqlTcpContract
+    {
+        //Amount of fields we Carry in the payload
+        public byte Version { get; private set; }
+        
+        public string TableName { get; set; }
+        public DateTime Expires { get; set; }
+        public string PartitionKey { get; set; }
+        
+        public string[] RowKeys { get; set; }
+        
+        
+        
+        public void Serialize(Stream stream)
+        {
+            stream.WriteByte(4);
+            
+            stream.WritePascalString(TableName);
+            stream.WriteDateTime(Expires);
+            stream.WritePascalString(PartitionKey);
+            stream.WritePascalStringArray(RowKeys);
+        }
+
+        public async ValueTask DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
+        {
+            Version = await dataReader.ReadByteAsync(ct);
+            TableName = await dataReader.ReadPascalStringAsync(ct);
+
+            Expires = await dataReader.ReadDateTimeAsync(ct);
+            PartitionKey = await dataReader.ReadPascalStringAsync(ct);
+            RowKeys = await dataReader.ReadPascalStringArrayAsync(ct);
         }
     }
 }

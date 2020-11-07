@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
@@ -21,8 +23,15 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable");
+            
+            var ioc = TestUtils.GetTestIoc();
 
+            var dbInstance = ioc.GetService<DbInstance>();
+
+            var dbTable = dbInstance.CreateTableIfNotExists("myTable");
+            
+            var dbOperations =  ioc.GetService<DbTableWriteOperations>();
+            
             var recordToInsert = new TestRecord
             {
                 PartitionKey = "MyPartition",
@@ -34,13 +43,13 @@ namespace MyNoSqlServer.Tests
 
             var fields = recordIsByteArray.AsMyMemory().ParseDynamicEntity();
 
-            dbTable.Insert(fields, DateTime.UtcNow);
+            dbOperations.InsertAsync(dbTable, fields, DataSynchronizationPeriod.Sec5, DateTime.UtcNow).AsTask().Wait();
 
             var query = "PartitionKey eq 'MyPartition' and RowKey eq 'MyRow'";
 
             var queryCondition = query.ParseQueryConditions();
             
-            var foundItems = dbTable.ApplyQuery(queryCondition).ToArray();
+            var foundItems = dbTable.ExecQuery(queryCondition).ToArray();
 
             Assert.AreEqual(recordToInsert.TestField, foundItems.First().GetValue("TestField"));
 
@@ -49,7 +58,13 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable");
+            var ioc = TestUtils.GetTestIoc();
+            
+            var dbInstance = ioc.GetService<DbInstance>();
+
+            var dbTable = dbInstance.CreateTableIfNotExists("myTable");
+            
+            var dbOperations =  ioc.GetService<DbTableWriteOperations>();
 
             for (var i = 0; i < 100; i++)
             {
@@ -65,14 +80,14 @@ namespace MyNoSqlServer.Tests
 
                 var entity = recordIsByteArray.ParseDynamicEntity();
             
-                dbTable.Insert(entity, DateTime.UtcNow);
+                dbOperations.InsertAsync(dbTable, entity, DataSynchronizationPeriod.Sec5, DateTime.UtcNow).AsTask().Wait();
             }
 
             var query = "PartitionKey eq 'MyPartition' and RowKey ge '001' and RowKey le '003'";
 
             var queryCondition = query.ParseQueryConditions();
             
-            var foundRecords = dbTable.ApplyQuery(queryCondition).ToArray();
+            var foundRecords = dbTable.ExecQuery(queryCondition).ToArray();
 
             Assert.AreEqual(1, foundRecords.Length);
 
@@ -83,7 +98,14 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeAboveQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable");
+            
+            var ioc = TestUtils.GetTestIoc();
+            
+            var dbInstance = ioc.GetService<DbInstance>();
+
+            var dbTable = dbInstance.CreateTableIfNotExists("myTable");
+            
+            var dbOperations =  ioc.GetService<DbTableWriteOperations>();
 
             for (var i = 0; i <= 100; i++)
             {
@@ -99,14 +121,14 @@ namespace MyNoSqlServer.Tests
 
                 var entity = recordIsByteArray.ParseDynamicEntity();
             
-                dbTable.Insert(entity, DateTime.UtcNow);
+                dbOperations.InsertAsync(dbTable, entity, DataSynchronizationPeriod.Sec5, DateTime.UtcNow).AsTask().Wait();
             }
 
-            var query = "PartitionKey eq 'MyPartition' and RowKey ge '199'";
+            const string query = "PartitionKey eq 'MyPartition' and RowKey ge '199'";
 
             var queryCondition = query.ParseQueryConditions();
             
-            var foundRecords = dbTable.ApplyQuery(queryCondition).ToArray();
+            var foundRecords = dbTable.ExecQuery(queryCondition).ToArray();
 
             Assert.AreEqual(1, foundRecords.Length);
 

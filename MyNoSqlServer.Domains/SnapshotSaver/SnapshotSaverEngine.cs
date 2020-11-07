@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.Domains.SnapshotSaver
 {
@@ -37,7 +39,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                     var partition = table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
 
                     if (partition != null)
-                        _replicaSynchronizationService.PublishInitPartition(table, partition);
+                        _replicaSynchronizationService.PublishInitPartition(table, partition.PartitionKey);
                 }
                 catch (Exception e)
                 {
@@ -68,8 +70,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                                 break;
                             
                             case SyncPartition syncPartition:
-                                
-                                var partitionSnapshot = PartitionSnapshot.Create(syncPartition.DbTable, syncPartition.DbPartition);
+                                var partitionSnapshot = PartitionSnapshot.Create(syncPartition.DbTable, syncPartition.PartitionKey);
                                 await _snapshotStorage.SavePartitionSnapshotAsync(partitionSnapshot);
                                 break;
                             

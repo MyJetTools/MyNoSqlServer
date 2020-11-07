@@ -4,9 +4,10 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using MyNoSqlServer.Common;
-using MyNoSqlServer.Domains.DataSynchronization;
+using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.AzureStorage
 {
@@ -48,11 +49,11 @@ namespace MyNoSqlServer.AzureStorage
             await container.CleanContainerAsync();
             Console.WriteLine($"{DateTime.UtcNow:s} Container cleaned: {dbTable.Name}");
 
-            var partitions = dbTable.GetAllPartitions();
+            var partitions = dbTable.AllPartitions;
 
             foreach (var dbPartition in partitions)
             {
-                var data = dbPartition.GetAllRows().ToJsonArray().AsArray();
+                var data = dbTable.GetRows(dbPartition.PartitionKey).ToJsonArray().AsArray();
                 await container.SavePartitionAsync(dbPartition.PartitionKey, data);
             
                 Console.WriteLine($"{DateTime.UtcNow:s} Saved snapshot: {dbTable.Name}/{dbPartition.PartitionKey}");

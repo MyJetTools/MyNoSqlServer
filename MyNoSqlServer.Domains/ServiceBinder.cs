@@ -1,5 +1,7 @@
 using MyDependencies;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.GarbageCollection;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
 
@@ -19,7 +21,9 @@ namespace MyNoSqlServer.Domains
             
             sr.Register<GlobalVariables>();
             
-            sr.Register<DbOperations>();
+            sr.Register<DbTableWriteOperations>();
+            sr.Register<DbTableReadOperationsWithExpiration>();
+            sr.Register<ExpiredEntitiesGarbageCollector>();
         }
     }
 }

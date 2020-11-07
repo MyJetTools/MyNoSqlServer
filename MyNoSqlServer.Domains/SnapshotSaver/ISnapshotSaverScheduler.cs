@@ -12,7 +12,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
 
     public interface ISnapshotSaverScheduler
     {
-        void SynchronizePartition(DbTable dbTable, DbPartition partitionToSave, DataSynchronizationPeriod period);
+        void SynchronizePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period);
         
         void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period);
         

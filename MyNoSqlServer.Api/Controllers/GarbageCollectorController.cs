@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
+using MyNoSqlServer.Domains.Db.Operations;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -12,50 +13,41 @@ namespace MyNoSqlServer.Api.Controllers
     public class GarbageCollectorController : Controller
     {
         [HttpPost("CleanAndKeepMaxPartitions")]
-        public IActionResult CleanAndKeepMaxPartitions([FromQuery] [Required] string tableName,
+        public ValueTask<IActionResult> CleanAndKeepMaxPartitions([FromQuery] [Required] string tableName,
             [FromQuery] [Required] int maxAmount)
         {
             
-            var (getTableResult, table) = this.GetTable(tableName);
+            var (getTableResult, dbTable) = this.GetTable(tableName);
             
             if (getTableResult != null)
-                return getTableResult;
+                return new ValueTask<IActionResult>(getTableResult);
 
-            var result = table.KeepMaxPartitions(maxAmount);
 
-            var response = Ok("Ok");
+            return ServiceLocator.DbTableWriteOperations
+                .KeepMaxPartitionsAmountAsync(dbTable, maxAmount)
+                .GetResponseOkAsync(this);
 
-            foreach (var dbPartition in result)
-                response.SynchronizeDeletePartitionAsync(table, dbPartition, DataSynchronizationPeriod.Sec1);
-
-            return response;
         }
 
 
         [HttpPost("CleanAndKeepMaxRecords")]
-        public async ValueTask<IActionResult> CleanAndKeepMaxRecords(
-            [FromQuery][Required] string tableName,
-            [FromQuery][Required]string partitionKey, [FromQuery][Required]int maxAmount,
+        public ValueTask<IActionResult> CleanAndKeepMaxRecords(
+            [FromQuery] [Required] string tableName,
+            [FromQuery] [Required] string partitionKey, [FromQuery] [Required] int maxAmount,
             [FromQuery] string syncPeriod)
         {
-
             var (getTableResult, table) = this.GetTable(tableName, partitionKey);
-            
+
             if (getTableResult != null)
-                return getTableResult;
+                return new ValueTask<IActionResult>(getTableResult);
 
+            return
+                ServiceLocator
+                    .DbTableWriteOperations
+                    .CleanAndKeepLastRecordsAsync(table, partitionKey, maxAmount,
+                        syncPeriod.ParseSynchronizationPeriodContract())
+                    .GetResponseOkAsync(this);
 
-            var (dbPartition, dbRows) = table.CleanAndKeepLastRecords(partitionKey, maxAmount);
-
-            if (dbPartition != null)
-            {
-                ServiceLocator.DataSynchronizer.SynchronizeDelete(table, dbRows);
-
-                return await this.ResponseOk()
-                    .SynchronizePartitionAsync(table, dbPartition, syncPeriod.ParseSynchronizationPeriodContract());
-            }
-
-            return this.ResponseOk();
         }
     }
 }

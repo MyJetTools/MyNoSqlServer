@@ -91,7 +91,7 @@ namespace MyNoSqlServer.Common
         }
         
         
-        public static IEnumerable<TValue> GetHighestAndBelow<TValue>(this SortedList<string, TValue> src, string highestRowKey, int maxAmount)
+        public static IReadOnlyList<TValue> GetHighestAndBelow<TValue>(this SortedList<string, TValue> src, string highestRowKey, int maxAmount)
         {
             var index = src.FindNearest(highestRowKey);
             index++;

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Json;
@@ -13,13 +12,21 @@ namespace MyNoSqlServer.Domains.Db.Partitions
     /// <summary>
     /// DbPartition Uses SlimLock of Table
     /// </summary>
-    public class DbPartition
+    public class DbPartition 
     {
-        public string PartitionKey { get; private set; }
+        public string PartitionKey { get; }
         
         private readonly SortedList<string, DbRow> _rows = new SortedList<string, DbRow>();
         
+        private readonly PartitionIndex _expirationIndex = new PartitionIndex(dbRow => dbRow.Expires != null);
+
+        
         public DateTime LastAccessTime { get; private set; }
+
+        public DbPartition(string partitionKey)
+        {
+            PartitionKey = partitionKey;
+        }
 
         public bool Insert(DbRow row, DateTime now)
         {
@@ -29,62 +36,83 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             _rows.Add(row.RowKey, row);
             LastAccessTime = now;
             
+            _expirationIndex.Insert(row);
+            
             return true;
         }
 
         public void InsertOrReplace(DbRow row)
         {
             if (_rows.ContainsKey(row.RowKey))
+            {
                 _rows[row.RowKey] = row;
+                _expirationIndex.Update(row);
+            }
             else
+            {
                 _rows.Add(row.RowKey, row);
+                _expirationIndex.Insert(row);  
+            }
             
             LastAccessTime = DateTime.UtcNow;
         }
 
 
-        public DbRow GetRow(string rowKey)
+        internal DbRow TryGetRow(string rowKey)
         {
             LastAccessTime = DateTime.UtcNow;
             return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;
         }
+
+        internal void UpdateExpirationTime(string rowKey, DateTime expires)
+        {
+            if (!_rows.ContainsKey(rowKey)) 
+                return;
+            
+            var dbRow = _rows[rowKey];
+            dbRow.Expires = expires;
+            _expirationIndex.Update(dbRow);
+        }
+
 
         public bool HasRecord(string rowKey)
         {
             return _rows.ContainsKey(rowKey);
         }
         
-        public IReadOnlyList<DbRow> GetAllRows()
+        internal IEnumerable<DbRow> GetAllRows()
         {
-            return _rows.Values.ToList();
+            return _rows.Values;
         }
         
-        public IReadOnlyList<DbRow> GetRowsWithLimit(int? limit, int? skip)
+        public IEnumerable<DbRow> GetRowsWithExpiration()
         {
-            LastAccessTime = DateTime.UtcNow;
-            IEnumerable<DbRow> result = _rows.Values;
-
-
-            if (skip != null)
-                result = result.Skip(skip.Value);
-            
-            if (limit != null)
-                result = result.Take(limit.Value);
-            
-            return result.ToList();
+            return _expirationIndex.GetIndexedRows();
         }
-        
-        
 
         public static DbPartition Create(string partitionKey)
         {
-            return new DbPartition
+            return new DbPartition(partitionKey);
+        }
+        
+        public IEnumerable<DbRow> TryDeleteRows(IEnumerable<string> rowKeys)
+        {
+            LastAccessTime = DateTime.UtcNow;
+
+            foreach (var rowKey in rowKeys)
             {
-                PartitionKey = partitionKey
-            };
+                if (!_rows.ContainsKey(rowKey))
+                    continue;
+                
+                var result = _rows[rowKey];
+                _rows.Remove(rowKey);
+                _expirationIndex.Delete(result);
+                yield return result;
+                
+            }
         }
 
-        public DbRow DeleteRow(string rowKey)
+        public DbRow TryDeleteRow(string rowKey)
         {
             LastAccessTime = DateTime.UtcNow;
             if (!_rows.ContainsKey(rowKey))
@@ -92,15 +120,9 @@ namespace MyNoSqlServer.Domains.Db.Partitions
 
             var result = _rows[rowKey];
             _rows.Remove(rowKey);
+            _expirationIndex.Delete(result);
             return result;
         }
-
-        public void RestoreRecord(IMyNoSqlDbEntity entityInfo, IMyMemory data)
-        {
-            if (!_rows.ContainsKey(entityInfo.RowKey))
-                _rows.Add(entityInfo.RowKey, DbRow.RestoreSnapshot(entityInfo, data));
-        }
-
 
         public IEnumerable<DbRow> ApplyQuery(IDictionary<string, List<QueryCondition>> conditionsDict)
         {
@@ -124,18 +146,16 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             }
         }
         
-        public IEnumerable<DbRow> GetHighestRowAndBelow(string rowKey, int maxAmount)
+        public IReadOnlyList<DbRow> GetHighestRowAndBelow(string rowKey, int maxAmount)
         {
             LastAccessTime = DateTime.UtcNow;
             return _rows.GetHighestAndBelow(rowKey, maxAmount);
         }
 
-
         public override string ToString()
         {
             return PartitionKey+"; Count: "+_rows.Count;
         }
-
 
         public void Clean()
         {
@@ -155,8 +175,9 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             
             while (_rows.Count>amount)
             {
-                if (rowsByLastInsertDateTime == null)
-                    rowsByLastInsertDateTime = _rows.OrderBy(itm => itm.Value.TimeStamp).ToQueue();
+                rowsByLastInsertDateTime ??= _rows
+                    .OrderBy(itm => itm.Value.TimeStamp)
+                    .ToQueue();
                 
                 var item = rowsByLastInsertDateTime.Dequeue();
                 
@@ -166,8 +187,14 @@ namespace MyNoSqlServer.Domains.Db.Partitions
 
             return result;
         }
-
-        public IReadOnlyList<DbRow> GetRows(string[] rowKeys)
+        
+        internal IEnumerable<DbRow> GetRows()
+        {
+            LastAccessTime = DateTime.UtcNow;
+            return _rows.Values;
+        }
+        
+        public IReadOnlyList<DbRow> GetRows(IEnumerable<string> rowKeys)
         {
             LastAccessTime = DateTime.UtcNow;
             return (from rowKey in rowKeys 

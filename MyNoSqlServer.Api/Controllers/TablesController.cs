@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.Api.Extensions;
 using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -10,11 +12,32 @@ namespace MyNoSqlServer.Api.Controllers
     [ApiController]
     public class TablesController : Controller
     {
-        [HttpGet("Tables/List")]
+        [HttpGet("/Tables/List")]
         public IActionResult List()
         {
-            var list = ServiceLocator.DbInstance.GetTablesList();
-            return Json(list);
+            var tableNames = ServiceLocator.DbInstance.TableNames;
+            return Json(tableNames);
+        }
+
+        [HttpGet("/Tables")]
+        public IActionResult Get()
+        {
+            var tableNames = ServiceLocator.DbInstance.TableNames;
+
+            var result = tableNames.Select(name =>
+                {
+                    var dbTable = ServiceLocator.DbInstance.TryGetTable(name);
+                    return new
+                    {
+                        Name = name,
+                        RecordsCount = dbTable.RecordsCount(),
+                        PartitionsCount = dbTable.PartitionsCount()
+                    };
+                }
+            );
+
+
+            return Json(result);
         }
 
         [HttpPost("Tables/CreateIfNotExists")]
@@ -41,10 +64,9 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            if (ServiceLocator.DbInstance.CreateTable(tableName))
-                return this.ResponseOk();
-
-            return this.GetResult(OperationResult.CanNotCreateObject);
+            return ServiceLocator.DbInstance.CreateTable(tableName) 
+                ? this.ResponseOk() 
+                : this.GetResult(OperationResult.CanNotCreateObject);
         }
 
         [HttpDelete("Tables/Clean")]
@@ -62,11 +84,10 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
 
-            table.Clean();
+            await ServiceLocator.DbTableWriteOperations.ClearTableAsync(table,
+                syncPeriod.ParseSynchronizationPeriodContract());
 
-            ServiceLocator.DataSynchronizer.PublishInitTable(table);
-
-            return await Ok().SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
+            return this.ResponseOk();
 
         }    
 

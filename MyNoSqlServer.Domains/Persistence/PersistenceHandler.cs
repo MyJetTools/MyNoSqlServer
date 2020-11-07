@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.SnapshotSaver;
@@ -27,36 +26,31 @@ namespace MyNoSqlServer.Domains.Persistence
             return new ValueTask();
         }
 
-        public ValueTask<OperationResult> SynchronizePartitionAsync(DbTable dbTable, DbPartition partitionToSave,
+        public ValueTask SynchronizePartitionAsync(DbTable dbTable, DbPartition dbPartition,
             DataSynchronizationPeriod period)
         {
 
             if (period == DataSynchronizationPeriod.Immediately)
             {
-                var partitionSnapshot = PartitionSnapshot.Create(dbTable, partitionToSave);
-                return new ValueTask<OperationResult>(
-                    _snapshotStorage
-                        .SavePartitionSnapshotAsync(partitionSnapshot)
-                        .AsTask()
-                        .ContinueWith(itm => OperationResult.Ok));
+                var partitionSnapshot = PartitionSnapshot.Create(dbTable, dbPartition.PartitionKey);
+                return _snapshotStorage
+                    .SavePartitionSnapshotAsync(partitionSnapshot);
             }
 
-            _snapshotSaverScheduler.SynchronizePartition(dbTable, partitionToSave, period);
-            return new ValueTask<OperationResult>(OperationResult.Ok);
+            _snapshotSaverScheduler.SynchronizePartition(dbTable, dbPartition.PartitionKey, period);
+            return new ValueTask();
         }
 
-        public ValueTask<OperationResult> SynchronizeDeletePartitionAsync(DbTable dbTable,
+        public ValueTask SynchronizeDeletePartitionAsync(DbTable dbTable,
             DbPartition dbPartition, DataSynchronizationPeriod period)
         {
-
             if (period == DataSynchronizationPeriod.Immediately)
-                return new ValueTask<OperationResult>(_snapshotStorage
-                    .DeleteTablePartitionAsync(dbTable.Name, dbPartition.PartitionKey)
-                    .AsTask()
-                    .ContinueWith(itm => OperationResult.Ok));
+                return _snapshotStorage
+                    .DeleteTablePartitionAsync(dbTable.Name, dbPartition.PartitionKey);
 
-            _snapshotSaverScheduler.SynchronizePartition(dbTable, dbPartition, period);
-            return new ValueTask<OperationResult>(OperationResult.Ok);
+            _snapshotSaverScheduler.SynchronizePartition(dbTable, dbPartition.PartitionKey, period);
+            return new ValueTask();
         }
+        
     }
 }

@@ -1,5 +1,5 @@
 using MyDependencies;
-using MyNoSqlServer.Domains.DataSynchronization;
+using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.AzureStorage
 {

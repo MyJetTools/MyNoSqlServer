@@ -2,11 +2,13 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using DotNetCoreDecorators;
 using MyDependencies;
-using MyNoSqlServer.Api.Services;
 using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.GarbageCollection;
+using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
@@ -41,19 +43,20 @@ namespace MyNoSqlServer.Api
             Console.WriteLine($"AspNetEnvironment: {AspNetEnvironment}");
             Console.WriteLine($"Host: {Host}");
             Console.WriteLine($"StartedAt: {StartedAt}");
-            Console.WriteLine($"Port http: 5123");
-            Console.WriteLine($"Port tcp: 5125");
+            Console.WriteLine("Port http: 5123");
+            Console.WriteLine("Port tcp: 5125");
             Console.WriteLine();
         }
 
-        public static string AppName { get; private set; }
-        public static string AppVersion { get; private set; }
+        public static string AppName { get; }
 
-        public static DateTime StartedAt { get; private set; }
+        public static string AppVersion { get; }
 
-        public static string AspNetEnvironment { get; private set; }
+        public static DateTime StartedAt { get;}
 
-        public static string Host { get; private set; }
+        public static string AspNetEnvironment { get; }
+        
+        public static string Host { get; }
 
         public static DbInstance DbInstance { get; private set; }
         
@@ -61,13 +64,17 @@ namespace MyNoSqlServer.Api
 
         public static ISnapshotStorage SnapshotStorage { get; private set; }
         
-        public static IReplicaSynchronizationService DataSynchronizer { get; private set; }
-
         public static SnapshotSaverEngine SnapshotSaverEngine { get; private set; }
         
         public static readonly ISnapshotSaverScheduler SnapshotSaverScheduler = new SnapshotSaverScheduler();
+
+        private static ExpiredEntitiesGarbageCollector ExpiredEntitiesGarbageCollector { get; set; }
+
+        private static readonly TaskTimer ExpiredEntitiesGcTimer = new TaskTimer(TimeSpan.FromSeconds(30));
         
-        public static DbOperations DbOperations { get; private set; }
+        public static DbTableWriteOperations DbTableWriteOperations { get; private set; }
+        public static DbTableReadOperationsWithExpiration DbTableReadOperations { get; private set; }
+        
         
         public static readonly MyServerTcpSocket<IMyNoSqlTcpContract> TcpServer = 
             new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
@@ -86,19 +93,27 @@ namespace MyNoSqlServer.Api
             DbInstance = sr.GetService<DbInstance>();
             SnapshotStorage = sr.GetService<ISnapshotStorage>();
             
-            DataSynchronizer = new ChangesPublisherToSocket();
             SnapshotSaverEngine = sr.GetService<SnapshotSaverEngine>();
 
             GlobalVariables = sr.GetService<GlobalVariables>();
 
-            DbOperations = sr.GetService<DbOperations>();
+            DbTableWriteOperations = sr.GetService<DbTableWriteOperations>();
+
+            DbTableReadOperations = sr.GetService<DbTableReadOperationsWithExpiration>();
+
+            ExpiredEntitiesGarbageCollector = sr.GetService<ExpiredEntitiesGarbageCollector>();
         }
 
         public static void Start()
         {
             SnapshotSaverEngine.LoadSnapshotsAsync().Wait();
+            
+            ExpiredEntitiesGcTimer.Register("Expired Entities GC", 
+                ()=>ExpiredEntitiesGarbageCollector.DetectAndExpireAsync(DateTime.UtcNow));
+            
             SnapshotSaverEngine.Start();
             TcpServer.Start();
+            ExpiredEntitiesGcTimer.Start();
         }
     }
 }

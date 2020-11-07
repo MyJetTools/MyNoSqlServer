@@ -20,7 +20,8 @@ namespace MyNoSqlServer.TcpContracts
                 [CommandType.InitTable] =     () => new InitTableContract(),
                 [CommandType.InitPartition] = () => new InitPartitionContract(),
                 [CommandType.UpdateRows] =    () => new UpdateRowsContract(),
-                [CommandType.DeleteRow] =     () => new DeleteRowsContract()
+                [CommandType.DeleteRow] =     () => new DeleteRowsContract(),
+                [CommandType.UpdateExpiresTime] = ()=> new UpdateExpiresTimeTcpContract()
             };
 
         private static readonly Dictionary<Type, CommandType> TypeToCommandType =

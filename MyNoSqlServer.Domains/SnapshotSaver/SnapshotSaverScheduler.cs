@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Tables;
 
 namespace MyNoSqlServer.Domains.SnapshotSaver
@@ -11,16 +10,16 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     public class SyncPartition : ISyncTask
     {
         public DbTable DbTable { get; private set; }
-        public DbPartition DbPartition { get; set; }
+        public string PartitionKey { get; set; }
         
         public DateTime SyncDateTime { get; private set; }
 
-        public static SyncPartition Create(DbTable dbTable, DbPartition dbPartition, DataSynchronizationPeriod period)
+        public static SyncPartition Create(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period)
         {
             return new SyncPartition
             {
                 DbTable = dbTable,
-                DbPartition = dbPartition,
+                PartitionKey = partitionKey,
                 SyncDateTime = DateTime.UtcNow.GetNextPeriod(period)
             };
         }
@@ -109,7 +108,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
 
 
-        public void SynchronizePartition(DbTable dbTable, DbPartition partitionToSave, DataSynchronizationPeriod period)
+        public void SynchronizePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period)
         {
             lock (_lockObject)
             {
@@ -121,8 +120,8 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
 
                 var dict = _syncPartitions[dbTable.Name];
                 
-                if (!dict.ContainsKey(partitionToSave.PartitionKey))
-                    dict.Add(partitionToSave.PartitionKey, SyncPartition.Create(dbTable, partitionToSave, period));
+                if (!dict.ContainsKey(partitionKey))
+                    dict.Add(partitionKey, SyncPartition.Create(dbTable, partitionKey, period));
             }
         }
 
@@ -234,7 +233,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         public static void Remove(this Dictionary<string, Dictionary<string, SyncPartition>> dictionary,
             SyncPartition taskToSync)
         {
-            dictionary[taskToSync.DbTable.Name].Remove(taskToSync.DbPartition.PartitionKey);
+            dictionary[taskToSync.DbTable.Name].Remove(taskToSync.PartitionKey);
             
             if (dictionary[taskToSync.DbTable.Name].Count == 0)
                 dictionary.Remove(taskToSync.DbTable.Name);

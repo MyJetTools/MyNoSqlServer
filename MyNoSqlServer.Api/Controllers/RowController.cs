@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
+using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Json;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -13,37 +15,47 @@ namespace MyNoSqlServer.Api.Controllers
     {
         [HttpGet("Row")]
         public IActionResult List([Required][FromQuery] string tableName, [FromQuery] string partitionKey,
-            [FromQuery] string rowKey, [FromQuery] int? limit, [FromQuery] int? skip)
+            [FromQuery] string rowKey, [FromQuery] int? limit, [FromQuery] int? skip, 
+            [FromQuery] DateTime? updateExpiresAt)
         {
             
-            var (getTableResult, table) = this.GetTable(tableName);
+            var (getTableResult, dbTable) = this.GetTable(tableName);
             
             if (getTableResult != null)
                 return getTableResult;
 
-            if (partitionKey != null)
+
+            if (updateExpiresAt == null)
             {
+                if (partitionKey != null)
+                    return rowKey == null
+                        ? dbTable.GetRows(partitionKey, limit, skip).ToDbRowsResult(this)
+                        : dbTable.TryGetRow(partitionKey, rowKey).ToDbRowResult(this);
+            
+            
                 if (rowKey == null)
-                {
-                    var entities = table.GetRecords(partitionKey, limit, skip);
-                    return this.ToDbRowsResult(entities);
-                }
+                    return dbTable.GetRows(limit, skip).ToDbRowsResult(this);
 
-                var entity = table.GetEntity(partitionKey, rowKey);
-
-                return entity == null 
-                    ? this.GetResult(OperationResult.RowNotFound) 
-                    : this.ToDbRowResult(entity);
+                return dbTable
+                    .GetRowsByRowKey(rowKey, limit, skip)
+                    .ToDbRowsResult(this);    
             }
-
-            // PartitionKey == null and RowKey == null
+            
+            if (partitionKey != null)
+                return rowKey == null
+                    ?  ServiceLocator.DbTableReadOperations.GetRows(dbTable, partitionKey, limit, skip, updateExpiresAt.Value)
+                        .ToDbRowsResult(this)
+                    : ServiceLocator.DbTableReadOperations.TryGetRow(dbTable, partitionKey, rowKey, updateExpiresAt.Value)
+                        .ToDbRowResult(this);
+            
+            
             if (rowKey == null)
-            {
-                var entities = table.GetAllRecords(limit);
-                return this.ToDbRowsResult(entities);
-            }
+                return ServiceLocator.DbTableReadOperations.GetRows(dbTable, limit, skip, updateExpiresAt.Value)
+                    .ToDbRowsResult(this);
 
-            return Conflict("Not Supported when PartitionKey==null and RowKey!=null");
+            return ServiceLocator.DbTableReadOperations.GetRows(dbTable, rowKey, limit, skip, updateExpiresAt.Value)
+                .ToDbRowsResult(this);    
+
         }
 
         [HttpPost("Row/Insert")]
@@ -57,7 +69,7 @@ namespace MyNoSqlServer.Api.Controllers
             
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = await ServiceLocator.DbOperations.InsertAsync(table, body, syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
+            var result = await ServiceLocator.DbTableWriteOperations.InsertAsync(table, body.ParseDynamicEntity(), syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
             
             return this.GetResult(result);
             
@@ -74,7 +86,7 @@ namespace MyNoSqlServer.Api.Controllers
             
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = await ServiceLocator.DbOperations.ReplaceAsync(table, body, 
+            var result = await ServiceLocator.DbTableWriteOperations.ReplaceAsync(table, body.ParseDynamicEntity(), 
                 syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
 
             return this.GetResult(result);
@@ -92,7 +104,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = await ServiceLocator.DbOperations.MergeAsync(table, body,
+            var result = await ServiceLocator.DbTableWriteOperations.MergeAsync(table, body.ParseDynamicEntity(),
                 syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
 
             return this.GetResult(result);
@@ -111,8 +123,8 @@ namespace MyNoSqlServer.Api.Controllers
             
             var body = await Request.BodyAsIMemoryAsync();
             
-            var result = await ServiceLocator.DbOperations.InsertOrReplaceAsync(table, 
-                body, syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
+            var result = await ServiceLocator.DbTableWriteOperations.InsertOrReplaceAsync(table, 
+                body.ParseDynamicEntity(), syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
             
             return this.GetResult(result);
         }
@@ -133,7 +145,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(rowKey))
                 return this.GetResult(OperationResult.RowKeyIsNull);
 
-            var result = await ServiceLocator.DbOperations.DeleteAsync(table, partitionKey, rowKey,
+            var result = await ServiceLocator.DbTableWriteOperations.DeleteAsync(table, partitionKey, rowKey,
                 syncPeriod.ParseSynchronizationPeriodContract());
 
             return this.GetResult(result);
@@ -141,21 +153,18 @@ namespace MyNoSqlServer.Api.Controllers
 
 
         [HttpDelete("CleanAndKeepLastRecords")]
-        public async ValueTask<IActionResult> CleanAndKeepLastRecords([Required] [FromQuery] string tableName,
+        public ValueTask<IActionResult> CleanAndKeepLastRecords([Required] [FromQuery] string tableName,
             [Required] [FromQuery] string partitionKey, [Required] [FromQuery] int amount,
             [FromQuery] string syncPeriod)
         {
-            
             var (getTableResult, table) = this.GetTable(tableName, partitionKey);
             
             if (getTableResult != null)
-                return getTableResult;
+                return new ValueTask<IActionResult>(getTableResult);
 
-            var result = await ServiceLocator.DbOperations.CleanAndKeepLastRecordsAsync(table, partitionKey, amount,
-                syncPeriod.ParseSynchronizationPeriodContract());
-            
-            return this.GetResult(result);
-            
+            return ServiceLocator.DbTableWriteOperations.CleanAndKeepLastRecordsAsync(table, partitionKey, amount,
+                syncPeriod.ParseSynchronizationPeriodContract())
+                .GetResponseOkAsync(this);
         }
 
         [HttpGet("Count")]

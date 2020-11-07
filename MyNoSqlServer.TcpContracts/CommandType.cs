@@ -2,6 +2,6 @@
 {
     public enum CommandType
     {
-        Ping, Pong, Greeting, Subscribe, InitTable, InitPartition, UpdateRows, DeleteRow
+        Ping, Pong, Greeting, Subscribe, InitTable, InitPartition, UpdateRows, DeleteRow, UpdateExpiresTime
     }
 }

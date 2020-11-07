@@ -18,6 +18,9 @@
       <Compile Include="..\MyNoSqlServer.TcpContracts\IMyNoSqlTcpContract.cs">
         <Link>IMyNoSqlTcpContract.cs</Link>
       </Compile>
+      <Compile Include="..\MyNoSqlServer.TcpContracts\ReadDataExtensions.cs">
+        <Link>ReadDataExtensions.cs</Link>
+      </Compile>
       <Compile Include="..\MyNoSqlServer.TcpContracts\SerializerDeserializer.cs">
         <Link>SerializerDeserializer.cs</Link>
       </Compile>

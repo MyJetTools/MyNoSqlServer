@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
 
@@ -25,21 +23,12 @@ namespace MyNoSqlServer.Domains.Db.Rows
         }
         
         public string PartitionKey { get; }
-
         public string RowKey { get; }
-        public string TimeStamp { get; private set; }
-        public byte[] Data { get; private set; }
+        public string TimeStamp { get; }
+        public byte[] Data { get; }
         
-        public DateTime? Expires { get; private set; }
+        public DateTime? Expires { get; internal set; }
 
-
-        
-
-        public static DbRow RestoreSnapshot(IMyNoSqlDbEntity techData, IMyMemory data)
-        {
-            return new DbRow(techData.PartitionKey, techData.RowKey, techData.TimeStamp, techData.Expires, data.AsArray());
-        }
-        
         public static DbRow CreateNew(DynamicEntity entity, DateTime now)
         {
             var timeStamp = now.ToTimeStampString();
@@ -47,10 +36,9 @@ namespace MyNoSqlServer.Domains.Db.Rows
             return new DbRow(entity.PartitionKey, entity.RowKey, timeStamp, entity.Expires, entity.AsDbRowJson());
         }
         
-        public void Replace(DynamicEntity entity, DateTime now)
-        {   TimeStamp = now.ToTimeStampString();
-            entity.UpdateTimeStamp(TimeStamp);
-            Data = entity.AsDbRowJson();
+        public static DbRow Restore(DynamicEntity entity)
+        {
+            return new DbRow(entity.PartitionKey, entity.RowKey, entity.TimeStamp, entity.Expires, entity.AsDbRowJson());
         }
 
         public bool MatchesQuery(IDictionary<string, List<QueryCondition>> conditionsDict)
@@ -58,15 +46,6 @@ namespace MyNoSqlServer.Domains.Db.Rows
             throw new NotImplementedException("Temporary disabled the ability to filter within Fields of DbRow");
         }
 
-    }
-
-    public static class DbRowHelpers
-    {
-        public static DbRow ToDbRow(this IMyMemory myMemory)
-        {
-            var entity = myMemory.ParseDynamicEntity();
-            return DbRow.CreateNew(entity, DateTime.UtcNow);
-        }
     }
     
 }

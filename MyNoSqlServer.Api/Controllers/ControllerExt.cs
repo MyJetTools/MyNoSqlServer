@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -13,12 +14,21 @@ namespace MyNoSqlServer.Api.Controllers
     public static class ControllerExt
     {
         private const string AppJsonContentType = "application/json";
-        public static IActionResult ToDbRowResult(this Controller ctx, DbRow dbRow)
+        public static IActionResult ToDbRowResult(this DbRow dbRow, Controller ctx)
         {
-            return ctx.File(dbRow.Data, AppJsonContentType);
+            return dbRow == null 
+                ? ctx.GetResult(OperationResult.RowNotFound) 
+                : ctx.File(dbRow.Data, AppJsonContentType);
         }
         
         public static IActionResult ToDbRowsResult(this Controller ctx, IEnumerable<DbRow> dbRows)
+        {
+            var response = dbRows.ToJsonArray().AsArray();
+            return ctx.File(response, AppJsonContentType);
+        }
+        
+        
+        public static IActionResult ToDbRowsResult(this IEnumerable<DbRow> dbRows, Controller ctx)
         {
             var response = dbRows.ToJsonArray().AsArray();
             return ctx.File(response, AppJsonContentType);
@@ -57,7 +67,6 @@ namespace MyNoSqlServer.Api.Controllers
             var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
             return (null, table);
         }
-
         
         public static (IActionResult result, DbTable dbTable) GetTable(this Controller ctx, string tableName)
         {

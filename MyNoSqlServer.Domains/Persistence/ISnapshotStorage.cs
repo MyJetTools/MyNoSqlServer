@@ -1,11 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MyNoSqlServer.Domains.Db.Partitions;
+using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 
-namespace MyNoSqlServer.Domains.DataSynchronization
+namespace MyNoSqlServer.Domains.Persistence
 {
     
     public class PartitionSnapshot
@@ -24,10 +23,10 @@ namespace MyNoSqlServer.Domains.DataSynchronization
             };
         }
 
-        public static PartitionSnapshot Create(DbTable table, DbPartition partition)
+        public static PartitionSnapshot Create(DbTable table, string partitionKey)
         {
-            var dbRowsAsByteArray = partition.GetAllRows().ToJsonArray().AsArray();
-            return Create(table.Name, partition.PartitionKey, dbRowsAsByteArray);
+            var dbRowsAsByteArray = table.GetRows(partitionKey).ToJsonArray().AsArray();
+            return Create(table.Name, partitionKey, dbRowsAsByteArray);
         }
 
 

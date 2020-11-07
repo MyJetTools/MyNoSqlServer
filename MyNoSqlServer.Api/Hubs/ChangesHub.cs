@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using MyNoSqlServer.Domains.Db.Partitions;
+using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 
@@ -96,25 +96,25 @@ namespace MyNoSqlServer.Api.Hubs
 
             foreach (var clientProxy in clientsToSend)
             {
-                if (packetToBroadcast == null)
-                    packetToBroadcast = dbTable.GetAllRecords(null).ToHubUpdateContract();
-
+                packetToBroadcast ??= dbTable.GetRows().ToHubUpdateContract();
                 clientProxy.SendAsync(dbTable.Name, "i", packetToBroadcast);
             }
         }
         
-        public static void BroadCastInit(DbTable dbTable, DbPartition partition)
+        public static void BroadCastInitPartition(DbTable dbTable, string partitionKey)
         {
-            var clientsToSend = Connections.Get(itm => itm.SubscribedToTable(dbTable.Name)).Select(itm => itm.Client);
+            var clientsToSend 
+                = Connections
+                    .Get(itm => itm.SubscribedToTable(dbTable.Name))
+                    .Select(itm => itm.Client);
 
             byte[] packetToBroadcast = null;
 
             foreach (var clientProxy in clientsToSend)
             {
-                if (packetToBroadcast == null)
-                    packetToBroadcast = partition.GetAllRows().ToHubUpdateContract();
+                packetToBroadcast ??= dbTable.GetRows(partitionKey).ToHubUpdateContract();
 
-                clientProxy.SendAsync(dbTable.Name, "i:"+partition.PartitionKey, packetToBroadcast);
+                clientProxy.SendAsync(dbTable.Name, "i:"+partitionKey, packetToBroadcast);
             }
         }
 
@@ -123,16 +123,14 @@ namespace MyNoSqlServer.Api.Hubs
             if (string.IsNullOrEmpty(tableName))
                 return;
 
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
+            var dbTable = ServiceLocator.DbInstance.TryGetTable(tableName);
 
-            if (table == null)
+            if (dbTable == null)
                 return;
 
             Connections.Update(Context.ConnectionId, itm => { itm.Subscribe(tableName); });
 
-            var rows = table.GetAllRecords(null);
-
-            var dataToSend = rows.ToHubUpdateContract();
+            var dataToSend =  dbTable.GetRows().ToHubUpdateContract();
 
             await Clients.Caller.SendAsync(tableName, "i", dataToSend);
         }
@@ -144,12 +142,7 @@ namespace MyNoSqlServer.Api.Hubs
             if (dbTable == null)
                 return Clients.Caller.SendTableNotFoundAsync(corrId);
 
-            var partition = dbTable.GetPartition(partitionKey);
-
-            if (partition == null)
-                return Clients.Caller.SendRowNotFoundAsync(corrId);
-
-            var row = partition.GetRow(rowKey);
+            var row = dbTable.TryGetRow(partitionKey, rowKey);
             
             if (row == null)
                 return Clients.Caller.SendRowNotFoundAsync(corrId);
@@ -165,12 +158,7 @@ namespace MyNoSqlServer.Api.Hubs
             if (dbTable == null)
                 return Clients.Caller.SendTableNotFoundAsync(corrId);
 
-            var partition = dbTable.GetPartition(partitionKey);
-
-            if (partition == null)
-                return Clients.Caller.SendEmptyRowsAsync(corrId);
-
-            var rows = partition.GetRowsWithLimit(limit.ContractToLimit(), skip.ContractToSkip());
+            var rows = dbTable.GetRows(partitionKey, limit.ContractToLimit(), skip.ContractToSkip());
 
             return Clients.Caller.SendRowsAsync(corrId, rows.ToJsonArray().AsArray());
         }
@@ -181,8 +169,7 @@ namespace MyNoSqlServer.Api.Hubs
             if (dbTable == null)
                 return Clients.Caller.SendTableNotFoundAsync(corrId);
 
-
-            var rows = dbTable.GetAllRecords(limit.ContractToLimit());
+            var rows = dbTable.GetRows(limit.ContractToLimit(), skip.ContractToSkip());
 
             return Clients.Caller.SendRowsAsync(corrId, rows.ToJsonArray().AsArray());
         }

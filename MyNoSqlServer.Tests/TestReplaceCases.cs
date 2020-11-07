@@ -1,9 +1,10 @@
 using System;
-using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db;
 using NUnit.Framework;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 
 namespace MyNoSqlServer.Tests
@@ -27,11 +28,9 @@ namespace MyNoSqlServer.Tests
         {
             var ioc = TestUtils.GetTestIoc();
 
-            var dbOperations =  ioc.GetService<DbOperations>();
+            var dbOperations =  ioc.GetService<DbTableWriteOperations>();
 
-            var dbInstance = ioc.GetService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable");
+            var table = ioc.CreateTable("mytable");
 
             var rawClass = new TestReplaceEntity
             {
@@ -41,20 +40,20 @@ namespace MyNoSqlServer.Tests
             };
 
             var dt = DateTime.UtcNow;
-
-            await dbOperations.InsertAsync(table, rawClass.ToMemory(), DataSynchronizationPeriod.Sec1, dt);
             
-            rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
+            ioc.InsertToTable(table, rawClass, dt);
+
+            rawClass = table.TryGetRow("test", "test").AsResult<TestReplaceEntity>();
 
             rawClass.Value = "456";
             
             dt = DateTime.UtcNow.AddSeconds(1);
             
-            var opResult = await dbOperations.ReplaceAsync(table, rawClass.ToMemory(), DataSynchronizationPeriod.Immediately, dt);
+            var opResult = await dbOperations.ReplaceAsync(table, rawClass.ToMemory().ParseDynamicEntity(), DataSynchronizationPeriod.Immediately, dt);
             
             Assert.AreEqual(OperationResult.Ok, opResult);
 
-            var result = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
+            var result = table.TryGetRow("test", "test").AsResult<TestReplaceEntity>();
 
             Assert.AreEqual("456", result.Value);
             Assert.AreEqual(dt.ToTimeStampString(), result.TimeStamp);
@@ -65,7 +64,7 @@ namespace MyNoSqlServer.Tests
         {
             var ioc = TestUtils.GetTestIoc();
 
-            var dbOperations =  ioc.GetService<DbOperations>();
+            var dbOperations =  ioc.GetService<DbTableWriteOperations>();
 
             var dbInstance = ioc.GetService<DbInstance>();
 
@@ -81,16 +80,16 @@ namespace MyNoSqlServer.Tests
 
             var memory = rawClass.ToMemory();
 
-            await dbOperations.InsertAsync(table, memory, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
+            await dbOperations.InsertAsync(table, memory.ParseDynamicEntity(), DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
             
-            rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
+            rawClass = table.TryGetRow("test", "test").AsResult<TestReplaceEntity>();
 
             rawClass.Value = "456";
             rawClass.TimeStamp = "111";
             
             memory = rawClass.ToMemory();
 
-            var opResult = await dbOperations.ReplaceAsync(table, memory, DataSynchronizationPeriod.Immediately, DateTime.UtcNow);
+            var opResult = await dbOperations.ReplaceAsync(table, memory.ParseDynamicEntity(), DataSynchronizationPeriod.Immediately, DateTime.UtcNow);
             
             Assert.AreEqual(OperationResult.RecordChangedConcurrently, opResult);
 
