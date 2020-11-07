@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim
+FROM mcr.microsoft.com/dotnet/aspnet:5.0
 WORKDIR /app
 COPY . .
 ENTRYPOINT ["dotnet", "MyNoSqlServer.Api.dll"]
