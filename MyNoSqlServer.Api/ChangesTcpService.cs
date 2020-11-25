@@ -44,7 +44,7 @@ namespace MyNoSqlServer.Api
 
 
 
-        public static void BroadcastInitTable(DbTable dbTable)
+        public static async Task BroadcastInitTableAsync(DbTable dbTable)
         {
 
             var connections = TableSubscribers.GetConnections(dbTable.Name);
@@ -59,7 +59,7 @@ namespace MyNoSqlServer.Api
             };
             
             foreach (var connection in connections)
-                connection.SendPacketAsync(initTablePacket);
+                await connection.SendPacketAsync(initTablePacket);
 
             var partitions = new List<string>();
 
@@ -74,12 +74,12 @@ namespace MyNoSqlServer.Api
             foreach (var connection in connections)
             {
                 foreach (var partition in partitions)
-                    BroadcastInitPartition(dbTable, partition, connection);   
+                    await BroadcastInitPartitionAsync(dbTable, partition, connection);   
             }
 
         }
 
-        public static void BroadcastInitPartition(DbTable dbTable, string partitionKey, ChangesTcpService connection)
+        public static async Task BroadcastInitPartitionAsync(DbTable dbTable, string partitionKey, ChangesTcpService connection)
         {
             var packetToBroadcast = new InitPartitionContract
             {
@@ -91,7 +91,7 @@ namespace MyNoSqlServer.Api
             
             Console.WriteLine($"Sending InitPartition {packetToBroadcast.PartitionKey} with Size: {packetToBroadcast.Data.Length} to connection: "+connection.ContextName);
             
-            connection.SendPacketAsync(packetToBroadcast);
+            await connection.SendPacketAsync(packetToBroadcast);
         }
 
         public static void BroadcastInitPartition(DbTable dbTable, string partitionKey)
@@ -116,7 +116,7 @@ namespace MyNoSqlServer.Api
         }
 
 
-        private static void SendInitTable(DbTable dbTable, ChangesTcpService connection)
+        private static async Task SendInitTable(DbTable dbTable, ChangesTcpService connection)
         {
 
             var initTablePacket = new InitTableContract
@@ -125,7 +125,7 @@ namespace MyNoSqlServer.Api
                 Data = Array.Empty<DbRow>().ToHubUpdateContract()
             };
 
-            connection.SendPacketAsync(initTablePacket);
+            await connection.SendPacketAsync(initTablePacket);
 
             var partitions = new List<string>();
 
@@ -136,9 +136,12 @@ namespace MyNoSqlServer.Api
                     partitions.Add(dbPartition);
                 }
             });
-
+            
             foreach (var partition in partitions)
-                BroadcastInitPartition(dbTable, partition, connection);
+            {
+                await BroadcastInitPartitionAsync(dbTable, partition, connection);
+            }
+                
         }
 
         public static void BroadcastRowsUpdate(DbTable dbTable, IReadOnlyList<DbRow> entities)
@@ -195,8 +198,7 @@ namespace MyNoSqlServer.Api
                     break;
                 
                 case SubscribeContract subscribeContract:
-                    HandleSubscribe(subscribeContract);
-                    break;
+                    return HandleSubscribeAsync(subscribeContract);
                 
                 
                 case UpdateExpiresTimeTcpContract expiresTimeTcpContract:
@@ -213,7 +215,7 @@ namespace MyNoSqlServer.Api
             return new ValueTask();
         }
 
-        private void HandleSubscribe(SubscribeContract subscribeContract)
+        private async ValueTask HandleSubscribeAsync(SubscribeContract subscribeContract)
         {
             if (string.IsNullOrEmpty(subscribeContract.TableName))
                 return;
@@ -240,7 +242,7 @@ namespace MyNoSqlServer.Api
             
             Console.WriteLine($"Socket {Id} is subscribed to the table {subscribeContract.TableName}. Initialized records: {rows.Count}");
 
-            SendInitTable(table, this);
+            await SendInitTable(table, this);
         }
         
     }
