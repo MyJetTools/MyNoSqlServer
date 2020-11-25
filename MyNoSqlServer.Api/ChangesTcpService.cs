@@ -88,6 +88,9 @@ namespace MyNoSqlServer.Api
                 Data = dbTable.GetRows(partitionKey).ToHubUpdateContract()
             };
 
+            
+            Console.WriteLine($"Sending InitPartition {packetToBroadcast.PartitionKey} with Size: {packetToBroadcast.Data.Length} to connection: "+connection.ContextName);
+            
             connection.SendPacketAsync(packetToBroadcast);
         }
 
@@ -135,7 +138,7 @@ namespace MyNoSqlServer.Api
             });
 
             foreach (var partition in partitions)
-                BroadcastInitPartition(dbTable, partition);
+                BroadcastInitPartition(dbTable, partition, connection);
         }
 
         public static void BroadcastRowsUpdate(DbTable dbTable, IReadOnlyList<DbRow> entities)
