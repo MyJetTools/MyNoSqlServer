@@ -172,14 +172,18 @@ namespace MyNoSqlServer.Api.Controllers
         {
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
+            
+            
 
-            if (string.IsNullOrEmpty(partitionKey))
-                return this.GetResult(OperationResult.PartitionKeyIsNull);
             
             var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
                 return this.GetResult(OperationResult.TableNotFound);
+
+
+            if (partitionKey == null)
+                return Content(table.GetRecordsCount().ToString());
 
             var count = table.GetRecordsCount(partitionKey);
 
