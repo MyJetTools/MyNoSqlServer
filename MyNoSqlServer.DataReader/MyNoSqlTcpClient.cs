@@ -9,9 +9,9 @@ namespace MyNoSqlServer.DataReader
 
         private readonly MyClientTcpSocket<IMyNoSqlTcpContract> _tcpClient;
         
-        public MyNoSqlTcpClient(Func<string> getHostPort, string appName)
+        public MyNoSqlTcpClient(Func<string> getHostPort, string appName, int reconnectTimeoutInSec = 3)
         {
-            _tcpClient = new MyClientTcpSocket<IMyNoSqlTcpContract>(getHostPort, TimeSpan.FromSeconds(3));
+            _tcpClient = new MyClientTcpSocket<IMyNoSqlTcpContract>(getHostPort, TimeSpan.FromSeconds(reconnectTimeoutInSec));
 
             _tcpClient
                 .RegisterTcpContextFactory(() => new MyNoSqlServerClientTcpContext(this, appName))
