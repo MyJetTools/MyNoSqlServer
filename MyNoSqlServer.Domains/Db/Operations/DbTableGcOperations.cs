@@ -23,6 +23,8 @@ namespace MyNoSqlServer.Domains.Db.Operations
 
         public static IEnumerable<(DbPartition partition, List<DbRow> rows)> GetExpiredEntities(this DbTable dbTable, DateTime nowTime)
         {
+            
+            /*
 
             Dictionary<string, (DbPartition partition, List<DbRow> rows)> result = null;
                 
@@ -42,8 +44,11 @@ namespace MyNoSqlServer.Domains.Db.Operations
                     }
                 }
             });
+            */
 
-            return result?.Values ?? EmptyExpiredRowsResult;
+           // return result?.Values ?? EmptyExpiredRowsResult;
+
+           return EmptyExpiredRowsResult;
         }
 
         internal static DbPartition GetPartitionIfOneHasToBeCleaned(this DbTable dbTable, string partitionKey,
