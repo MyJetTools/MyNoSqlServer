@@ -50,15 +50,26 @@ namespace MyNoSqlServer.Api
             
             if (connections == null)
                 return;
-            
-            var packetToBroadcast = new InitTableContract
-            {
-                TableName = dbTable.Name,
-                Data = dbTable.GetRows().ToHubUpdateContract()
-            };
 
-            foreach (var connection in connections)
-                    connection.SendPacketAsync(packetToBroadcast);
+            
+            dbTable.GetAccessWithReadLock(dbTableReader =>
+            {
+                foreach (var dbPartition in dbTableReader.Partitions)
+                {
+                                
+                    var packetToBroadcast = new InitPartitionContract
+                    {
+                        TableName = dbTable.Name,
+                        Data = dbTable.GetRows().ToHubUpdateContract(),
+                        PartitionKey = dbPartition.Key
+                    };
+
+                    foreach (var connection in connections)
+                        connection.SendPacketAsync(packetToBroadcast);
+                }
+            });
+            
+
         }
 
         public static void BroadcastInitPartition(DbTable dbTable, string partitionKey)
@@ -68,6 +79,16 @@ namespace MyNoSqlServer.Api
 
             if (connections == null)
                 return;
+
+            var initTablePacket = new InitTableContract
+            {
+                TableName = dbTable.Name,
+                Data = Array.Empty<DbRow>().ToHubUpdateContract() 
+            };
+            
+            foreach (var connection in connections)
+                connection.SendPacketAsync(initTablePacket);
+            
 
             var packetToBroadcast = new InitPartitionContract
             {
