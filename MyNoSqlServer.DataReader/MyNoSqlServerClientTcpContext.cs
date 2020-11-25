@@ -70,8 +70,16 @@ namespace MyNoSqlServer.DataReader
             {
                 switch (data)
                 {
+                    case PingContract _:
+                        Console.WriteLine("PING ARRIVED");
+                        break;
+                    
+                    case PongContract _:
+                        Console.WriteLine("PONG ARRIVED");
+                        break;
 
                     case InitTableContract initTableContract:
+
                         _subscriber.HandleInitTableEvent(initTableContract.TableName, initTableContract.Data);
                         break;
 

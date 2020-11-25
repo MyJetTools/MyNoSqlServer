@@ -105,6 +105,8 @@ namespace MyNoSqlServer.Api
                 PartitionKey = partitionKey,
                 Data = dbTable.GetRows(partitionKey).ToHubUpdateContract()
             };
+            
+            Console.WriteLine($"Sent data for Partition: {packetToBroadcast.PartitionKey}. Size: "+packetToBroadcast.Data.Length);
 
             foreach (var connection in connections)
                 connection.SendPacketAsync(packetToBroadcast);

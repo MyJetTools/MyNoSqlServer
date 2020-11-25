@@ -173,9 +173,6 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
             
-            
-
-            
             var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
