@@ -52,8 +52,6 @@ namespace MyNoSqlServer.Api
             if (connections == null)
                 return;
             
-            
-            
             var initTablePacket = new InitTableContract
             {
                 TableName = dbTable.Name,
@@ -73,9 +71,24 @@ namespace MyNoSqlServer.Api
                 }
             });
 
-            foreach (var partition in partitions)
-                BroadcastInitPartition(dbTable, partition);
+            foreach (var connection in connections)
+            {
+                foreach (var partition in partitions)
+                    BroadcastInitPartition(dbTable, partition, connection);   
+            }
 
+        }
+
+        public static void BroadcastInitPartition(DbTable dbTable, string partitionKey, ChangesTcpService connection)
+        {
+            var packetToBroadcast = new InitPartitionContract
+            {
+                TableName = dbTable.Name,
+                PartitionKey = partitionKey,
+                Data = dbTable.GetRows(partitionKey).ToHubUpdateContract()
+            };
+
+            connection.SendPacketAsync(packetToBroadcast);
         }
 
         public static void BroadcastInitPartition(DbTable dbTable, string partitionKey)
@@ -95,6 +108,32 @@ namespace MyNoSqlServer.Api
 
             foreach (var connection in connections)
                 connection.SendPacketAsync(packetToBroadcast);
+        }
+
+
+        private static void SendInitTable(DbTable dbTable, ChangesTcpService connection)
+        {
+
+            var initTablePacket = new InitTableContract
+            {
+                TableName = dbTable.Name,
+                Data = Array.Empty<DbRow>().ToHubUpdateContract()
+            };
+
+            connection.SendPacketAsync(initTablePacket);
+
+            var partitions = new List<string>();
+
+            dbTable.GetAccessWithReadLock(dbTableReader =>
+            {
+                foreach (var dbPartition in dbTableReader.Partitions.Keys)
+                {
+                    partitions.Add(dbPartition);
+                }
+            });
+
+            foreach (var partition in partitions)
+                BroadcastInitPartition(dbTable, partition);
         }
 
         public static void BroadcastRowsUpdate(DbTable dbTable, IReadOnlyList<DbRow> entities)
@@ -196,13 +235,7 @@ namespace MyNoSqlServer.Api
             
             Console.WriteLine($"Socket {Id} is subscribed to the table {subscribeContract.TableName}. Initialized records: {rows.Count}");
 
-            var initContract = new InitTableContract
-            {
-                TableName = subscribeContract.TableName,
-                Data = rows.ToHubUpdateContract() 
-            };
-
-            SendPacketAsync(initContract);
+            SendInitTable(table, this);
         }
         
     }
