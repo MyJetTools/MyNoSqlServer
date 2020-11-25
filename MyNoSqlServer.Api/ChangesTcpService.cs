@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.Api.Hubs;
 using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.TcpContracts;
@@ -42,21 +43,27 @@ namespace MyNoSqlServer.Api
         }
 
 
-        
+
         public static void BroadcastInitTable(DbTable dbTable)
         {
 
             var connections = TableSubscribers.GetConnections(dbTable.Name);
-            
+
             if (connections == null)
                 return;
 
-            
+            SortedList<string, DbPartition> partitions = null;
+
+
             dbTable.GetAccessWithReadLock(dbTableReader =>
             {
-                foreach (var dbPartition in dbTableReader.Partitions)
+                partitions = new SortedList<string, DbPartition>(dbTableReader.Partitions);
+            });
+
+            if (partitions != null)
+                foreach (var dbPartition in partitions)
                 {
-                                
+
                     var packetToBroadcast = new InitPartitionContract
                     {
                         TableName = dbTable.Name,
@@ -67,9 +74,6 @@ namespace MyNoSqlServer.Api
                     foreach (var connection in connections)
                         connection.SendPacketAsync(packetToBroadcast);
                 }
-            });
-            
-
         }
 
         public static void BroadcastInitPartition(DbTable dbTable, string partitionKey)
