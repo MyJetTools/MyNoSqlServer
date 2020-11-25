@@ -78,6 +78,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
         internal static IReadOnlyList<DbPartition> GetPartitionsToGarbageCollect(this DbTable dbTable, int maxAmount)
         {
 
+            /*
             IReadOnlyList<DbPartition> result = null;
             
             dbTable.GetAccessWithReadLock(dbTableReader =>
@@ -94,6 +95,8 @@ namespace MyNoSqlServer.Domains.Db.Operations
             });
 
             return result ?? EmptyPartitionsList;
+            */
+            return EmptyPartitionsList;
         }
         
         
