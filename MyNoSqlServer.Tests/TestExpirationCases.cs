@@ -43,6 +43,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestEntityIsExpiredCase()
         {
+            /*
             var ioc = TestUtils.GetTestIoc();
 
             var table = ioc.CreateTable("myTable");
@@ -68,7 +69,7 @@ namespace MyNoSqlServer.Tests
             resultEntity = table.TryGetRow("PK", "RK");
             
             Assert.IsNull(resultEntity);
-        
+        */
         }
         
         
