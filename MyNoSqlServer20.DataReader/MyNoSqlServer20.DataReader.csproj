@@ -9,6 +9,7 @@
     <ItemGroup>
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
         <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+        <PackageReference Include="MyTcpSockets20" Version="1.3.17" />
     </ItemGroup>
 
     <ItemGroup>
@@ -40,16 +41,16 @@
       <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer20.TcpContracts\MyNoSqlServer20.TcpContracts.csproj" />
     </ItemGroup>
 
-  <PropertyGroup>
-    <TargetsForTfmSpecificBuildOutput>
-      $(TargetsForTfmSpecificBuildOutput);PackReferencedProjectOutputs
-    </TargetsForTfmSpecificBuildOutput>
-  </PropertyGroup>
+    <PropertyGroup>
+      <TargetsForTfmSpecificBuildOutput>
+        $(TargetsForTfmSpecificBuildOutput);PackReferencedProjectOutputs
+      </TargetsForTfmSpecificBuildOutput>
+    </PropertyGroup>
 
-  <Target Name="PackReferencedProjectOutputs" DependsOnTargets="BuildOnlySettings;ResolveReferences">
-    <ItemGroup>
-      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
-    </ItemGroup>
-  </Target>
+    <Target Name="PackReferencedProjectOutputs" DependsOnTargets="BuildOnlySettings;ResolveReferences">
+      <ItemGroup>
+        <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+      </ItemGroup>
+    </Target>
 
 </Project>
