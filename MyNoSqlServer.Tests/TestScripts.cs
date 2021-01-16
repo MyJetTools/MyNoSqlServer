@@ -19,8 +19,6 @@ namespace MyNoSqlServer.Tests
             return dbInstance.CreateTableIfNotExists(tableName);
         }
 
-
-
         public static void InsertToTable(this MyIoc ioc, DbTable table, IMyNoSqlDbEntity entity, DateTime? dt = null)
         {
             var dbOperations =  ioc.GetService<DbTableWriteOperations>();

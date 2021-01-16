@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Persistence;
 
@@ -13,8 +12,6 @@ namespace MyNoSqlServer.Tests.MockServices
         public string TableName { get; set; }
         public string PartitionKey { get; set; }
     }
-
-
     
     public class SnapshotStorageMock : ISnapshotStorage
     {
@@ -45,12 +42,18 @@ namespace MyNoSqlServer.Tests.MockServices
             return new ValueTask();
         }
 
-        public async IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync()
+        public async IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync()
         {
-            foreach (var partitionSnapshot in Array.Empty<PartitionSnapshot>())
+            foreach (var tableLoader in Array.Empty<ITableLoader>())
             {
-                yield return partitionSnapshot;
+                yield return tableLoader;
             }
         }
+
+        public ValueTask CreateTableAsync(DbTable dbTable)
+        {
+            return new ValueTask();
+        }
     }
+
 }

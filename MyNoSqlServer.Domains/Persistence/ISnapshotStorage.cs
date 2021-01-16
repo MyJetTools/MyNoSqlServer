@@ -35,12 +35,21 @@ namespace MyNoSqlServer.Domains.Persistence
             return TableName + "/" + PartitionKey;
         }
     }
+
+
+    public interface ITableLoader
+    {
+        string TableName { get; }
+        IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync();
+    }
     
     public interface ISnapshotStorage
     {
         ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot);
         ValueTask SaveTableSnapshotAsync(DbTable dbTable);
         ValueTask DeleteTablePartitionAsync(string tableName, string partitionKey);
-        IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync();
+        IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync();
+
+        ValueTask CreateTableAsync(DbTable dbTable);
     }
 }

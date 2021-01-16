@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
-using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
@@ -75,7 +73,7 @@ namespace MyNoSqlServer.AzureStorage
             
         }
 
-        public async IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync()
+        public async IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync()
         {
 
             const string ignoreContainerName = "nosqlsnapshots";
@@ -86,24 +84,18 @@ namespace MyNoSqlServer.AzureStorage
                 if (container.Name == ignoreContainerName)
                     continue;
 
-                await foreach (var blockBlob in container.GetListOfBlobsAsync())
-                {
-                    var memoryStream = new MemoryStream();
-
-                    await blockBlob.DownloadToStreamAsync(memoryStream);
-
-                    var snapshot = new PartitionSnapshot
-                    {
-                        TableName = container.Name,
-                        PartitionKey = blockBlob.Name.Base64ToString(),
-                        Snapshot = memoryStream.ToArray()
-                    };
-
-                    yield return snapshot;
-                    Console.WriteLine("Loaded snapshot: " + snapshot);
-                }
+                var tableLoader = new AzureBlobTableLoader(container);
+                Console.WriteLine($"Restoring table: {container.Name}");
+                yield return tableLoader;
+                
             }
 
+        }
+
+        public async ValueTask CreateTableAsync(DbTable dbTable)
+        {
+            var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
+            await container.CreateIfNotExistsAsync();
         }
 
         public async IAsyncEnumerable<string> GetPersistedTablesAsync()

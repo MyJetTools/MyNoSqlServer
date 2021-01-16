@@ -9,6 +9,9 @@ using MyNoSqlServer.Domains.Persistence;
 namespace MyNoSqlServer.Domains.SnapshotSaver
 {
     
+    
+    
+    
     public class SnapshotSaverEngine 
     {
         private readonly DbInstance _dbInstance;
@@ -31,22 +34,28 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         public async Task LoadSnapshotsAsync()
         {
 
-            await foreach (var snapshot in _snapshotStorage.LoadSnapshotsAsync())
+            await foreach (var tableLoader in _snapshotStorage.LoadSnapshotsAsync())
             {
-                try
-                {
-                    var table = _dbInstance.CreateTableIfNotExists(snapshot.TableName);
-                    var partition = table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
+                var table = _dbInstance.CreateTableIfNotExists(tableLoader.TableName);
 
-                    if (partition != null)
-                        _replicaSynchronizationService.PublishInitPartition(table, partition.PartitionKey);
-                }
-                catch (Exception e)
+
+                await foreach (var snapshot in tableLoader.LoadSnapshotsAsync())
                 {
-                    Console.WriteLine(
-                        $"Snapshots {snapshot.TableName}/{snapshot.PartitionKey} could not be loaded: " +
-                        e.Message);
-                } 
+                    try
+                    {
+     
+                        var partition = table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
+
+                        if (partition != null)
+                            _replicaSynchronizationService.PublishInitPartition(table, partition.PartitionKey);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(
+                            $"Snapshots {snapshot.TableName}/{snapshot.PartitionKey} could not be loaded: " +
+                            e.Message);
+                    } 
+                }
             }
             
         }

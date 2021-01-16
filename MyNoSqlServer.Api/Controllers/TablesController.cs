@@ -40,7 +40,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("Tables/CreateIfNotExists")]
-        public IActionResult CreateIfNotExists([Required] [FromQuery] string tableName)
+        public async ValueTask<IActionResult> CreateIfNotExists([Required] [FromQuery] string tableName)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -49,12 +49,12 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
+            await ServiceLocator.DbInstance.CreateTableIfNotExistsAsync(tableName);
             return this.ResponseOk();
         }
 
         [HttpPost("Tables/Create")]
-        public IActionResult Create([Required] [FromQuery] string tableName)
+        public async ValueTask<IActionResult> Create([Required] [FromQuery] string tableName)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -63,9 +63,8 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            return ServiceLocator.DbInstance.CreateTable(tableName) 
-                ? this.ResponseOk() 
-                : this.GetResult(OperationResult.CanNotCreateObject);
+            var result = await ServiceLocator.DbInstance.CreateTableAsync(tableName);
+            return this.GetResult(result);
         }
 
         [HttpDelete("Tables/Clean")]
