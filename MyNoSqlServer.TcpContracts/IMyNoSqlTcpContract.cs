@@ -189,7 +189,7 @@ namespace MyNoSqlServer.TcpContracts
         public byte Version { get; private set; }
         
         public string TableName { get; set; }
-        public DateTime Expires { get; set; }
+        public DateTime? Expires { get; set; }
         public string PartitionKey { get; set; }
         
         public string[] RowKeys { get; set; }
@@ -201,7 +201,7 @@ namespace MyNoSqlServer.TcpContracts
             stream.WriteByte(4);
             
             stream.WritePascalString(TableName);
-            stream.WriteDateTime(Expires);
+            stream.WriteExpirationDateTime(Expires);
             stream.WritePascalString(PartitionKey);
             stream.WritePascalStringArray(RowKeys);
         }

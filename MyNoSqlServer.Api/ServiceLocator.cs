@@ -68,7 +68,7 @@ namespace MyNoSqlServer.Api
         
         public static readonly ISnapshotSaverScheduler SnapshotSaverScheduler = new SnapshotSaverScheduler();
 
-        private static ExpiredEntitiesGarbageCollector ExpiredEntitiesGarbageCollector { get; set; }
+        public static ExpiredEntitiesGarbageCollector ExpiredEntitiesGarbageCollector { get; set; }
 
         private static readonly TaskTimer ExpiredEntitiesGcTimer = new TaskTimer(TimeSpan.FromSeconds(30));
         

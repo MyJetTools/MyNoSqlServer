@@ -340,7 +340,8 @@ namespace MyNoSqlServer.TcpContracts.Tests
             Assert.AreEqual(testContract.TableName, result.TableName);
             
             Assert.AreEqual(testContract.PartitionKey, result.PartitionKey);
-            Assert.AreEqual(testContract.Expires.ToString("s"), result.Expires.ToString("s"));
+            
+            testContract.Expires.AssertExpirationDate(result.Expires);
             
             Assert.AreEqual(testContract.RowKeys.Length, result.RowKeys.Length);
             for (var i = 0; i < testContract.RowKeys.Length; i++)

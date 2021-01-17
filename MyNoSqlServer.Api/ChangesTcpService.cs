@@ -207,7 +207,11 @@ namespace MyNoSqlServer.Api
                         ServiceLocator.DbTableWriteOperations.UpdateExpirationTime(dbTable, 
                             expiresTimeTcpContract.PartitionKey, 
                             expiresTimeTcpContract.RowKeys, 
-                            expiresTimeTcpContract.Expires);
+                            new UpdateExpirationTime
+                            {
+                                ExpiresDate = expiresTimeTcpContract.Expires,
+                                ClearExpiresDate = expiresTimeTcpContract.Expires == null
+                            });
                     break;
                 
             }

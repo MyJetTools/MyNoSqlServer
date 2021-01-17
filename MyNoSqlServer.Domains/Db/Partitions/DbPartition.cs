@@ -8,6 +8,15 @@ using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Domains.Db.Partitions
 {
+
+
+    public struct UpdateExpirationTime
+    {
+        public DateTime? ExpiresDate { get; set; }
+        
+        public bool ClearExpiresDate { get; set; }
+    }
+    
     
     /// <summary>
     /// DbPartition Uses SlimLock of Table
@@ -80,13 +89,19 @@ namespace MyNoSqlServer.Domains.Db.Partitions
                 : null;
         }
 
-        internal void UpdateExpirationTime(string rowKey, DateTime expires)
+        internal void UpdateExpirationTime(string rowKey, in UpdateExpirationTime updateExpirationTime)
         {
             if (!_rows.ContainsKey(rowKey)) 
                 return;
             
             var dbRow = _rows[rowKey];
-            dbRow.Expires = expires;
+
+            if (updateExpirationTime.ExpiresDate != null)
+                dbRow.Expires = updateExpirationTime.ExpiresDate;
+
+            if (updateExpirationTime.ClearExpiresDate)
+                dbRow.Expires = null;
+            
             _expirationIndex.Update(dbRow);
         }
 

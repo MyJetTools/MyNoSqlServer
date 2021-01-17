@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using MyDependencies;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db;
@@ -19,21 +20,20 @@ namespace MyNoSqlServer.Tests
             return dbInstance.CreateTableIfNotExists(tableName);
         }
 
-        public static void InsertToTable(this MyIoc ioc, DbTable table, IMyNoSqlDbEntity entity, DateTime? dt = null)
+        public static async Task InsertToTableAsync(this MyIoc ioc, DbTable table, IMyNoSqlDbEntity entity, DateTime? dt = null)
         {
             var dbOperations =  ioc.GetService<DbTableWriteOperations>();
 
             dt ??= DateTime.UtcNow;
             
-            dbOperations.InsertAsync(table, entity.ToDynamicEntity(), DataSynchronizationPeriod.Sec1, dt.Value).AsTask().Wait();
+            await dbOperations.InsertAsync(table, entity.ToDynamicEntity(), DataSynchronizationPeriod.Sec1, dt.Value);
         }
 
-
-        public static void ExpirationTimerTick(this MyIoc ioc, DateTime now)
+        public static ValueTask ExpirationTimerTickAsync(this MyIoc ioc, DateTime now)
         {
             var expirationService = ioc.GetService<ExpiredEntitiesGarbageCollector>();
 
-            expirationService.DetectAndExpireAsync(now).AsTask().Wait();
+            return expirationService.DetectAndExpireAsync(now);
         }
         
         

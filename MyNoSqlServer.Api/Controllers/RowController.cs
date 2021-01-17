@@ -16,7 +16,7 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("Row")]
         public IActionResult List([Required][FromQuery] string tableName, [FromQuery] string partitionKey,
             [FromQuery] string rowKey, [FromQuery] int? limit, [FromQuery] int? skip, 
-            [FromQuery] DateTime? updateExpiresAt)
+            [FromQuery] string updateExpiresAt)
         {
             
             var (getTableResult, dbTable) = this.GetTable(tableName);
@@ -43,17 +43,17 @@ namespace MyNoSqlServer.Api.Controllers
             
             if (partitionKey != null)
                 return rowKey == null
-                    ?  ServiceLocator.DbTableReadOperations.GetRows(dbTable, partitionKey, limit, skip, updateExpiresAt.Value)
+                    ?  ServiceLocator.DbTableReadOperations.GetRows(dbTable, partitionKey, limit, skip, this.GetUpdateExpirationTime(updateExpiresAt))
                         .ToDbRowsResult(this)
-                    : ServiceLocator.DbTableReadOperations.TryGetRow(dbTable, partitionKey, rowKey, updateExpiresAt.Value)
+                    : ServiceLocator.DbTableReadOperations.TryGetRow(dbTable, partitionKey, rowKey, this.GetUpdateExpirationTime(updateExpiresAt))
                         .ToDbRowResult(this);
             
             
             if (rowKey == null)
-                return ServiceLocator.DbTableReadOperations.GetRows(dbTable, limit, skip, updateExpiresAt.Value)
+                return ServiceLocator.DbTableReadOperations.GetRows(dbTable, limit, skip, this.GetUpdateExpirationTime(updateExpiresAt))
                     .ToDbRowsResult(this);
 
-            return ServiceLocator.DbTableReadOperations.GetRows(dbTable, rowKey, limit, skip, updateExpiresAt.Value)
+            return ServiceLocator.DbTableReadOperations.GetRows(dbTable, rowKey, limit, skip, this.GetUpdateExpirationTime(updateExpiresAt))
                 .ToDbRowsResult(this);    
 
         }

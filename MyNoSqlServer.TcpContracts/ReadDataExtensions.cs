@@ -45,10 +45,33 @@ namespace MyNoSqlServer.TcpContracts
             var dateAsLong = (date - UnixTime).TotalMilliseconds;
             stream.WriteLong((long)dateAsLong);
         }
+
+        public static long ResetExpirationDate { get; } = -100;
+
+        public static void WriteExpirationDateTime(this Stream stream, DateTime? expiresAt)
+        {
+            if (expiresAt == null)
+            {
+                stream.WriteLong(ResetExpirationDate);
+                return;
+            }
+            
+            stream.WriteDateTime(expiresAt.Value);
+        }
         
         public static async ValueTask<DateTime> ReadDateTimeAsync(this TcpDataReader stream, CancellationToken ct)
         {
             var unixTime = await stream.ReadLongAsync(ct);
+            return UnixTime.AddMilliseconds(unixTime);
+        }
+        
+        public static async ValueTask<DateTime?> ReadExpirationDateTimeAsync(this TcpDataReader stream, CancellationToken ct)
+        {
+            var unixTime = await stream.ReadLongAsync(ct);
+
+            if (unixTime == ResetExpirationDate)
+                return null;
+            
             return UnixTime.AddMilliseconds(unixTime);
         }
     }

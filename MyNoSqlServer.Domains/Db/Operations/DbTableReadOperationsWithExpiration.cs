@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 
@@ -15,8 +15,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
         }
         
 
-        public DbRow TryGetRow(DbTable dbTable, string partitionKey, string rowKey,
-            DateTime updateExpirationTime)
+        public DbRow TryGetRow(DbTable dbTable, string partitionKey, string rowKey, UpdateExpirationTime updateExpirationTime)
         {
             DbRow result = null;
 
@@ -39,7 +38,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
         }
 
         public IReadOnlyList<DbRow> GetRows(DbTable dbTable,
-            int? limit, int? skip, DateTime updateExpirationTime)
+            int? limit, int? skip, in UpdateExpirationTime updateExpirationTime)
         {
             var result = dbTable.GetRows(limit, skip);
 
@@ -50,7 +49,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
         }
         
         public IReadOnlyList<DbRow> GetRows(DbTable dbTable, string partitionKey, 
-            int? limit, int? skip, DateTime updateExpirationTime)
+            int? limit, int? skip, in UpdateExpirationTime updateExpirationTime)
         {
             var result = dbTable.GetRows(partitionKey, limit, skip);
 
@@ -61,7 +60,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
         }
         
         public IReadOnlyList<DbRow> GetRowsByRowKey(DbTable dbTable, string rowKey, 
-            int? limit, int? skip, DateTime updateExpirationTime)
+            int? limit, int? skip, in UpdateExpirationTime updateExpirationTime)
         {
             var result = dbTable.GetRowsByRowKey(rowKey, limit, skip);
 
@@ -71,8 +70,8 @@ namespace MyNoSqlServer.Domains.Db.Operations
             return result;
         }
         
-        public IReadOnlyList<DbRow> GetRows(DbTable dbTable, string partitionKey, IReadOnlyList<string> rowKeys,
-            DateTime updateExpirationTime)
+        public IReadOnlyList<DbRow> GetRows(DbTable dbTable, string partitionKey, IReadOnlyList<string> rowKeys, 
+            in UpdateExpirationTime updateExpirationTime)
         {
             var result = dbTable.GetRows(partitionKey, rowKeys);
             
@@ -93,7 +92,8 @@ namespace MyNoSqlServer.Domains.Db.Operations
         }        
         
         public IReadOnlyList<DbRow> GetHighestRowAndBelow(DbTable dbTable, string partitionKey,
-            string rowKey, int maxAmount, DateTime updateExpirationTime)
+            string rowKey, int maxAmount, 
+            in UpdateExpirationTime updateExpirationTime)
         {
             var result = dbTable.GetHighestRowAndBelow(partitionKey, rowKey, maxAmount);
 
