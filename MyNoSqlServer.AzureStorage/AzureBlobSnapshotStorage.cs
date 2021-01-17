@@ -73,6 +73,13 @@ namespace MyNoSqlServer.AzureStorage
             
         }
 
+        public async ValueTask DeleteTableAsync(string tableName)
+        {
+            var container = await _storageAccount.GetBlockBlobReferenceAsync(tableName);
+            await container.DeleteIfExistsAsync();
+            Console.WriteLine($"Deleted table: {container.Name}");
+        }
+
         public async IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync()
         {
 

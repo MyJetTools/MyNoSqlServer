@@ -48,6 +48,9 @@ namespace MyNoSqlServer.Domains.Persistence
         ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot);
         ValueTask SaveTableSnapshotAsync(DbTable dbTable);
         ValueTask DeleteTablePartitionAsync(string tableName, string partitionKey);
+        
+        ValueTask DeleteTableAsync(string tableName);
+        
         IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync();
 
         ValueTask CreateTableAsync(DbTable dbTable);

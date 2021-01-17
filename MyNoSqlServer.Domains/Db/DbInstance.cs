@@ -23,17 +23,20 @@ namespace MyNoSqlServer.Domains.Db
             _snapshotStorage = snapshotStorage;
         }
 
+        private void UpdateCaches()
+        {
+            TableNames = _tables.Keys.ToList();
+
+            Tables = _tables.Values.ToList();
+        }
+
         private DbTable CreateTableAndUpdateDictionary(string tableName)
         {
             var tableInstance = DbTable.CreateByRequest(tableName);
 
-            var tables = new Dictionary<string, DbTable>(_tables) {{tableInstance.Name, tableInstance}};
+            _tables = _tables.AddByCreatingNewDictionary(tableInstance.Name, tableInstance);
 
-            _tables = tables;
-
-            TableNames = _tables.Keys.ToList();
-
-            Tables = _tables.Values.ToList();
+            UpdateCaches();
 
             return tableInstance;
         }
@@ -86,6 +89,20 @@ namespace MyNoSqlServer.Domains.Db
 
         }
 
+        public async Task<OperationResult> DeleteTableAsync(string tableName)
+        {
+            lock (_lockObject)
+            {
+                if (!_tables.ContainsKey(tableName))
+                    return OperationResult.TableNotFound;
 
+                _tables = _tables.RemoveByCreatingNewDictionary(tableName);
+
+                UpdateCaches();
+            }
+
+            await _snapshotStorage.DeleteTableAsync(tableName);
+            return OperationResult.Ok;
+        }
     }
 }

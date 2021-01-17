@@ -89,6 +89,22 @@ namespace MyNoSqlServer.Api.Controllers
 
         }    
 
+        
+                
+        [HttpDelete("/Tables")]
+        public async ValueTask<IActionResult> DeleteTableAsync([Required][FromQuery] string tableName)
+        {
+            var shutDown = this.CheckOnShuttingDown();
+            if (shutDown != null)
+                return shutDown;
+
+            if (string.IsNullOrEmpty(tableName))
+                return this.GetResult(OperationResult.TableNameIsEmpty);
+
+            var opResult = await ServiceLocator.DbInstance.DeleteTableAsync(tableName);
+            return this.GetResult(opResult);
+        }  
+
     }
     
 }

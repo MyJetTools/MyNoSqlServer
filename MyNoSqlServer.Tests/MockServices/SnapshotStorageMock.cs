@@ -42,6 +42,11 @@ namespace MyNoSqlServer.Tests.MockServices
             return new ValueTask();
         }
 
+        public ValueTask DeleteTableAsync(string tableName)
+        {
+            return new ValueTask();
+        }
+
         public async IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync()
         {
             foreach (var tableLoader in Array.Empty<ITableLoader>())
