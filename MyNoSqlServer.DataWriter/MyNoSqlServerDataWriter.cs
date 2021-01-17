@@ -4,62 +4,104 @@ using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
 using MyNoSqlServer.Abstractions;
+using Newtonsoft.Json;
 
 namespace MyNoSqlServer.DataWriter
 {
+
+    public class TableDescription
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+        
+        [JsonProperty("recordsCount")]
+        public int RecordsCount { get; set; }
+        
+        [JsonProperty("partitionsCount")]
+        public int PartitionsCount { get; set; }
+        
+        [JsonProperty("dataSize")]
+        public int DataSize { get; set; }
+    }
+    
     public class MyNoSqlServerDataWriter<T> : IMyNoSqlServerDataWriter<T> where T : IMyNoSqlDbEntity, new()
     {
 
         private const string RowController = "Row";
         
-        private readonly Func<string> _getUrl;
+        internal readonly Func<string> GetUrl;
         private readonly DataSynchronizationPeriod _dataSynchronizationPeriod;
-        private readonly string _tableName;
+        internal readonly string TableName;
+
+        private readonly TimeSpan _timeOutPeriod = TimeSpan.FromSeconds(5);
 
         public MyNoSqlServerDataWriter(Func<string> getUrl, string tableName,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
-            _getUrl = getUrl;
+            GetUrl = getUrl;
             _dataSynchronizationPeriod = dataSynchronizationPeriod;
-            _tableName = tableName.ToLower();
+            TableName = tableName.ToLower();
             Task.Run(CreateTableIfNotExistsAsync);
         }
 
-        private async Task CreateTableIfNotExistsAsync()
+        public async Task CreateTableIfNotExistsAsync()
         {
-            await _getUrl()
+            await GetUrl()
                 .AppendPathSegments("Tables", "CreateIfNotExists")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
+                .WithTimeout(_timeOutPeriod)
                 .PostStringAsync(string.Empty);
+        }
+
+        public async ValueTask<IReadOnlyList<TableDescription>> GetListOfTablesAsync()
+        {
+            return await GetUrl()
+                .AppendPathSegments("Tables")
+                .WithTableNameAsQueryParam(TableName)
+                .WithTimeout(_timeOutPeriod)
+                .GetJsonAsync<List<TableDescription>>();
+        }
+
+
+        public async Task DeleteTableIfExistsAsync()
+        {
+            await GetUrl()
+                .AppendPathSegments("Tables")
+                .WithTableNameAsQueryParam(TableName)
+                .WithTimeout(_timeOutPeriod)
+                .DeleteAsync(); 
         }
 
         public async ValueTask InsertAsync(T entity)
         {
-            await _getUrl()
+            await GetUrl()
                 .AppendPathSegments(RowController, "Insert")
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
+                .WithTimeout(_timeOutPeriod)
                 .PostJsonAsync(entity);
         }
 
         public async ValueTask InsertOrReplaceAsync(T entity)
         {
-            await _getUrl()
+            await GetUrl()
                 .AppendPathSegments(RowController, "InsertOrReplace")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                .WithTimeout(_timeOutPeriod)
                 .PostJsonAsync(entity);
         }
 
         public async ValueTask CleanAndKeepLastRecordsAsync(string partitionKey, int amount)
         {
-            await _getUrl()
+            await GetUrl()
                 .AppendPathSegments("CleanAndKeepLastRecords")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .SetQueryParam("amount", amount)
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .AllowNonOkCodes()
+                .WithTimeout(_timeOutPeriod)
                 .DeleteAsync();
         }
 
@@ -68,10 +110,11 @@ namespace MyNoSqlServer.DataWriter
         {
             try
             {
-                await _getUrl()
+                await GetUrl()
                     .AppendPathSegments("Bulk", "InsertOrReplace")
-                    .WithTableNameAsQueryParam(_tableName)
+                    .WithTableNameAsQueryParam(TableName)
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
+                    .WithTimeout(_timeOutPeriod)
                     .PostJsonAsync(entities);
 
             }
@@ -87,10 +130,11 @@ namespace MyNoSqlServer.DataWriter
         {
             try
             {
-                await _getUrl()
+                await GetUrl()
                     .AppendPathSegments("Bulk", "CleanAndBulkInsert")
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
-                    .WithTableNameAsQueryParam(_tableName)
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithTimeout(_timeOutPeriod)
                     .PostJsonAsync(entities);
             }
             catch (Exception e)
@@ -105,11 +149,12 @@ namespace MyNoSqlServer.DataWriter
         {
             try
             {
-                await _getUrl()
+                await GetUrl()
                     .AppendPathSegments("Bulk", "CleanAndBulkInsert")
-                    .WithTableNameAsQueryParam(_tableName)
+                    .WithTableNameAsQueryParam(TableName)
                     .WithPartitionKeyAsQueryParam(partitionKey)
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
+                    .WithTimeout(_timeOutPeriod)
                     .PostJsonAsync(entities);
 
             }
@@ -124,11 +169,12 @@ namespace MyNoSqlServer.DataWriter
         private async ValueTask<OperationResult> ExecuteUpdateHttpAsync(T entity, string method, 
             DataSynchronizationPeriod syncPeriod)
         {
-            var response = await _getUrl()
+            var response = await GetUrl()
                 .AppendPathSegments(RowController, method)
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .AppendDataSyncPeriod(syncPeriod)
                 .AllowNonOkCodes()
+                .WithTimeout(_timeOutPeriod)
                 .PutJsonAsync(entity);
 
             return await response.GetOperationResultCodeAsync();
@@ -172,31 +218,38 @@ namespace MyNoSqlServer.DataWriter
 
         public async ValueTask<IEnumerable<T>> GetAsync()
         {
-            return await _getUrl()
+            return await GetUrl()
                 .AppendPathSegments(RowController)
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
+                .WithTimeout(_timeOutPeriod)
                 .GetAsync()
                 .ReadAsJsonAsync<List<T>>();
         }
 
         public async ValueTask<IEnumerable<T>> GetAsync(string partitionKey)
         {
-            return await _getUrl()
+            return await GetUrl()
                 .AppendPathSegments(RowController)
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .GetAsync()
                 .ReadAsJsonAsync<List<T>>();
         }
+        
+        public GetRecordsRequestsBuilder<T> GetRecords()
+        {
+            return new GetRecordsRequestsBuilder<T>(this);
+        }
 
         public async ValueTask<T> GetAsync(string partitionKey, string rowKey)
         {
-            var response = await _getUrl()
+            var response = await GetUrl()
                 .AppendPathSegments(RowController)
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .WithRowKeyAsQueryParam(rowKey)
                 .AllowNonOkCodes()
+                .WithTimeout(_timeOutPeriod)
                 .GetAsync();
 
             var statusCode = await response.GetOperationResultCodeAsync();
@@ -212,11 +265,12 @@ namespace MyNoSqlServer.DataWriter
         public async ValueTask<IReadOnlyList<T>> GetMultipleRowKeysAsync(string partitionKey,
             IEnumerable<string> rowKeys)
         {
-            var response = await _getUrl()
+            var response = await GetUrl()
                 .AppendPathSegments("Rows", "SinglePartitionMultipleRows")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .AllowNonOkCodes()
+                .WithTimeout(_timeOutPeriod)
                 .PostJsonAsync(rowKeys);
 
             
@@ -235,13 +289,14 @@ namespace MyNoSqlServer.DataWriter
             if (result == null)
                 return default;
 
-            await _getUrl()
+            await GetUrl()
                 .AppendPathSegments(RowController)
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .WithRowKeyAsQueryParam(rowKey)
                 .AppendDataSyncPeriod(_dataSynchronizationPeriod)
                 .AllowNonOkCodes()
+                .WithTimeout(_timeOutPeriod)
                 .DeleteAsync();
 
             return result;
@@ -250,10 +305,11 @@ namespace MyNoSqlServer.DataWriter
 
         public async ValueTask<IEnumerable<T>> QueryAsync(string query)
         {
-            var response = await _getUrl()
+            var response = await GetUrl()
                 .AppendPathSegments("Query")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .SetQueryParam("query", query)
+                .WithTimeout(_timeOutPeriod)
                 .GetAsync();
 
             return await response.GetJsonAsync<List<T>>();
@@ -262,12 +318,13 @@ namespace MyNoSqlServer.DataWriter
 
         public async ValueTask<IEnumerable<T>> GetHighestRowAndBelow(string partitionKey, string rowKeyFrom, int amount)
         {
-            var response = await _getUrl()
+            var response = await GetUrl()
                 .AppendPathSegments("Rows", "HighestRowAndBelow")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .WithRowKeyAsQueryParam(rowKeyFrom)
                 .SetQueryParam("maxAmount", amount)
+                .WithTimeout(_timeOutPeriod)
                 .GetAsync();
 
             return await response.GetJsonAsync<List<T>>();
@@ -275,10 +332,11 @@ namespace MyNoSqlServer.DataWriter
 
         public ValueTask CleanAndKeepMaxPartitions(int maxAmount)
         {
-            var result = _getUrl()
+            var result = GetUrl()
                 .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxPartitions")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .SetQueryParam("maxAmount", maxAmount)
+                .WithTimeout(_timeOutPeriod)
                 .PostStringAsync("");
 
             return new ValueTask(result);
@@ -286,11 +344,12 @@ namespace MyNoSqlServer.DataWriter
 
         public ValueTask CleanAndKeepMaxRecords(string partitionKey, int maxAmount)
         {
-            var result = _getUrl()
+            var result = GetUrl()
                 .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxRecords")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .SetQueryParam("maxAmount", maxAmount)
+                .WithTimeout(_timeOutPeriod)
                 .PostStringAsync("");
 
             return new ValueTask(result);
@@ -298,10 +357,11 @@ namespace MyNoSqlServer.DataWriter
 
         public async ValueTask<int> GetCountAsync(string partitionKey)
         {
-            var response = await _getUrl()
+            var response = await GetUrl()
                 .AppendPathSegments("/Count")
-                .WithTableNameAsQueryParam(_tableName)
+                .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
+                .WithTimeout(_timeOutPeriod)
                 .GetStringAsync();
 
             return int.Parse(response);

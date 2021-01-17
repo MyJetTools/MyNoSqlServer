@@ -16,7 +16,34 @@ namespace MyNoSqlServer.DataWriter
 
         public static Url WithPartitionKeyAsQueryParam(this Url url, string partitionKey)
         {
-            return url.SetQueryParam("partitionKey", partitionKey);
+            return partitionKey == null ? url : url.SetQueryParam("partitionKey", partitionKey);
+        }
+        
+        
+        public static Url WithLimitAsQueryParam(this Url url, int limit)
+        {
+            return limit <= 0 ? url : url.SetQueryParam("limit", limit);
+        }
+        
+        public static Url WithSkipAsQueryParam(this Url url, int skip)
+        {
+            return skip <= 0 ? url : url.SetQueryParam("skip", skip);
+        }
+        
+        public static Url WithResetExpiresTimeAsQueryParam(this Url url, bool resetExpiresTime)
+        {
+            if (!resetExpiresTime)
+                return url;
+            
+            return url.SetQueryParam("resetExpiresTime", "1");
+        }
+        
+        
+        public static Url WithUpdateExpiresAt(this Url url, DateTime? updateExpiresAt)
+        {
+            return updateExpiresAt == null 
+                ? url 
+                : url.SetQueryParam("updateExpiresAt", updateExpiresAt.Value.ToString("s"));
         }
         
         public static Url WithRowKeyAsQueryParam(this Url url, string rowKey)
