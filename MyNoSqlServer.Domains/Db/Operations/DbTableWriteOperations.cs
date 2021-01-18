@@ -60,7 +60,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
                     return false;
                 }
 
-                result = OperationResult.RecordNotFound;
+                result = OperationResult.Ok;
                 return true;
             });
             
