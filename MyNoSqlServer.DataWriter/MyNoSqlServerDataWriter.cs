@@ -216,7 +216,7 @@ namespace MyNoSqlServer.DataWriter
             return ExecuteUpdateProcessAsync(partitionKey, rowKey, "Merge", updateCallback, syncPeriod);
         }
 
-        public async ValueTask<IEnumerable<T>> GetAsync()
+        public async ValueTask<IReadOnlyList<T>> GetAsync()
         {
             return await GetUrl()
                 .AppendPathSegments(RowController)
@@ -226,7 +226,7 @@ namespace MyNoSqlServer.DataWriter
                 .ReadAsJsonAsync<List<T>>();
         }
 
-        public async ValueTask<IEnumerable<T>> GetAsync(string partitionKey)
+        public async ValueTask<IReadOnlyList<T>> GetAsync(string partitionKey)
         {
             return await GetUrl()
                 .AppendPathSegments(RowController)
@@ -372,6 +372,16 @@ namespace MyNoSqlServer.DataWriter
                 .AppendPathSegments("GarbageCollector", "PushRowsExpirations")
                 .WithTimeout(_timeOutPeriod)
                 .PostAsync();
+        }
+
+
+        public async ValueTask CleanTableAsync()
+        {
+            await GetUrl()
+                .AppendPathSegments("Tables", "Clean")
+                .WithTableNameAsQueryParam(TableName)
+                .WithTimeout(_timeOutPeriod)
+                .DeleteAsync(); 
         }
     }
     

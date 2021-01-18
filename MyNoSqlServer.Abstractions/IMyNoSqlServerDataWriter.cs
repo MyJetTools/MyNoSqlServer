@@ -21,8 +21,8 @@ namespace MyNoSqlServer.Abstractions
             DataSynchronizationPeriod syncPeriod = DataSynchronizationPeriod.Sec5);
         
         
-        ValueTask<IEnumerable<T>> GetAsync();
-        ValueTask<IEnumerable<T>> GetAsync(string partitionKey);
+        ValueTask<IReadOnlyList<T>> GetAsync();
+        ValueTask<IReadOnlyList<T>> GetAsync(string partitionKey);
         ValueTask<T> GetAsync(string partitionKey, string rowKey);
         
         ValueTask<IReadOnlyList<T>> GetMultipleRowKeysAsync(string partitionKey, IEnumerable<string> rowKeys);
