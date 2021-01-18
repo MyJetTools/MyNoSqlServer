@@ -8,6 +8,7 @@ namespace MyNoSqlServer.Abstractions
         string RowKey { get; set; }
         string TimeStamp { get; set; }
         DateTime? Expires { get; set; }
+        
     }
 
 

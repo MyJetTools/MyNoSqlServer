@@ -9,16 +9,11 @@ namespace MyNoSqlServer.DataWriter
 {
     public struct GetRecordsRequestsBuilder<T> where T : IMyNoSqlDbEntity, new()
     {
-
         private string _partitionKey;
-
         private int _limit;
         private int _skip;
-
         private DateTime? _updateExpiresAt;
-
         private bool _resetExpiresTime;
-        
         private readonly MyNoSqlServerDataWriter<T> _dataWriter;
 
         public GetRecordsRequestsBuilder(MyNoSqlServerDataWriter<T> dataWriter)
@@ -37,7 +32,6 @@ namespace MyNoSqlServer.DataWriter
             _partitionKey = partitionKey;
             return this;
         }
-
 
         public GetRecordsRequestsBuilder<T> LimitRecords(int limit)
         {
@@ -79,8 +73,7 @@ namespace MyNoSqlServer.DataWriter
                 .WithPartitionKeyAsQueryParam(_partitionKey)
                 .WithLimitAsQueryParam(_limit)
                 .WithSkipAsQueryParam(_skip)
-                .WithResetExpiresTimeAsQueryParam(_resetExpiresTime)
-                .WithUpdateExpiresAt(_updateExpiresAt)
+                .WithUpdateExpiresAt(_updateExpiresAt, _resetExpiresTime)
                 .GetAsync()
                 .ReadAsJsonAsync<List<T>>();
         }

@@ -30,7 +30,7 @@ namespace MyNoSqlServer.DataWriter
         private const string RowController = "Row";
         
         internal readonly Func<string> GetUrl;
-        private readonly DataSynchronizationPeriod _dataSynchronizationPeriod;
+        internal readonly DataSynchronizationPeriod DefaultDataSynchronizationPeriod;
         internal readonly string TableName;
 
         private readonly TimeSpan _timeOutPeriod = TimeSpan.FromSeconds(5);
@@ -39,7 +39,7 @@ namespace MyNoSqlServer.DataWriter
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
             GetUrl = getUrl;
-            _dataSynchronizationPeriod = dataSynchronizationPeriod;
+            DefaultDataSynchronizationPeriod = dataSynchronizationPeriod;
             TableName = tableName.ToLower();
             Task.Run(CreateTableIfNotExistsAsync);
         }
@@ -76,7 +76,7 @@ namespace MyNoSqlServer.DataWriter
         {
             await GetUrl()
                 .AppendPathSegments(RowController, "Insert")
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                .AppendDataSyncPeriod(DefaultDataSynchronizationPeriod)
                 .WithTableNameAsQueryParam(TableName)
                 .WithTimeout(_timeOutPeriod)
                 .PostJsonAsync(entity);
@@ -87,7 +87,7 @@ namespace MyNoSqlServer.DataWriter
             await GetUrl()
                 .AppendPathSegments(RowController, "InsertOrReplace")
                 .WithTableNameAsQueryParam(TableName)
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                .AppendDataSyncPeriod(DefaultDataSynchronizationPeriod)
                 .WithTimeout(_timeOutPeriod)
                 .PostJsonAsync(entity);
         }
@@ -99,7 +99,7 @@ namespace MyNoSqlServer.DataWriter
                 .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .SetQueryParam("amount", amount)
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                .AppendDataSyncPeriod(DefaultDataSynchronizationPeriod)
                 .AllowNonOkCodes()
                 .WithTimeout(_timeOutPeriod)
                 .DeleteAsync();
@@ -252,9 +252,7 @@ namespace MyNoSqlServer.DataWriter
                 .WithTimeout(_timeOutPeriod)
                 .GetAsync();
 
-            var statusCode = await response.GetOperationResultCodeAsync();
-
-            if (statusCode == OperationResult.RecordNotFound)
+            if (response.StatusCode ==404)
                 return default;
 
             return await response.GetJsonAsync<T>();
@@ -294,7 +292,7 @@ namespace MyNoSqlServer.DataWriter
                 .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .WithRowKeyAsQueryParam(rowKey)
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                .AppendDataSyncPeriod(DefaultDataSynchronizationPeriod)
                 .AllowNonOkCodes()
                 .WithTimeout(_timeOutPeriod)
                 .DeleteAsync();
@@ -365,6 +363,15 @@ namespace MyNoSqlServer.DataWriter
                 .GetStringAsync();
 
             return int.Parse(response);
+        }
+
+
+        public async ValueTask PushExpiredRowsAsync()
+        {
+            await GetUrl()
+                .AppendPathSegments("GarbageCollector", "PushRowsExpirations")
+                .WithTimeout(_timeOutPeriod)
+                .PostAsync();
         }
     }
     

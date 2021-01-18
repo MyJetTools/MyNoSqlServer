@@ -30,21 +30,18 @@ namespace MyNoSqlServer.DataWriter
             return skip <= 0 ? url : url.SetQueryParam("skip", skip);
         }
         
-        public static Url WithResetExpiresTimeAsQueryParam(this Url url, bool resetExpiresTime)
+        public static Url WithUpdateExpiresAt(this Url url, DateTime? updateExpiresAt, bool resetExpiresTime)
         {
-            if (!resetExpiresTime)
-                return url;
             
-            return url.SetQueryParam("resetExpiresTime", "1");
-        }
-        
-        
-        public static Url WithUpdateExpiresAt(this Url url, DateTime? updateExpiresAt)
-        {
+            if (resetExpiresTime)
+                return url.SetQueryParam("updateExpiresAt", "del");
+            
             return updateExpiresAt == null 
                 ? url 
                 : url.SetQueryParam("updateExpiresAt", updateExpiresAt.Value.ToString("s"));
         }
+        
+
         
         public static Url WithRowKeyAsQueryParam(this Url url, string rowKey)
         {
