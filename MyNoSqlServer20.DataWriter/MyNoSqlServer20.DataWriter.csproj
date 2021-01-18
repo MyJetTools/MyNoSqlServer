@@ -27,6 +27,9 @@
       <Compile Include="..\MyNoSqlServer.DataWriter\MyNoSqlServerDataWriter.cs">
         <Link>MyNoSqlServerDataWriter.cs</Link>
       </Compile>
+      <Compile Include="..\MyNoSqlServer.DataWriter\RequestsBuilder.cs">
+        <Link>RequestsBuilder.cs</Link>
+      </Compile>
     </ItemGroup>
 
 
