@@ -45,7 +45,7 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery] string partitionKey,
             [FromQuery] string syncPeriod)
         {
-            var (getTableResult, dbTable) = this.GetTable(tableName, partitionKey);
+            var (getTableResult, dbTable) = this.GetTable(tableName);
             
             if (getTableResult != null)
                 return getTableResult;
