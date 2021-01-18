@@ -1,27 +1,31 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Persistence;
+using MyNoSqlServer.Domains.SnapshotSaver.Implementation;
 
 namespace MyNoSqlServer.Domains.SnapshotSaver
 {
-    
-    
-    
-    
-    public class SnapshotSaverEngine 
+
+
+
+
+    public class SnapshotSaverEngine
     {
         private readonly DbInstance _dbInstance;
         private readonly ISnapshotStorage _snapshotStorage;
         private readonly IReplicaSynchronizationService _replicaSynchronizationService;
         private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
 
+        private readonly AsyncLock _asyncLock = new AsyncLock();
 
-        public SnapshotSaverEngine(DbInstance dbInstance, ISnapshotStorage snapshotStorage, 
-            IReplicaSynchronizationService replicaSynchronizationService, 
+        public SnapshotSaverEngine(DbInstance dbInstance, ISnapshotStorage snapshotStorage,
+            IReplicaSynchronizationService replicaSynchronizationService,
             ISnapshotSaverScheduler snapshotSaverScheduler)
         {
             _dbInstance = dbInstance;
@@ -31,19 +35,21 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
         
         
+
         public async Task LoadSnapshotsAsync()
         {
 
             await foreach (var tableLoader in _snapshotStorage.LoadSnapshotsAsync())
             {
-                var table = _dbInstance.CreateTableIfNotExists(tableLoader.TableName);
+                var table = _dbInstance.CreateTableIfNotExists(tableLoader.TableName, 
+                    tableLoader.MetaData.Persisted, tableLoader.MetaData.Created);
 
 
                 await foreach (var snapshot in tableLoader.LoadSnapshotsAsync())
                 {
                     try
                     {
-     
+
                         var partition = table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
 
                         if (partition != null)
@@ -54,76 +60,131 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                         Console.WriteLine(
                             $"Snapshots {snapshot.TableName}/{snapshot.PartitionKey} could not be loaded: " +
                             e.Message);
-                    } 
+                    }
                 }
             }
-            
+
         }
 
-        public async Task TheLoop()
+        private readonly Dictionary<string, DateTime> _lastSyncDateTime
+            = new Dictionary<string, DateTime>();
+
+        private DateTime GetLastDateTime(string tableName)
+        {
+            lock (_lastSyncDateTime)
+            {
+                if (!_lastSyncDateTime.ContainsKey(tableName))
+                    return DateTime.Now.AddYears(-20);
+
+                return _lastSyncDateTime[tableName];
+            }
+        }
+
+
+        private void UpdateLastDateTime(string tableName, DateTime updateDateTime)
+        {
+            lock (_lastSyncDateTime)
+            {
+                if (_lastSyncDateTime.ContainsKey(tableName))
+                    _lastSyncDateTime[tableName] = updateDateTime;
+                
+                _lastSyncDateTime.Add(tableName, updateDateTime);
+            }
+        }
+            
+
+        private async Task SyncTableAsync(ITableToSaveEventsQueue eventsQueue)
         {
 
-            
-            while (!_appIsShuttingDown || _snapshotSaverScheduler.TasksToSyncCount()>0)
+            var eventToSync = eventsQueue.Dequeue();
+
+            while (eventToSync != null)
+            {
+                switch (eventToSync)
+                {
+                    case CreateTablePersistEvent syncEvent:
+                        await _snapshotStorage.CreateTableAsync(syncEvent.Table);
+                        break;
+
+                    case SyncTablePersistEvent syncEvent:
+                        var lastUpdateDateTime = GetLastDateTime(syncEvent.Table.Name);
+                        if (syncEvent.SnapshotDateTime > lastUpdateDateTime)
+                            await _snapshotStorage.SaveTableSnapshotAsync(syncEvent.Table);
+                        break;
+
+                    case SyncPartitionPersistEvent syncEvent:
+                        var lastUpdateDateTime2 = GetLastDateTime(syncEvent.Table.Name);
+                        if (syncEvent.SnapshotDateTime > lastUpdateDateTime2)
+                        {
+                            var partitionSnapshot = new PartitionSnapshot
+                            {
+                                PartitionKey = syncEvent.Partition.PartitionKey,
+                                Snapshot = syncEvent.Partition.GetRows().ToJsonArray().AsArray(),
+                                TableName = syncEvent.Table.Name
+                            };
+
+                            await _snapshotStorage.SavePartitionSnapshotAsync(partitionSnapshot);
+                        }  
+                        break;
+
+                    case SyncDeletePartitionPersistEvent syncEvent:
+                        await _snapshotStorage.DeleteTablePartitionAsync(syncEvent.Table.Name,
+                            syncEvent.Partition.PartitionKey);
+                        break;
+
+                    case SyncDeleteTablePersistEvent syncEvent:
+                        await _snapshotStorage.DeleteTableAsync(syncEvent.Table.Name);
+                        break;
+                }
+                
+                UpdateLastDateTime(eventToSync.Table.Name, eventToSync.SnapshotDateTime);
+
+                eventToSync = eventsQueue.Dequeue();
+            }
+
+        }
+
+        public async ValueTask SynchronizeAsync(string tableName)
+        {
+            try
+            {
+
+                await _asyncLock.LockAsync();
                 try
                 {
-                    var elementToSave = _snapshotSaverScheduler.GetTaskToSync(_appIsShuttingDown);
 
-                    while (elementToSave != null)
+                    if (tableName == null)
                     {
-                        switch (elementToSave)
+                        foreach (var eventsQueue in _snapshotSaverScheduler.GetEventsQueue())
                         {
-                            
-                            case SyncTable syncTable:
-                                await _snapshotStorage.SaveTableSnapshotAsync(syncTable.DbTable);
-                                break;
-                            
-                            case SyncPartition syncPartition:
-                                var partitionSnapshot = PartitionSnapshot.Create(syncPartition.DbTable, syncPartition.PartitionKey);
-                                await _snapshotStorage.SavePartitionSnapshotAsync(partitionSnapshot);
-                                break;
-                            
-                            case SyncDeletePartition syncDeletePartition:
-                                await _snapshotStorage.DeleteTablePartitionAsync(syncDeletePartition.TableName,
-                                    syncDeletePartition.PartitionKey);
-                                break;
-                            
+                            await SyncTableAsync(eventsQueue);
                         }
-
-                        elementToSave = _snapshotSaverScheduler.GetTaskToSync(_appIsShuttingDown);
                     }
-
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("There is something wrong during saving the snapshot. " + e.Message);
+                    else
+                    {
+                        var eventsQueue = _snapshotSaverScheduler.TryGetEventsQueue(tableName);
+                        
+                        if (eventsQueue != null)
+                            await SyncTableAsync(eventsQueue);
+                    }
+                    
                 }
                 finally
                 {
-                    await Task.Delay(1000);
-                    
+                    _asyncLock.Unlock();
                 }
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("There is something wrong during saving the snapshot. " + e.Message);
+            }
+            finally
+            {
+                await Task.Delay(1000);
+            }
         }
 
-
-        private Task _theLoop;
-
-        private bool _appIsShuttingDown;
-
-        public void Start()
-        {
-            _appIsShuttingDown = false;
-            _theLoop = TheLoop();
-        }
-
-
-        public void Stop()
-        {
-            Console.WriteLine("Shutting down sync tasks");
-            _appIsShuttingDown = true;
-            _theLoop.Wait();
-        }
-        
     }
-    
+
 }

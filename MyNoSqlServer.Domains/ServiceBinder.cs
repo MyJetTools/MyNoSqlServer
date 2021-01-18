@@ -4,6 +4,7 @@ using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.GarbageCollection;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
+using MyNoSqlServer.Domains.SnapshotSaver.Implementation;
 
 namespace MyNoSqlServer.Domains
 {

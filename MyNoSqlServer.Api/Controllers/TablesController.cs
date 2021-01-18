@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,7 +41,8 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("Tables/CreateIfNotExists")]
-        public async ValueTask<IActionResult> CreateIfNotExists([Required] [FromQuery] string tableName)
+        public async ValueTask<IActionResult> CreateIfNotExists([Required] [FromQuery] string tableName, 
+            [FromQuery]string persist)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -48,13 +50,18 @@ namespace MyNoSqlServer.Api.Controllers
 
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
+            
+            var persistIt = persist != null;
 
-            await ServiceLocator.DbInstance.CreateTableIfNotExistsAsync(tableName);
+            if (persist != null)
+                persistIt = persist == "1" || persist.ToLower() == "true";
+
+            await ServiceLocator.DbInstance.CreateTableIfNotExistsAsync(tableName, persistIt, DateTime.UtcNow);
             return this.ResponseOk();
         }
 
         [HttpPost("Tables/Create")]
-        public async ValueTask<IActionResult> Create([Required] [FromQuery] string tableName)
+        public async ValueTask<IActionResult> Create([Required] [FromQuery] string tableName, [FromQuery]string persist)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -63,7 +70,12 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            var result = await ServiceLocator.DbInstance.CreateTableAsync(tableName);
+            var persistIt = persist != null;
+
+            if (persist != null)
+                persistIt = persist == "1" || persist.ToLower() == "true";
+
+            var result = await ServiceLocator.DbInstance.CreateTableAsync(tableName, persistIt, DateTime.UtcNow);
             return this.GetResult(result);
         }
 

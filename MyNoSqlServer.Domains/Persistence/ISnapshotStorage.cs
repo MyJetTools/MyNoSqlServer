@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyNoSqlServer.Domains.Db.Operations;
@@ -37,10 +38,19 @@ namespace MyNoSqlServer.Domains.Persistence
     }
 
 
+    public interface ITableMetaData
+    {
+        public DateTime Created { get; }
+        public bool Persisted { get; }
+    }
+
+
     public interface ITableLoader
     {
         string TableName { get; }
         IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync();
+        
+        ITableMetaData MetaData { get; }
     }
     
     public interface ISnapshotStorage
@@ -53,6 +63,6 @@ namespace MyNoSqlServer.Domains.Persistence
         
         IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync();
 
-        ValueTask CreateTableAsync(DbTable dbTable);
+        ValueTask CreateTableAsync(DbTable tableName);
     }
 }

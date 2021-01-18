@@ -1,24 +1,41 @@
 using System;
+using System.Collections.Generic;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Tables;
 
 namespace MyNoSqlServer.Domains.SnapshotSaver
 {
-    public interface ISyncTask
-    {
-        DateTime SyncDateTime { get; }
-    }
 
+    public interface IPersistTableEvent
+    {
+        DbTable Table { get; }
+        DataSynchronizationPeriod Period { get; }
+        public DateTime SnapshotDateTime { get; }
+    }
+    
+
+    public interface ITableToSaveEventsQueue
+    {
+        public string Table { get; }
+
+        public IPersistTableEvent Dequeue();
+    }
+    
+    
     public interface ISnapshotSaverScheduler
     {
-        void SynchronizePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period);
         
-        void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period);
-        
-        void SynchronizeDeletePartition(string tableName, string partitionKey, DataSynchronizationPeriod period);
+        void SynchronizeCreateTable(DbTable dbTable, DataSynchronizationPeriod period, DateTime snapshotDateTime);
+        void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period, DateTime snapshotDateTime);
+        void SynchronizePartition(DbTable dbTable, DbPartition partition, DataSynchronizationPeriod period, DateTime snapshotDateTime);
+        void SynchronizeDeletePartition(DbTable dbTable, DbPartition partition, 
+            DataSynchronizationPeriod period, DateTime snapshotDateTime);
+        void SynchronizeDeleteTable(DbTable dbTable, 
+            DataSynchronizationPeriod period, DateTime snapshotDateTime);
 
-        ISyncTask GetTaskToSync(bool appIsShuttingDown);
+        IReadOnlyList<ITableToSaveEventsQueue> GetEventsQueue();
+        ITableToSaveEventsQueue TryGetEventsQueue(string tableName);
 
 
         int TasksToSyncCount();

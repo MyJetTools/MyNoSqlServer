@@ -8,7 +8,6 @@ using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.GarbageCollection;
-using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
@@ -49,32 +48,20 @@ namespace MyNoSqlServer.Api
         }
 
         public static string AppName { get; }
-
         public static string AppVersion { get; }
-
         public static DateTime StartedAt { get;}
-
         public static string AspNetEnvironment { get; }
-        
         public static string Host { get; }
-
         public static DbInstance DbInstance { get; private set; }
-        
         public static GlobalVariables GlobalVariables { get; private set; }
-
-        public static ISnapshotStorage SnapshotStorage { get; private set; }
-        
         public static SnapshotSaverEngine SnapshotSaverEngine { get; private set; }
-        
-        public static readonly ISnapshotSaverScheduler SnapshotSaverScheduler = new SnapshotSaverScheduler();
-
         public static ExpiredEntitiesGarbageCollector ExpiredEntitiesGarbageCollector { get; set; }
 
         private static readonly TaskTimer ExpiredEntitiesGcTimer = new TaskTimer(TimeSpan.FromSeconds(30));
         
+        private static readonly TaskTimer PersistenceTime = new TaskTimer(TimeSpan.FromSeconds(5));
         public static DbTableWriteOperations DbTableWriteOperations { get; private set; }
         public static DbTableReadOperationsWithExpiration DbTableReadOperations { get; private set; }
-        
         
         public static readonly MyServerTcpSocket<IMyNoSqlTcpContract> TcpServer = 
             new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
@@ -91,7 +78,6 @@ namespace MyNoSqlServer.Api
         public static void Init(IServiceResolver sr)
         {
             DbInstance = sr.GetService<DbInstance>();
-            SnapshotStorage = sr.GetService<ISnapshotStorage>();
             
             SnapshotSaverEngine = sr.GetService<SnapshotSaverEngine>();
 
@@ -110,10 +96,13 @@ namespace MyNoSqlServer.Api
             
             ExpiredEntitiesGcTimer.Register("Expired Entities GC", 
                 ()=>ExpiredEntitiesGarbageCollector.DetectAndExpireAsync(DateTime.UtcNow));
+
+            PersistenceTime.Register("Persistence Timer", 
+                () => SnapshotSaverEngine.SynchronizeAsync(null));
             
-            SnapshotSaverEngine.Start();
             TcpServer.Start();
             ExpiredEntitiesGcTimer.Start();
+            PersistenceTime.Start();
         }
     }
 }

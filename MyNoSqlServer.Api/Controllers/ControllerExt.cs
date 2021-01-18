@@ -65,7 +65,10 @@ namespace MyNoSqlServer.Api.Controllers
                 return (ctx.GetResult(OperationResult.PartitionKeyIsNull), null);
 
             tableName = tableName.ToLowerInvariant();
-            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
+            if (table == null)
+                return (ctx.GetResult(OperationResult.TableNotFound), null);
+            
             return (null, table);
         }
 
@@ -122,7 +125,10 @@ namespace MyNoSqlServer.Api.Controllers
                 return (ctx.GetResult(OperationResult.TableNameIsEmpty), null);
 
             tableName = tableName.ToLowerInvariant();
-            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
+            if (table == null)
+                return (ctx.GetResult(OperationResult.TableNotFound), null);
+            
             return (null, table);
         }
 

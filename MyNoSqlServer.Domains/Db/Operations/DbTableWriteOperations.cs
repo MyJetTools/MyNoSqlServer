@@ -39,23 +39,29 @@ namespace MyNoSqlServer.Domains.Db.Operations
 
             DbPartition dbPartition = null;
             DbRow dbRow = null;
-            var result = OperationResult.Ok;
+            var result = OperationResult.RecordNotFound;
             
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 dbPartition = dbTableWriter.GetOrCreatePartition(entityToInsert.PartitionKey);
 
                 if (dbPartition.HasRecord(entityToInsert.RowKey))
                 {
                     result = OperationResult.RecordExists;
-                    return;
+                    return false;
                 }
+                    
                 
                 dbRow = DbRow.CreateNew(entityToInsert, now);
-                
+
                 if (!dbPartition.Insert(dbRow, now))
+                {
                     result = OperationResult.RecordExists;
-                
+                    return false;
+                }
+
+                result = OperationResult.RecordNotFound;
+                return true;
             });
             
             if (result != OperationResult.Ok)
@@ -64,7 +70,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
             _dataSynchronizer.SynchronizeUpdate(dbTable, new[] {dbRow});
 
             return _persistenceHandler
-                .SynchronizePartitionAsync(dbTable, dbPartition, synchronizationPeriod)
+                .SynchronizePartitionAsync(dbTable, dbPartition, synchronizationPeriod, snapshotDateTime)
                 .ReturnValueTaskResult(OperationResult.Ok);
         }
         
@@ -83,17 +89,18 @@ namespace MyNoSqlServer.Domains.Db.Operations
             DbRow dbRow = null;
             
             
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 dbPartition = dbTableWriter.GetOrCreatePartition(entity.PartitionKey);
                 dbRow = DbRow.CreateNew(entity, now);
                 dbPartition.InsertOrReplace(dbRow);
+                return true;
             });
             
             _dataSynchronizer.SynchronizeUpdate(dbTable, new[]{dbRow});
 
             return _persistenceHandler
-                .SynchronizePartitionAsync(dbTable, dbPartition, synchronizationPeriod)
+                .SynchronizePartitionAsync(dbTable, dbPartition, synchronizationPeriod, snapshotDateTime)
                 .ReturnValueTaskResult(OperationResult.Ok);
             
         }        
@@ -102,16 +109,17 @@ namespace MyNoSqlServer.Domains.Db.Operations
         {
             var deletedRows = new List<DbRow>();
             
-            table.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = table.GetAccessWithWriteLock(dbTableWriter =>
             {
                 deletedRows.AddRange(dbPartition.TryDeleteRows(rows.Select(itm => itm.RowKey)));
+                return true;
             });
 
             if (deletedRows.Count == 0) 
                 return;
          
             _dataSynchronizer.SynchronizeDelete(table, deletedRows);
-            await _persistenceHandler.SynchronizeDeletePartitionAsync(table, dbPartition, DataSynchronizationPeriod.Sec5);
+            await _persistenceHandler.SynchronizeDeletePartitionAsync(table, dbPartition, DataSynchronizationPeriod.Sec5, snapshotDateTime);
         }
 
 
@@ -126,19 +134,19 @@ namespace MyNoSqlServer.Domains.Db.Operations
             DbPartition dbPartition = null;
             DbRow dbRow = null;
             
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 dbPartition = dbTableWriter.TryGetPartition(entityToModify.PartitionKey);
 
                 var dbRowFromDb = dbPartition?.TryGetRow(entityToModify.RowKey);
                 
                 if (dbRowFromDb == null)
-                    return;
+                    return false;
 
                 if (dbRowFromDb.TimeStamp != entityToModify.TimeStamp)
                 {
                     result = OperationResult.RecordChangedConcurrently;
-                    return;
+                    return false;
                 }
                 
                 dbRow = modifyAction(dbRowFromDb);
@@ -147,6 +155,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
                     dbPartition.InsertOrReplace(dbRow);
                 
                 result = OperationResult.Ok;
+                return true;
             });
 
             if (result == OperationResult.Ok)
@@ -154,7 +163,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
                 _dataSynchronizer.SynchronizeUpdate(dbTable, new[] {dbRow});
 
                 return _persistenceHandler
-                    .SynchronizePartitionAsync(dbTable, dbPartition, dataSynchronizationPeriod)
+                    .SynchronizePartitionAsync(dbTable, dbPartition, dataSynchronizationPeriod, snapshotDateTime)
                     .ReturnValueTaskResult(result);
             }
 
@@ -192,10 +201,11 @@ namespace MyNoSqlServer.Domains.Db.Operations
             DbPartition dbPartition = null;
             DbRow dbRow = null;
 
-            table.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = table.GetAccessWithWriteLock(dbTableWriter =>
             {
                 dbPartition = dbTableWriter.TryGetPartition(partitionKey);
                 dbRow = dbPartition.TryDeleteRow(rowKey);
+                return true;
             });
 
 
@@ -205,7 +215,8 @@ namespace MyNoSqlServer.Domains.Db.Operations
             _dataSynchronizer.SynchronizeDelete(table, new[]{dbRow});
             
             return _persistenceHandler
-                .SynchronizeDeletePartitionAsync(table, dbPartition, synchronizationPeriod)
+                .SynchronizeDeletePartitionAsync(table, dbPartition, 
+                    synchronizationPeriod, snapshotDateTime)
                 .ReturnValueTaskResult(OperationResult.Ok);
         }
         
@@ -221,14 +232,16 @@ namespace MyNoSqlServer.Domains.Db.Operations
             
             IReadOnlyList<DbRow> cleanedRows = null;
             
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 dbPartition = dbTableWriter.TryGetPartition(partitionKey);
-                
+
                 if (dbPartition == null)
-                    return;
+                    return false;
 
                 cleanedRows = dbPartition.CleanAndKeepLastRecords(amount);
+
+                return true;
             });
 
             if (cleanedRows == null) 
@@ -237,7 +250,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
             _dataSynchronizer.SynchronizeDelete(dbTable, cleanedRows);
                 
             return _persistenceHandler
-                .SynchronizePartitionAsync(dbTable, dbPartition, synchronizationPeriod);
+                .SynchronizePartitionAsync(dbTable, dbPartition, synchronizationPeriod, snapshotDateTime);
         }
         
         public  async ValueTask BulkInsertOrReplaceAsync(
@@ -252,7 +265,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
                 .Select(entity => DbRow.CreateNew(entity, dateTime))
                 .ToList();
             
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 foreach (var dbRow in dbRows)
                 {
@@ -263,12 +276,14 @@ namespace MyNoSqlServer.Domains.Db.Operations
                     if (!partitionsToSync.ContainsKey(dbPartition.PartitionKey))
                         partitionsToSync.Add(dbPartition.PartitionKey, dbPartition);
                 }
+
+                return true;
             });
           
             foreach (var dbPartition in partitionsToSync.Values)
             {
                 _dataSynchronizer.PublishInitPartition(dbTable, dbPartition.PartitionKey);
-                await _persistenceHandler.SynchronizePartitionAsync(dbTable, dbPartition, syncPeriod);
+                await _persistenceHandler.SynchronizePartitionAsync(dbTable, dbPartition, syncPeriod, snapshotDateTime);
             }
         }
 
@@ -285,7 +300,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
                 .Select(entity => DbRow.CreateNew(entity, dateTime))
                 .ToList();
 
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 dbTableWriter.Clear();
                 
@@ -298,10 +313,12 @@ namespace MyNoSqlServer.Domains.Db.Operations
                     if (!partitionsToSync.ContainsKey(dbPartition.PartitionKey))
                         partitionsToSync.Add(dbPartition.PartitionKey, dbPartition);
                 }
+
+                return true;
             });
 
             _dataSynchronizer.PublishInitTable(dbTable);
-            return _persistenceHandler.SynchronizeTableAsync(dbTable, syncPeriod);
+            return _persistenceHandler.SynchronizeTableAsync(dbTable, syncPeriod, snapshotDateTime);
         }
         
         
@@ -317,7 +334,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
                 .Select(entity => DbRow.CreateNew(entity, dateTime))
                 .ToList();
 
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 var partitionToClear = dbTableWriter.TryGetPartition(partitionKeyToClear);
                 if (partitionToClear != null && partitionToClear.GetRecordsCount() > 0)
@@ -335,18 +352,20 @@ namespace MyNoSqlServer.Domains.Db.Operations
                     if (!partitionsToSync.ContainsKey(dbPartition.PartitionKey))
                         partitionsToSync.Add(dbPartition.PartitionKey, dbPartition);
                 }
+
+                return true;
             });
 
             _dataSynchronizer.PublishInitTable(dbTable);
-            return _persistenceHandler.SynchronizeTableAsync(dbTable, syncPeriod);
+            return _persistenceHandler.SynchronizeTableAsync(dbTable, syncPeriod, snapshotDateTime);
         }
 
 
         public ValueTask ClearTableAsync(DbTable dbTable, DataSynchronizationPeriod syncPeriod)
         {
-            dbTable.Clean();
+            var snapshotDateTime = dbTable.Clean();
             _dataSynchronizer.PublishInitTable(dbTable);
-            return _persistenceHandler.SynchronizeTableAsync(dbTable, syncPeriod);
+            return _persistenceHandler.SynchronizeTableAsync(dbTable, syncPeriod, snapshotDateTime);
         }
         
         
@@ -361,7 +380,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
             
             var result = new List<DbPartition>();
             
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 foreach (var dbPartition in partitionsToGc)
                 {
@@ -369,6 +388,8 @@ namespace MyNoSqlServer.Domains.Db.Operations
                     if (dbTableWriter.RemovePartition(dbPartition.PartitionKey))
                         result.Add(dbPartition);
                 }
+
+                return true;
             });
             
             if (result.Count == 0)
@@ -378,28 +399,38 @@ namespace MyNoSqlServer.Domains.Db.Operations
                 _dataSynchronizer.PublishInitPartition(dbTable, dbPartition.PartitionKey);
 
             foreach (var dbPartition in result)
-                await _persistenceHandler.SynchronizeDeletePartitionAsync(dbTable, dbPartition, DataSynchronizationPeriod.Sec1);
+                await _persistenceHandler.SynchronizeDeletePartitionAsync(dbTable, dbPartition, DataSynchronizationPeriod.Sec1, snapshotDateTime);
 
         }
 
 
         internal void UpdateExpirationTime(DbTable dbTable, IReadOnlyList<DbRow> dbRows, UpdateExpirationTime updateExpirationTime)
         {
-            dbTable.GetAccessWithWriteLock(dbTableWriter =>
+
+            var partitionsToSync = new Dictionary<string, DbPartition>();
+            
+            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 foreach (var group in dbRows.GroupBy(itm => itm.PartitionKey))
                 {
                     var dbPartition = dbTableWriter.TryGetPartition(group.Key);
 
                     if (dbPartition == null)
-                        return;
+                        return false;
 
                     foreach (var dbRow in group)
                         dbPartition.UpdateExpirationTime(dbRow.RowKey, updateExpirationTime);
-        
-                    _persistenceHandler.SynchronizePartitionAsync(dbTable, dbPartition, DataSynchronizationPeriod.Sec5);
+
+                    if (!partitionsToSync.ContainsKey(dbPartition.PartitionKey))
+                        partitionsToSync.Add(dbPartition.PartitionKey, dbPartition);
                 }
+
+                return true;
             });
+
+
+            foreach (var dbPartition in partitionsToSync.Values)
+                _persistenceHandler.SynchronizePartitionAsync(dbTable, dbPartition, DataSynchronizationPeriod.Sec5, snapshotDateTime);
             
             _dataSynchronizer.SynchronizeUpdate(dbTable, dbRows);
         }

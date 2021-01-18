@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Operations;
-using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using NUnit.Framework;
 
@@ -37,7 +36,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable");
+            var table = dbInstance.CreateTableIfNotExists("mytable", false, DateTime.UtcNow);
 
             var rawClass1 = new MergeEntity1
             {
@@ -85,7 +84,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable");
+            var table = dbInstance.CreateTableIfNotExists("mytable", false, DateTime.UtcNow);
 
             var rawClass1 = new MergeEntity1
             {

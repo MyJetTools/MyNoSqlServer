@@ -4,7 +4,6 @@ using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Operations;
-using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
 using NUnit.Framework;
@@ -28,7 +27,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var dbTable = dbInstance.CreateTableIfNotExists("myTable");
+            var dbTable = dbInstance.CreateTableIfNotExists("myTable", false, DateTime.UtcNow);
             
             var dbOperations =  ioc.GetService<DbTableWriteOperations>();
             
@@ -62,7 +61,7 @@ namespace MyNoSqlServer.Tests
             
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var dbTable = dbInstance.CreateTableIfNotExists("myTable");
+            var dbTable = dbInstance.CreateTableIfNotExists("myTable", false, DateTime.UtcNow);
             
             var dbOperations =  ioc.GetService<DbTableWriteOperations>();
 
@@ -103,7 +102,7 @@ namespace MyNoSqlServer.Tests
             
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var dbTable = dbInstance.CreateTableIfNotExists("myTable");
+            var dbTable = dbInstance.CreateTableIfNotExists("myTable", false, DateTime.UtcNow);
             
             var dbOperations =  ioc.GetService<DbTableWriteOperations>();
 

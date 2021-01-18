@@ -17,7 +17,7 @@ namespace MyNoSqlServer.Tests
         public static DbTable CreateTable(this MyIoc ioc, string tableName)
         {
             var dbInstance = ioc.GetService<DbInstance>();
-            return dbInstance.CreateTableIfNotExists(tableName);
+            return dbInstance.CreateTableIfNotExists(tableName, false, DateTime.UtcNow);
         }
 
         public static async Task InsertToTableAsync(this MyIoc ioc, DbTable table, IMyNoSqlDbEntity entity, DateTime? dt = null)

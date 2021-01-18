@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using MyNoSqlServer.Domains.Db.Operations;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
@@ -9,10 +11,14 @@ using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.AzureStorage
 {
+
+    
     
     public class AzureBlobSnapshotStorage : ISnapshotStorage
     {
         private readonly CloudStorageAccount _storageAccount;
+
+        
 
         public AzureBlobSnapshotStorage(string connectionString)
         {
@@ -82,20 +88,39 @@ namespace MyNoSqlServer.AzureStorage
 
         public async IAsyncEnumerable<ITableLoader> LoadSnapshotsAsync()
         {
-
             const string ignoreContainerName = "nosqlsnapshots";
 
             await foreach (var container in _storageAccount.GetListOfContainersAsync())
             {
-
                 if (container.Name == ignoreContainerName)
                     continue;
 
                 var tableLoader = new AzureBlobTableLoader(container);
+                await tableLoader.InitMetaDataAsync();
+                
                 Console.WriteLine($"Restoring table: {container.Name}");
                 yield return tableLoader;
-                
             }
+        }
+
+
+        private static async Task SaveMetaDataAsync(DbTable dbTable, CloudBlobContainer cloudBlobContainer)
+        {
+            var metaData = new TableMetaDataAzureBlobEntity
+            {
+                Persisted = dbTable.PersistTable,
+                Created = dbTable.Created
+            };
+
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(metaData);
+            var bytes = Encoding.UTF8.GetBytes(json);
+
+            await cloudBlobContainer.DeleteIfExistsAsync();
+
+            var blob = cloudBlobContainer.GetBlockBlobReference(AzureBlobTableLoader.TableTechBlobName);
+            blob.Properties.ContentType = "application/json";
+
+            await blob.UploadFromByteArrayAsync(bytes, 0, bytes.Length);
 
         }
 
@@ -103,7 +128,10 @@ namespace MyNoSqlServer.AzureStorage
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             await container.CreateIfNotExistsAsync();
+
+            await SaveMetaDataAsync(dbTable, container);
         }
+
 
         public async IAsyncEnumerable<string> GetPersistedTablesAsync()
         {

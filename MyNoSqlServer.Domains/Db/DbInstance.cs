@@ -10,19 +10,18 @@ namespace MyNoSqlServer.Domains.Db
 {
     public class DbInstance
     {
-        private readonly ISnapshotStorage _snapshotStorage;
+        private readonly PersistenceHandler _persistenceHandler;
+
         private readonly object _lockObject = new object();
         
         private Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
         public IReadOnlyList<DbTable> Tables { get; private set; } = Array.Empty<DbTable>();
         public IReadOnlyList<string> TableNames { get; private set; } = Array.Empty<string>();
 
-
-        public DbInstance(ISnapshotStorage snapshotStorage)
+        public DbInstance(PersistenceHandler persistenceHandler)
         {
-            _snapshotStorage = snapshotStorage;
+            _persistenceHandler = persistenceHandler;
         }
-
         private void UpdateCaches()
         {
             TableNames = _tables.Keys.ToList();
@@ -30,9 +29,9 @@ namespace MyNoSqlServer.Domains.Db
             Tables = _tables.Values.ToList();
         }
 
-        private DbTable CreateTableAndUpdateDictionary(string tableName)
+        private DbTable CreateTableAndUpdateDictionary(string tableName, bool persist, DateTime created)
         {
-            var tableInstance = DbTable.CreateByRequest(tableName);
+            var tableInstance = DbTable.CreateByRequest(tableName, persist, created);
 
             _tables = _tables.AddByCreatingNewDictionary(tableInstance.Name, tableInstance);
 
@@ -41,44 +40,44 @@ namespace MyNoSqlServer.Domains.Db
             return tableInstance;
         }
                 
-        public DbTable CreateTableIfNotExists(string tableName)
+        public DbTable CreateTableIfNotExists(string tableName, bool persist, DateTime created)
         {
             lock (_lockObject)
             {
                 return _tables.TryGetValue(tableName, out var result) 
                     ? result 
-                    : CreateTableAndUpdateDictionary(tableName);
+                    : CreateTableAndUpdateDictionary(tableName,  persist, created);
             }
         }
 
         
-        private async Task<OperationResult> CreateAndPersistTableAsync(string tableName)
+        private async Task<OperationResult> CreateAndPersistTableAsync(string tableName, bool persist, DateTime created)
         {
-            var tableToSave = CreateTableAndUpdateDictionary(tableName);
+            var tableToSave = CreateTableAndUpdateDictionary(tableName, persist, created);
 
-            await _snapshotStorage.CreateTableAsync(tableToSave);
+            await _persistenceHandler.SynchronizeCreateTableAsync(tableToSave, DataSynchronizationPeriod.Immediately, tableToSave.Updated);
             return OperationResult.Ok;
         }
         
         
-        public ValueTask<OperationResult> CreateTableAsync(string tableName)
+        public ValueTask<OperationResult> CreateTableAsync(string tableName, bool persist, DateTime created)
         {
             lock (_lockObject)
             {
                 if (_tables.ContainsKey(tableName))
                     return new ValueTask<OperationResult>(OperationResult.CanNotCreateObject);
 
-                return new ValueTask<OperationResult>(CreateAndPersistTableAsync(tableName));
+                return new ValueTask<OperationResult>(CreateAndPersistTableAsync(tableName, persist, created));
             }
         }
         
-        public ValueTask CreateTableIfNotExistsAsync(string tableName)
+        public ValueTask CreateTableIfNotExistsAsync(string tableName, bool persist, DateTime created)
         {
             lock (_lockObject)
             {
                 return _tables.ContainsKey(tableName) 
                     ? new ValueTask() 
-                    : new ValueTask(CreateAndPersistTableAsync(tableName));
+                    : new ValueTask(CreateAndPersistTableAsync(tableName, persist, created));
             }
         }
         
@@ -91,17 +90,21 @@ namespace MyNoSqlServer.Domains.Db
 
         public async Task<OperationResult> DeleteTableAsync(string tableName)
         {
+            DbTable dbTable;
             lock (_lockObject)
             {
                 if (!_tables.ContainsKey(tableName))
                     return OperationResult.TableNotFound;
+
+                dbTable = _tables[tableName];
 
                 _tables = _tables.RemoveByCreatingNewDictionary(tableName);
 
                 UpdateCaches();
             }
 
-            await _snapshotStorage.DeleteTableAsync(tableName);
+            if (dbTable != null)
+                await _persistenceHandler.SynchronizeDeleteTableAsync(dbTable, DataSynchronizationPeriod.Immediately, dbTable.Updated);
             return OperationResult.Ok;
         }
     }

@@ -67,7 +67,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable");
+            var table = dbInstance.CreateTableIfNotExists("mytable", false, DateTime.UtcNow);
 
             var rawClass = new TestReplaceEntity
             {

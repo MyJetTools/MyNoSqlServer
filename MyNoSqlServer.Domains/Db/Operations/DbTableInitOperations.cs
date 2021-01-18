@@ -25,6 +25,8 @@ namespace MyNoSqlServer.Domains.Db.Operations
 
                     partition.InsertOrReplace(dbRow);
                 }
+
+                return true;
             });
             
             return partition;

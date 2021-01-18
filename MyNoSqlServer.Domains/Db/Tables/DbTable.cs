@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 
@@ -29,17 +28,26 @@ namespace MyNoSqlServer.Domains.Db.Tables
         void Clear();
     }
 
+
     public class DbTable : IDbTableWriter
     {
-        private DbTable(string name)
+        private DbTable(string name, bool persistTable, DateTime created)
         {
             Name = name;
+            PersistTable = persistTable;
+            Created = created;
         }
 
-        public static DbTable CreateByRequest(string name)
+        public static DbTable CreateByRequest(string name, bool persistTable, DateTime created)
         {
-            return new DbTable(name);
+            return new DbTable(name,persistTable, created);
         }
+        
+        public bool PersistTable { get; }
+        
+        public DateTime Created { get; }
+        
+        public DateTime Updated { get; private set; }
 
         public string Name { get; }
 
@@ -73,6 +81,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             _partitions.Add(partition.PartitionKey, partition);
 
             _partitionsAsList = null;
+            Updated = DateTime.UtcNow;
 
             return partition;
         }
@@ -84,6 +93,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
             _partitions.Remove(partitionKey);
             _partitionsAsList = null;
+            Updated = DateTime.UtcNow;
 
             return true;
         }
@@ -91,6 +101,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
         void IDbTableWriter.Clear()
         {
             _partitions.Clear();
+            Updated = DateTime.UtcNow;
         }
 
 
@@ -127,12 +138,18 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-        public void GetAccessWithWriteLock(Action<IDbTableWriter> dbTableWriter)
+        public DateTime GetAccessWithWriteLock(Func<IDbTableWriter, bool> dbTableWriter)
         {
             _readerWriterLockSlim.EnterWriteLock();
             try
             {
-                dbTableWriter(this);
+                var updated = dbTableWriter(this);
+                
+                if (updated)
+                    Updated = DateTime.UtcNow;
+
+
+                return Updated;
             }
             finally
             {
@@ -140,19 +157,14 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-
-        public void Clean()
+        public DateTime Clean()
         {
-            _readerWriterLockSlim.EnterWriteLock();
-            try
+            return GetAccessWithWriteLock(writeAccess =>
             {
                 _partitions.Clear();
                 _partitionsAsList = Array.Empty<DbPartition>();
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
+                return true;
+            });
         }
 
 

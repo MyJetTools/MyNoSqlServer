@@ -55,6 +55,11 @@ namespace MyNoSqlServer.Tests.MockServices
             }
         }
 
+        public ValueTask CreateTableAsync(DbTable tableName, bool persistTable)
+        {
+            return new ValueTask();
+        }
+
         public ValueTask CreateTableAsync(DbTable dbTable)
         {
             return new ValueTask();

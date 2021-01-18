@@ -1,38 +1,56 @@
 using System.Collections.Generic;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.Domains.Db.Operations
 {
     public class DbTableReadOperationsWithExpiration
     {
         private readonly DbTableWriteOperations _dbTableWriteOperations;
+        private readonly PersistenceHandler _persistenceHandler;
 
-        public DbTableReadOperationsWithExpiration(DbTableWriteOperations dbTableWriteOperations)
+        public DbTableReadOperationsWithExpiration(DbTableWriteOperations dbTableWriteOperations, 
+            PersistenceHandler persistenceHandler)
         {
             _dbTableWriteOperations = dbTableWriteOperations;
+            _persistenceHandler = persistenceHandler;
         }
         
 
         public DbRow TryGetRow(DbTable dbTable, string partitionKey, string rowKey, UpdateExpirationTime updateExpirationTime)
         {
             DbRow result = null;
+            DbPartition dbPartition = null;
 
-            dbTable.GetAccessWithWriteLock(dbTableReader =>
+           var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableReader =>
             {
-                var dbPartition = dbTableReader.TryGetPartition(partitionKey);
+                dbPartition = dbTableReader.TryGetPartition(partitionKey);
 
                 if (dbPartition == null)
-                    return;
+                    return false;
 
                 result = dbPartition.TryGetRow(rowKey);
                 if (result != null)
                     dbPartition.UpdateExpirationTime(result.RowKey, updateExpirationTime);
+
+                return true;
             });
 
-            if (result != null)
-                _dbTableWriteOperations.UpdateExpirationTime(dbTable, new[]{result}, updateExpirationTime);
+           if (result != null)
+           {
+               _dbTableWriteOperations.UpdateExpirationTime(dbTable, new[]{result}, updateExpirationTime);
+
+               if (dbPartition != null)
+               {
+                   _persistenceHandler.SynchronizePartitionAsync(dbTable, dbPartition, DataSynchronizationPeriod.Sec5,
+                       snapshotDateTime);
+               }
+               
+           }
+            
 
             return result;
         }
