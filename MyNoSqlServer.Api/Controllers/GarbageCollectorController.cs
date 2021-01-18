@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
-using MyNoSqlServer.Domains.Db.Operations;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -23,11 +22,9 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return new ValueTask<IActionResult>(getTableResult);
 
-
             return ServiceLocator.DbTableWriteOperations
                 .KeepMaxPartitionsAmountAsync(dbTable, maxAmount)
                 .GetResponseOkAsync(this);
-
         }
 
 

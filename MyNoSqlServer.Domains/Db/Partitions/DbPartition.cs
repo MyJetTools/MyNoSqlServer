@@ -9,11 +9,9 @@ using MyNoSqlServer.Domains.Query;
 namespace MyNoSqlServer.Domains.Db.Partitions
 {
 
-
     public struct UpdateExpirationTime
     {
         public DateTime? ExpiresDate { get; set; }
-        
         public bool ClearExpiresDate { get; set; }
     }
     
@@ -111,11 +109,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             return _rows.ContainsKey(rowKey);
         }
         
-        internal IEnumerable<DbRow> GetAllRows()
-        {
-            return _rows.Values;
-        }
-        
         public IEnumerable<DbRow> GetRowsWithExpiration()
         {
             return _expirationIndex.GetIndexedRows();
@@ -196,7 +189,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             
         public IReadOnlyList<DbRow> CleanAndKeepLastRecords(int amount)
         {
-            
             LastAccessTime = DateTime.UtcNow;
             if (amount<0)
                 throw new Exception("Amount must be greater than zero");

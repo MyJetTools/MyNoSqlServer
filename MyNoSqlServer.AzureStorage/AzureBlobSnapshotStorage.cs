@@ -47,7 +47,7 @@ namespace MyNoSqlServer.AzureStorage
             await container.CleanContainerAsync();
             Console.WriteLine($"{DateTime.UtcNow:s} Container cleaned: {dbTable.Name}");
 
-            var partitions = dbTable.AllPartitions;
+            var partitions = dbTable.GetAllPartitionsWithReadLock();
 
             foreach (var dbPartition in partitions)
             {

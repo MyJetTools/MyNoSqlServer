@@ -74,13 +74,11 @@ namespace MyNoSqlServer.Domains.Db.Operations
         
         internal static IReadOnlyList<DbPartition> GetPartitionsToGarbageCollect(this DbTable dbTable, int maxAmount)
         {
-
-            /*
             IReadOnlyList<DbPartition> result = null;
             
             dbTable.GetAccessWithReadLock(dbTableReader =>
             {
-                var partitions = dbTable.AllPartitions;
+                var partitions = dbTableReader.GetAllPartitions();
                 
                 if (partitions.Count == 0)
                     return;
@@ -92,8 +90,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
             });
 
             return result ?? EmptyPartitionsList;
-            */
-            return EmptyPartitionsList;
+
         }
         
         

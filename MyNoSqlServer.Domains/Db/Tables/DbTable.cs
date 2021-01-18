@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 
@@ -17,6 +16,8 @@ namespace MyNoSqlServer.Domains.Db.Tables
         DbPartition TryGetPartition(string partitionKey);
 
         IEnumerable<DbRow> GetRows();
+
+        IReadOnlyList<DbPartition> GetAllPartitions();
     }
     
     public interface IDbTableWriter : IDbTableReader
@@ -50,34 +51,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         private IReadOnlyList<DbPartition> _partitionsAsList;
 
-        public IReadOnlyList<DbPartition> AllPartitions
+        IReadOnlyList<DbPartition> IDbTableReader.GetAllPartitions()
         {
-            get
-            {
-                _readerWriterLockSlim.EnterReadLock();
-                try
-                {
-                    if (_partitionsAsList != null)
-                        return _partitionsAsList;
-                }
-                finally
-                {
-                    _readerWriterLockSlim.ExitReadLock();
-                }
-
-                _readerWriterLockSlim.EnterWriteLock();
-                try
-                {
-                    return _partitionsAsList ??= _partitions.Values.ToList();
-                }
-                finally
-                {
-                    _readerWriterLockSlim.ExitWriteLock();
-                }
-
-            }
+            if (_partitionsAsList != null)
+                return _partitionsAsList;
+            
+            return _partitionsAsList ??= _partitions.Values.ToList();
         }
-
 
         IEnumerable<DbRow> IDbTableReader.GetRows()
         {
@@ -133,6 +113,19 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitReadLock();
             }
         }
+        
+        public T GetAccessWithReadLock<T>(Func<IDbTableReader, T> dbTableReader)
+        {
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                return dbTableReader(this);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+        }
 
         public void GetAccessWithWriteLock(Action<IDbTableWriter> dbTableWriter)
         {
@@ -146,20 +139,6 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitWriteLock();
             }
         }
-
-        public ValueTask GetAccessWithWriteLockAsync(Func<IDbTableWriter, ValueTask> dbTableWriterAsync)
-        {
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                return dbTableWriterAsync(this);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-        }
-
 
 
         public void Clean()
