@@ -108,61 +108,37 @@ namespace MyNoSqlServer.DataWriter
         public async ValueTask BulkInsertOrReplaceAsync(IEnumerable<T> entities,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
-            try
-            {
-                await GetUrl()
-                    .AppendPathSegments("Bulk", "InsertOrReplace")
-                    .WithTableNameAsQueryParam(TableName)
-                    .AppendDataSyncPeriod(dataSynchronizationPeriod)
-                    .WithTimeout(_timeOutPeriod)
-                    .PostJsonAsync(entities);
 
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            await GetUrl()
+                .AppendPathSegments("Bulk", "InsertOrReplace")
+                .WithTableNameAsQueryParam(TableName)
+                .AppendDataSyncPeriod(dataSynchronizationPeriod)
+                .WithTimeout(_timeOutPeriod)
+                .PostJsonAsync(entities);
         }
 
         public async ValueTask CleanAndBulkInsertAsync(IEnumerable<T> entities,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
-            try
-            {
-                await GetUrl()
-                    .AppendPathSegments("Bulk", "CleanAndBulkInsert")
-                    .AppendDataSyncPeriod(dataSynchronizationPeriod)
-                    .WithTableNameAsQueryParam(TableName)
-                    .WithTimeout(_timeOutPeriod)
-                    .PostJsonAsync(entities);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+
+            await GetUrl()
+                .AppendPathSegments("Bulk", "CleanAndBulkInsert")
+                .AppendDataSyncPeriod(dataSynchronizationPeriod)
+                .WithTableNameAsQueryParam(TableName)
+                .WithTimeout(_timeOutPeriod)
+                .PostJsonAsync(entities);
         }
 
         public async ValueTask CleanAndBulkInsertAsync(string partitionKey, IEnumerable<T> entities,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
-            try
-            {
-                await GetUrl()
-                    .AppendPathSegments("Bulk", "CleanAndBulkInsert")
-                    .WithTableNameAsQueryParam(TableName)
-                    .WithPartitionKeyAsQueryParam(partitionKey)
-                    .AppendDataSyncPeriod(dataSynchronizationPeriod)
-                    .WithTimeout(_timeOutPeriod)
-                    .PostJsonAsync(entities);
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            await GetUrl()
+                .AppendPathSegments("Bulk", "CleanAndBulkInsert")
+                .WithTableNameAsQueryParam(TableName)
+                .WithPartitionKeyAsQueryParam(partitionKey)
+                .AppendDataSyncPeriod(dataSynchronizationPeriod)
+                .WithTimeout(_timeOutPeriod)
+                .PostJsonAsync(entities);
         }
 
 
