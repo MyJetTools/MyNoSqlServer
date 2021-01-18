@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.Domains.Db
 {
@@ -44,37 +45,21 @@ namespace MyNoSqlServer.Domains.Db
                     : CreateTableAndUpdateDictionary(tableName,  persist, created);
             }
         }
-
-        
-        private async Task<OperationResult> CreateAndPersistTableAsync(string tableName, bool persist, DateTime created)
-        {
-            var tableToSave = CreateTableAndUpdateDictionary(tableName, persist, created);
-
-          //  await _persistenceHandler.SynchronizeCreateTableAsync(tableToSave, DataSynchronizationPeriod.Immediately, tableToSave.Updated);
-            return OperationResult.Ok;
-        }
         
         
-        public ValueTask<OperationResult> CreateTableAsync(string tableName, bool persist, DateTime created)
+        
+        public (bool, DbTable) CreateTable(string tableName, bool persist, DateTime created)
         {
             lock (_lockObject)
             {
                 if (_tables.ContainsKey(tableName))
-                    return new ValueTask<OperationResult>(OperationResult.CanNotCreateObject);
+                    return (false, _tables[tableName]);
 
-                return new ValueTask<OperationResult>(CreateAndPersistTableAsync(tableName, persist, created));
+                var result = CreateTableAndUpdateDictionary(tableName, persist, created);
+                return (true, result);
             }
         }
         
-        public ValueTask CreateTableIfNotExistsAsync(string tableName, bool persist, DateTime created)
-        {
-            lock (_lockObject)
-            {
-                return _tables.ContainsKey(tableName) 
-                    ? new ValueTask() 
-                    : new ValueTask(CreateAndPersistTableAsync(tableName, persist, created));
-            }
-        }
         
         public DbTable TryGetTable(string tableName)
         {
@@ -83,24 +68,22 @@ namespace MyNoSqlServer.Domains.Db
 
         }
 
-        public async Task<OperationResult> DeleteTableAsync(string tableName)
+        public DbTable DeleteTable(string tableName)
         {
-            DbTable dbTable;
             lock (_lockObject)
             {
                 if (!_tables.ContainsKey(tableName))
-                    return OperationResult.TableNotFound;
+                    return null;
 
-                dbTable = _tables[tableName];
+                var result = _tables[tableName];
 
                 _tables = _tables.RemoveByCreatingNewDictionary(tableName);
 
                 UpdateCaches();
+
+                return result;
             }
 
-        //    if (dbTable != null)
-        //        await _persistenceHandler.SynchronizeDeleteTableAsync(dbTable, DataSynchronizationPeriod.Immediately, dbTable.Updated);
-            return OperationResult.Ok;
         }
     }
 }

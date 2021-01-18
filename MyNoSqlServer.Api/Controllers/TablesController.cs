@@ -56,7 +56,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (persist != null)
                 persistIt = persist == "1" || persist.ToLower() == "true";
 
-            await ServiceLocator.DbInstance.CreateTableIfNotExistsAsync(tableName, persistIt, DateTime.UtcNow);
+            await ServiceLocator.DbTableOperations.CreateTableAsync(tableName, persistIt, DateTime.UtcNow);
             return this.ResponseOk();
         }
 
@@ -75,7 +75,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (persist != null)
                 persistIt = persist == "1" || persist.ToLower() == "true";
 
-            var result = await ServiceLocator.DbInstance.CreateTableAsync(tableName, persistIt, DateTime.UtcNow);
+            var result = await ServiceLocator.DbTableOperations.CreateTableAsync(tableName, persistIt, DateTime.UtcNow);
             return this.GetResult(result);
         }
 
@@ -113,7 +113,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            var opResult = await ServiceLocator.DbInstance.DeleteTableAsync(tableName);
+            var opResult = await ServiceLocator.DbTableOperations.DeleteTableAsync(tableName);
             return this.GetResult(opResult);
         }  
 

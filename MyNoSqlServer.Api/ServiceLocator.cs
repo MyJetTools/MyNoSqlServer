@@ -7,6 +7,7 @@ using MyDependencies;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.GarbageCollection;
 using MyNoSqlServer.Domains.SnapshotSaver;
 using MyNoSqlServer.TcpContracts;
@@ -53,6 +54,8 @@ namespace MyNoSqlServer.Api
         public static string AspNetEnvironment { get; }
         public static string Host { get; }
         public static DbInstance DbInstance { get; private set; }
+        
+        public static DbTableOperations DbTableOperations { get; private set; }
         public static GlobalVariables GlobalVariables { get; private set; }
         public static SnapshotSaverEngine SnapshotSaverEngine { get; private set; }
         public static ExpiredEntitiesGarbageCollector ExpiredEntitiesGarbageCollector { get; set; }
@@ -86,6 +89,8 @@ namespace MyNoSqlServer.Api
             DbTableWriteOperations = sr.GetService<DbTableWriteOperations>();
 
             DbTableReadOperations = sr.GetService<DbTableReadOperationsWithExpiration>();
+
+            DbTableOperations = sr.GetService<DbTableOperations>();
 
             ExpiredEntitiesGarbageCollector = sr.GetService<ExpiredEntitiesGarbageCollector>();
         }

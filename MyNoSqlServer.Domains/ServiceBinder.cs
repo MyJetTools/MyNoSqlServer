@@ -1,6 +1,7 @@
 using MyDependencies;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Operations;
+using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.GarbageCollection;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
@@ -13,7 +14,7 @@ namespace MyNoSqlServer.Domains
         public static void BindDomainsServices(this IServiceRegistrator sr)
         {
             sr.Register<DbInstance>();
-            
+            sr.Register<DbTableOperations>();
             sr.Register<SnapshotSaverEngine>();
             
             sr.Register<ISnapshotSaverScheduler, SnapshotSaverScheduler>();
@@ -25,6 +26,7 @@ namespace MyNoSqlServer.Domains
             sr.Register<DbTableWriteOperations>();
             sr.Register<DbTableReadOperationsWithExpiration>();
             sr.Register<ExpiredEntitiesGarbageCollector>();
+
         }
     }
 }
