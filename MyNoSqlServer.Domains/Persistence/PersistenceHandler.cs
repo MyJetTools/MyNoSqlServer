@@ -9,14 +9,12 @@ namespace MyNoSqlServer.Domains.Persistence
 {
     public class PersistenceHandler
     {
-        private readonly ISnapshotStorage _snapshotStorage;
         private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
         private readonly SnapshotSaverEngine _snapshotSaverEngine;
 
-        public PersistenceHandler(ISnapshotStorage snapshotStorage, ISnapshotSaverScheduler snapshotSaverScheduler, 
+        public PersistenceHandler(ISnapshotSaverScheduler snapshotSaverScheduler, 
             SnapshotSaverEngine snapshotSaverEngine)
         {
-            _snapshotStorage = snapshotStorage;
             _snapshotSaverScheduler = snapshotSaverScheduler;
             _snapshotSaverEngine = snapshotSaverEngine;
         }
@@ -27,7 +25,7 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverScheduler.SynchronizeCreateTable(dbTable, period, snapshotDateTime);
             
             return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotStorage.SaveTableSnapshotAsync(dbTable) 
+                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name) 
                 : new ValueTask();
         }
 
@@ -41,7 +39,7 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverScheduler.SynchronizeTable(dbTable, period, snapshotDateTime);
             
             return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotStorage.SaveTableSnapshotAsync(dbTable) 
+                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name) 
                 : new ValueTask();
         }
 
