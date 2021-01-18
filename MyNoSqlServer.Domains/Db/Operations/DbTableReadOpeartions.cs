@@ -70,10 +70,10 @@ namespace MyNoSqlServer.Domains.Db.Operations
                 
                 var dbRows = dbPartition.GetRows();
                 
-                if (skip != null)
+                if (skip!=null)
                     dbRows = dbRows.Skip(skip.Value);
                 
-                if (limit != null)
+                if (limit!= null)
                     dbRows = dbRows.Take(limit.Value);
                 
                 result.AddRange(dbRows);

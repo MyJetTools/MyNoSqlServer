@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 
@@ -66,6 +67,49 @@ namespace MyNoSqlServer.Api.Controllers
             tableName = tableName.ToLowerInvariant();
             var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
             return (null, table);
+        }
+
+
+        public static UpdateExpirationTime GetUpdateExpirationTime(this Controller ctx, string updateExpiresAt)
+        {
+
+            if (string.IsNullOrEmpty(updateExpiresAt))
+            {
+                return new UpdateExpirationTime
+                {
+                    ExpiresDate = null,
+                    ClearExpiresDate = false
+                };
+            }
+
+            if (updateExpiresAt == "del" || updateExpiresAt == "delete")
+            {
+                return new UpdateExpirationTime
+                {
+                    ExpiresDate = null,
+                    ClearExpiresDate = true
+                };
+            }
+
+            if (updateExpiresAt.Contains("T"))
+            {
+                if (DateTime.TryParse(updateExpiresAt, out var value))
+                {
+                    return new UpdateExpirationTime
+                    {
+                        ExpiresDate = value,
+                        ClearExpiresDate = true
+                    };
+                }
+            }
+
+
+            
+            return new UpdateExpirationTime
+            {
+                ExpiresDate = null,
+                ClearExpiresDate = false
+            };
         }
         
         public static (IActionResult result, DbTable dbTable) GetTable(this Controller ctx, string tableName)

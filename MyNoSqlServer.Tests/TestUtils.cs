@@ -14,6 +14,13 @@ using MyNoSqlServer.Tests.MockServices;
 
 namespace MyNoSqlServer.Tests
 {
+
+    public class TestEntity : MyNoSqlDbEntity
+    {
+        public string Value { get; set; }
+    }
+    
+    
     public static class TestUtils
     {
         public static MyIoc GetTestIoc()

@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,13 @@ namespace MyNoSqlServer.Api.Controllers
                         syncPeriod.ParseSynchronizationPeriodContract())
                     .GetResponseOkAsync(this);
 
+        }
+
+        [HttpPost("PushRowsExpirations")]
+        public async ValueTask<IActionResult> PushRowsExpirations()
+        {
+            await ServiceLocator.ExpiredEntitiesGarbageCollector.DetectAndExpireAsync(DateTime.UtcNow);
+            return this.GetResult(OperationResult.Ok);
         }
     }
 }

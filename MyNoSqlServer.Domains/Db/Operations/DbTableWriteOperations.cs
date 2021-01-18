@@ -383,7 +383,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
         }
 
 
-        internal void UpdateExpirationTime(DbTable dbTable, IReadOnlyList<DbRow> dbRows, DateTime updateExpirationTime)
+        internal void UpdateExpirationTime(DbTable dbTable, IReadOnlyList<DbRow> dbRows, UpdateExpirationTime updateExpirationTime)
         {
             dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
@@ -404,16 +404,12 @@ namespace MyNoSqlServer.Domains.Db.Operations
             _dataSynchronizer.SynchronizeUpdate(dbTable, dbRows);
         }
         
-        
-        public void UpdateExpirationTime(DbTable dbTable, string partitionKeys, IReadOnlyList<string> dbRowKeys, DateTime updateExpirationTime)
+        public void UpdateExpirationTime(DbTable dbTable, string partitionKeys, IReadOnlyList<string> dbRowKeys, 
+            in UpdateExpirationTime updateExpirationTime)
         {
             var dbRows = dbTable.GetRows(partitionKeys, dbRowKeys);
-            
             UpdateExpirationTime(dbTable, dbRows, updateExpirationTime);
         }
-        
-
-
 
     }
 }

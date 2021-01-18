@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Operations;
 using NUnit.Framework;
@@ -8,14 +9,9 @@ namespace MyNoSqlServer.Tests
     public class TestExpirationCases
     {
         
-        private class TestEntity : MyNoSqlDbEntity
-        {
-            public string Value { get; set; }
-        }
-        
         
         [Test]
-        public void TestExpireFieldWorks()
+        public async Task TestExpireFieldWorks()
         {
             var ioc = TestUtils.GetTestIoc();
 
@@ -31,8 +27,7 @@ namespace MyNoSqlServer.Tests
                 Value = "TEST"
             };
             
-            ioc.InsertToTable(table, testEntity);
-
+            await ioc.InsertToTableAsync(table, testEntity);
 
             var resultEntity = table.TryGetRow("PK", "RK");
             

@@ -15,7 +15,7 @@ namespace MyNoSqlServer.Api.Controllers
         
         [HttpPost("Rows/SinglePartitionMultipleRows")]
         public IActionResult SinglePartitionMultipleRows([Required][FromQuery] string tableName, [Required][FromQuery] string partitionKey,
-            [Required][FromBody] string[] rowKeys, [FromQuery] DateTime? updateExpiresAt)
+            [Required][FromBody] string[] rowKeys, [FromQuery] string updateExpiresAt)
         {
             
             var (getTableResult, dbTable) = this.GetTable(tableName);
@@ -29,7 +29,7 @@ namespace MyNoSqlServer.Api.Controllers
             var result =
                 updateExpiresAt == null
                     ? dbTable.GetRows(partitionKey, rowKeys)
-                    : ServiceLocator.DbTableReadOperations.GetRows(dbTable, partitionKey, rowKeys, updateExpiresAt.Value);
+                    : ServiceLocator.DbTableReadOperations.GetRows(dbTable, partitionKey, rowKeys, this.GetUpdateExpirationTime(updateExpiresAt));
             
             return this.ToDbRowsResult(result);
         }
@@ -37,7 +37,7 @@ namespace MyNoSqlServer.Api.Controllers
         
         [HttpGet("Rows/HighestRowAndBelow")]
         public IActionResult HighestRowAndBelow([Required][FromQuery] string tableName, [Required][FromQuery] string partitionKey, 
-            [Required][FromQuery] string rowKey, [Required][FromQuery] int maxAmount, [FromQuery] DateTime? updateExpiresAt)
+            [Required][FromQuery] string rowKey, [Required][FromQuery] int maxAmount, [FromQuery] string updateExpiresAt)
         {
             var (getTableResult, dbTable) = this.GetTable(tableName);
             
@@ -50,7 +50,7 @@ namespace MyNoSqlServer.Api.Controllers
             var result =
                 updateExpiresAt == null
                     ? dbTable.GetHighestRowAndBelow(partitionKey, rowKey, maxAmount)
-                    : ServiceLocator.DbTableReadOperations.GetHighestRowAndBelow(dbTable, partitionKey, rowKey, maxAmount, updateExpiresAt.Value);
+                    : ServiceLocator.DbTableReadOperations.GetHighestRowAndBelow(dbTable, partitionKey, rowKey, maxAmount, this.GetUpdateExpirationTime(updateExpiresAt));
             
             return this.ToDbRowsResult(result);
         }
@@ -59,7 +59,7 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("Rows/UpdateExpiresTime")]
         public async ValueTask<IActionResult> HighestRowAndBelow([Required][FromQuery] string tableName, 
             [Required][FromQuery] string partitionKey, 
-            [FromQuery] DateTime updateExpiresAt)
+            [FromQuery] string updateExpiresAt)
         {
             var (getTableResult, dbTable) = this.GetTable(tableName);
             
@@ -72,7 +72,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var bodyModel = Newtonsoft.Json.JsonConvert.DeserializeObject<UpdateExpiresModel>(json); 
 
-            ServiceLocator.DbTableWriteOperations.UpdateExpirationTime(dbTable, partitionKey, bodyModel.RowKeys, updateExpiresAt);
+            ServiceLocator.DbTableWriteOperations.UpdateExpirationTime(dbTable, partitionKey, bodyModel.RowKeys, this.GetUpdateExpirationTime(updateExpiresAt));
             
             return this.ResponseOk();
         }

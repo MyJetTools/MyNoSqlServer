@@ -4,7 +4,6 @@ using NUnit.Framework;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Operations;
-using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 
 namespace MyNoSqlServer.Tests
@@ -41,7 +40,7 @@ namespace MyNoSqlServer.Tests
 
             var dt = DateTime.UtcNow;
             
-            ioc.InsertToTable(table, rawClass, dt);
+            await ioc.InsertToTableAsync(table, rawClass, dt);
 
             rawClass = table.TryGetRow("test", "test").AsResult<TestReplaceEntity>();
 
