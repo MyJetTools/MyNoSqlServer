@@ -4,13 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.Domains.Db
 {
     public class DbInstance
     {
-        private readonly PersistenceHandler _persistenceHandler;
 
         private readonly object _lockObject = new object();
         
@@ -18,10 +16,7 @@ namespace MyNoSqlServer.Domains.Db
         public IReadOnlyList<DbTable> Tables { get; private set; } = Array.Empty<DbTable>();
         public IReadOnlyList<string> TableNames { get; private set; } = Array.Empty<string>();
 
-        public DbInstance(PersistenceHandler persistenceHandler)
-        {
-            _persistenceHandler = persistenceHandler;
-        }
+
         private void UpdateCaches()
         {
             TableNames = _tables.Keys.ToList();
@@ -55,7 +50,7 @@ namespace MyNoSqlServer.Domains.Db
         {
             var tableToSave = CreateTableAndUpdateDictionary(tableName, persist, created);
 
-            await _persistenceHandler.SynchronizeCreateTableAsync(tableToSave, DataSynchronizationPeriod.Immediately, tableToSave.Updated);
+          //  await _persistenceHandler.SynchronizeCreateTableAsync(tableToSave, DataSynchronizationPeriod.Immediately, tableToSave.Updated);
             return OperationResult.Ok;
         }
         
@@ -103,8 +98,8 @@ namespace MyNoSqlServer.Domains.Db
                 UpdateCaches();
             }
 
-            if (dbTable != null)
-                await _persistenceHandler.SynchronizeDeleteTableAsync(dbTable, DataSynchronizationPeriod.Immediately, dbTable.Updated);
+        //    if (dbTable != null)
+        //        await _persistenceHandler.SynchronizeDeleteTableAsync(dbTable, DataSynchronizationPeriod.Immediately, dbTable.Updated);
             return OperationResult.Ok;
         }
     }

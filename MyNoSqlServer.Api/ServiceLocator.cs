@@ -22,7 +22,7 @@ namespace MyNoSqlServer.Api
 
             var name = Assembly.GetEntryAssembly()?.GetName();
 
-            string appName = name?.Name ?? string.Empty;
+            var appName = name?.Name ?? string.Empty;
 
             var nameSegments = appName.Split('.', StringSplitOptions.RemoveEmptyEntries);
 
