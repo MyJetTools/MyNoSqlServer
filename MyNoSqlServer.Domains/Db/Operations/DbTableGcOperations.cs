@@ -14,7 +14,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
         {
             return dbPartition
                 .GetRowsWithExpiration()
-                .Where(dbRow => dbRow.Expires != null && dbRow.Expires.Value >= now);
+                .Where(dbRow => dbRow.Expires != null && dbRow.Expires.Value < now);
         }
 
 
