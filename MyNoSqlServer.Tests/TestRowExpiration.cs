@@ -25,6 +25,8 @@ namespace MyNoSqlServer.Tests
             };
 
             var dbTable = ioc.CreateTable("test");
+            
+            Console.WriteLine($"Added entity with Expire time: {entity.Expires.Value:O}");
 
             await ioc.InsertToTableAsync(dbTable, entity, dt);
             var dbRow =  dbTable.TryGetRow("testPK", "testPK");

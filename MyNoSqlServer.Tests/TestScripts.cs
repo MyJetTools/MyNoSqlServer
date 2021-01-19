@@ -32,6 +32,8 @@ namespace MyNoSqlServer.Tests
         public static ValueTask ExpirationTimerTickAsync(this MyIoc ioc, DateTime now)
         {
             var expirationService = ioc.GetService<ExpiredEntitiesGarbageCollector>();
+            
+            Console.WriteLine($"Expiring timer. Now is: {now:O}");
 
             return expirationService.DetectAndExpireAsync(now);
         }

@@ -31,7 +31,7 @@ namespace MyNoSqlServer.Domains.GarbageCollection
                 foreach (var (dbPartition, dbRows) in dbTable.GetExpiredEntities(nowTime))
                 {
                     Console.WriteLine(
-                        $"Expiring Partitions {dbTable.Name}/{dbPartition.PartitionKey}. Rows Amount: {dbRows.Count}");
+                        $"{nowTime:O} Expiring Partitions {dbTable.Name}/{dbPartition.PartitionKey}. Rows Amount: {dbRows.Count}");
                     await _dbTableWriteOperations.DeleteEntitiesAsync(dbTable, dbPartition, dbRows);
                 }
             }
