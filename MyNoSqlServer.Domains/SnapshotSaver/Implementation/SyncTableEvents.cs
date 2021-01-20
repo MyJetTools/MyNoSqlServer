@@ -10,19 +10,17 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
 
     public class CreateTablePersistEvent : IPersistTableEvent
     {
-        public DataSynchronizationPeriod Period { get; private set; }
+        public DateTime DequeueTime { get; set; }
         public DbTable Table { get; private set; }
-        public bool PersistTable { get; private set; }
         public DateTime SnapshotDateTime { get; private set; }
 
-        public static CreateTablePersistEvent Create(DbTable table, bool persistTable, 
+        public static CreateTablePersistEvent Create(DbTable table, 
             DataSynchronizationPeriod period, DateTime snapshotDateTime)
         {
             return new CreateTablePersistEvent
             {
                 Table = table,
-                PersistTable = persistTable,
-                Period = period,
+                DequeueTime = snapshotDateTime.GetDequeueTime(period),
                 SnapshotDateTime = snapshotDateTime
             };
         }
@@ -31,7 +29,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
 
     public class SyncTablePersistEvent : IPersistTableEvent
     {
-        public DataSynchronizationPeriod Period { get; private set; }
+        public DateTime DequeueTime { get; set; }
         public DbTable Table { get; private set; }
         
         public DateTime SnapshotDateTime { get; private set; }
@@ -42,7 +40,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
             return new SyncTablePersistEvent
             {
                 Table = table,
-                Period = period,
+                DequeueTime = snapshotDateTime.GetDequeueTime(period),
                 SnapshotDateTime = snapshotDateTime
             };
         }
@@ -50,7 +48,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
 
     public class SyncPartitionPersistEvent : IPersistTableEvent
     {
-        public DataSynchronizationPeriod Period { get; private set; }
+        public DateTime DequeueTime { get; set; }
         public DbTable Table { get; private set; }
         public DbPartition Partition { get; private set; }
         public DateTime SnapshotDateTime { get; private set; }
@@ -61,7 +59,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
             {
                 Table = table,
                 Partition = partition,
-                Period = period,
+                DequeueTime = snapshotDateTime.GetDequeueTime(period),
                 SnapshotDateTime = snapshotDateTime
             };
         }
@@ -70,7 +68,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
     
     public class SyncDeletePartitionPersistEvent : IPersistTableEvent
     {
-        public DataSynchronizationPeriod Period { get; private set; }
+        public DateTime DequeueTime { get; set; }
         public DbTable Table { get; private set; }
         
         public DbPartition Partition { get; private set; }
@@ -84,7 +82,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
             {
                 Table = table,
                 Partition = partition,
-                Period = period,
+                DequeueTime = snapshotDateTime.GetDequeueTime(period),
                 SnapshotDateTime = snapshotDateTime
             };
         }
@@ -92,7 +90,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
     
     public class SyncDeleteTablePersistEvent : IPersistTableEvent
     {
-        public DataSynchronizationPeriod Period { get; private set; }
+        public DateTime DequeueTime { get; set; }
         public DbTable Table { get; private set; }
         
         public DateTime SnapshotDateTime { get; private set; }
@@ -102,7 +100,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
             return new SyncDeleteTablePersistEvent
             {
                 Table = table,
-                Period = period,
+                DequeueTime = snapshotDateTime.GetDequeueTime(period),
                 SnapshotDateTime = snapshotDateTime
             };
         }
@@ -110,7 +108,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
     
     public class PersistTableEventsQueue : ITableToSaveEventsQueue
     {
-        private readonly Queue<IPersistTableEvent> _events = new Queue<IPersistTableEvent>();
+        private readonly LinkedList<IPersistTableEvent> _events = new LinkedList<IPersistTableEvent>();
 
         public PersistTableEventsQueue(string table)
         {
@@ -118,24 +116,67 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
         }
         
         public string Table { get; }
+
+
+        private void InsertSyncPartitionEventPreExecution(SyncPartitionPersistEvent syncPartitionEvent)
+        {
+            if (_events.Count == 0)
+                return;
+
+            var last = _events.Last.Value;
+
+            if (last is SyncPartitionPersistEvent lastSyncPartitionEvent)
+            {
+                if (lastSyncPartitionEvent.SnapshotDateTime < syncPartitionEvent.SnapshotDateTime)
+                    _events.RemoveLast();
+            }
+
+        }
+
+        private void UpdateDequeueDateIfNeeded(IPersistTableEvent newEvent)
+        {
+
+            foreach (var @event in _events)
+            {
+                if (@event.DequeueTime > newEvent.DequeueTime)
+                    @event.DequeueTime = newEvent.DequeueTime;
+            }
+            
+        }
         
-        public void Enqueue(IPersistTableEvent @event)
+        
+        public void Enqueue(IPersistTableEvent newEvent)
         {
             lock (_events)
             {
-                _events.Enqueue(@event);
+                UpdateDequeueDateIfNeeded(newEvent);
+                
+                if (newEvent is SyncPartitionPersistEvent syncPartitionEvent)
+                    InsertSyncPartitionEventPreExecution(syncPartitionEvent);
+                
+                _events.AddLast(newEvent);
                 Count = _events.Count;
             }
         }
 
 
-        public IPersistTableEvent Dequeue()
+        public IPersistTableEvent Dequeue(DateTime nowTime)
         {
             lock (_events)
             {
                 try
                 {
-                    return _events.Count > 0 ? _events.Dequeue() : default;
+                    if (_events.Count > 0)
+                    {
+                        var result = _events.First.Value;
+                        if (result.DequeueTime > nowTime)
+                            return null;
+                        
+                        _events.RemoveFirst();
+                        return result;
+                    }
+                    
+                    return default;
                 }
                 finally
                 {

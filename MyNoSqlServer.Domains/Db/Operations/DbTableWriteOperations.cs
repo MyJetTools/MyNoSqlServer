@@ -406,10 +406,7 @@ namespace MyNoSqlServer.Domains.Db.Operations
 
         internal void UpdateExpirationTime(DbTable dbTable, IReadOnlyList<DbRow> dbRows, UpdateExpirationTime updateExpirationTime)
         {
-
-            var partitionsToSync = new Dictionary<string, DbPartition>();
-            
-            var snapshotDateTime = dbTable.GetAccessWithWriteLock(dbTableWriter =>
+            dbTable.GetAccessWithWriteLock(dbTableWriter =>
             {
                 foreach (var group in dbRows.GroupBy(itm => itm.PartitionKey))
                 {
@@ -420,19 +417,10 @@ namespace MyNoSqlServer.Domains.Db.Operations
 
                     foreach (var dbRow in group)
                         dbPartition.UpdateExpirationTime(dbRow.RowKey, updateExpirationTime);
-
-                    if (!partitionsToSync.ContainsKey(dbPartition.PartitionKey))
-                        partitionsToSync.Add(dbPartition.PartitionKey, dbPartition);
                 }
 
                 return true;
             });
-
-
-            foreach (var dbPartition in partitionsToSync.Values)
-                _persistenceHandler.SynchronizePartitionAsync(dbTable, dbPartition, DataSynchronizationPeriod.Sec5, snapshotDateTime);
-            
-            _dataSynchronizer.SynchronizeUpdate(dbTable, dbRows);
         }
         
         public void UpdateExpirationTime(DbTable dbTable, string partitionKeys, IReadOnlyList<string> dbRowKeys, 

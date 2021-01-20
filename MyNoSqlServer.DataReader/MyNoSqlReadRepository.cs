@@ -163,14 +163,14 @@ namespace MyNoSqlServer.DataReader
         }
 
 
-        public T Get(string partitionKey, string rowKey)
+        public T Get(string partitionKey, string rowKey, DateTime? updateExpirationTime = null)
         {
             _lock.EnterReadLock();
             try
             {
 
                 if (!_cache.ContainsKey(partitionKey))
-                    return default(T);
+                    return default;
 
                 var partition = _cache[partitionKey];
 
@@ -183,7 +183,7 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public IReadOnlyList<T> Get(string partitionKey)
+        public IReadOnlyList<T> Get(string partitionKey, DateTime? updateExpirationTime = null)
         {
             _lock.EnterReadLock();
             try
@@ -201,7 +201,7 @@ namespace MyNoSqlServer.DataReader
 
         }
 
-        public IReadOnlyList<T> Get(string partitionKey, int skip, int take)
+        public IReadOnlyList<T> Get(string partitionKey, int skip, int take, DateTime? updateExpirationTime = null)
         {
             _lock.EnterReadLock();
             try
@@ -218,7 +218,7 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public IReadOnlyList<T> Get(string partitionKey, int skip, int take, Func<T, bool> condition)
+        public IReadOnlyList<T> Get(string partitionKey, int skip, int take, Func<T, bool> condition, DateTime? updateExpirationTime = null)
         {
             _lock.EnterReadLock();
             try
@@ -235,7 +235,7 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public IReadOnlyList<T> Get(string partitionKey, Func<T, bool> condition)
+        public IReadOnlyList<T> Get(string partitionKey, Func<T, bool> condition, DateTime? updateExpirationTime = null)
         {
             _lock.EnterReadLock();
             try
@@ -252,7 +252,8 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public IReadOnlyList<T> Get(Func<T, bool> condition = null)
+        //ToDo - updateExpirationTime
+        public IReadOnlyList<T> Get(Func<T, bool> condition = null, DateTime? updateExpirationTime = null)
         {
 
             var result = new List<T>();

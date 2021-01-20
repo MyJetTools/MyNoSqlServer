@@ -4,6 +4,7 @@ using System.Net;
 using System.Reflection;
 using DotNetCoreDecorators;
 using MyDependencies;
+using MyNoSqlServer.Api.Tcp;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Operations;
@@ -103,7 +104,7 @@ namespace MyNoSqlServer.Api
                 ()=>ExpiredEntitiesGarbageCollector.DetectAndExpireAsync(DateTime.UtcNow));
 
             PersistenceTime.Register("Persistence Timer", 
-                () => SnapshotSaverEngine.SynchronizeAsync(null));
+                () => SnapshotSaverEngine.SynchronizeAsync(null, DateTime.UtcNow));
             
             TcpServer.Start();
             ExpiredEntitiesGcTimer.Start();

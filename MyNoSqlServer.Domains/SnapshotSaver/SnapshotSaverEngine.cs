@@ -93,10 +93,10 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
             
 
-        private async Task SyncTableAsync(ITableToSaveEventsQueue eventsQueue)
+        private async Task SyncTableAsync(ITableToSaveEventsQueue eventsQueue, DateTime utcNow)
         {
 
-            var eventToSync = eventsQueue.Dequeue();
+            var eventToSync = eventsQueue.Dequeue(utcNow);
 
             while (eventToSync != null)
             {
@@ -139,12 +139,12 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                 
                 UpdateLastDateTime(eventToSync.Table.Name, eventToSync.SnapshotDateTime);
 
-                eventToSync = eventsQueue.Dequeue();
+                eventToSync = eventsQueue.Dequeue(utcNow);
             }
 
         }
 
-        public async ValueTask SynchronizeAsync(string tableName)
+        public async ValueTask SynchronizeAsync(string tableName, DateTime utcNow)
         {
             try
             {
@@ -157,7 +157,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                     {
                         foreach (var eventsQueue in _snapshotSaverScheduler.GetEventsQueue())
                         {
-                            await SyncTableAsync(eventsQueue);
+                            await SyncTableAsync(eventsQueue, utcNow);
                         }
                     }
                     else
@@ -165,7 +165,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                         var eventsQueue = _snapshotSaverScheduler.TryGetEventsQueue(tableName);
                         
                         if (eventsQueue != null)
-                            await SyncTableAsync(eventsQueue);
+                            await SyncTableAsync(eventsQueue, utcNow);
                     }
                     
                 }

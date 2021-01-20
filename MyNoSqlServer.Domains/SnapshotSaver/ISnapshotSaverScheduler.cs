@@ -10,7 +10,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     public interface IPersistTableEvent
     {
         DbTable Table { get; }
-        DataSynchronizationPeriod Period { get; }
+        DateTime DequeueTime { get; set; }
         public DateTime SnapshotDateTime { get; }
     }
     
@@ -19,7 +19,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     {
         public string Table { get; }
 
-        public IPersistTableEvent Dequeue();
+        public IPersistTableEvent Dequeue(DateTime nowTime);
     }
     
     

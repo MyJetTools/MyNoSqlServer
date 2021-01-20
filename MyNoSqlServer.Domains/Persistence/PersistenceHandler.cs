@@ -25,7 +25,7 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverScheduler.SynchronizeCreateTable(dbTable, period, snapshotDateTime);
             
             return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name) 
+                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name, DateTime.UtcNow) 
                 : new ValueTask();
         }
 
@@ -39,7 +39,7 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverScheduler.SynchronizeTable(dbTable, period, snapshotDateTime);
             
             return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name) 
+                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name, DateTime.UtcNow) 
                 : new ValueTask();
         }
 
@@ -53,7 +53,7 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverScheduler.SynchronizePartition(dbTable, partition, period, snapshotDateTime);
             
             return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name) 
+                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name, DateTime.UtcNow) 
                 : new ValueTask();
         }
 
@@ -67,7 +67,7 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverScheduler.SynchronizeDeletePartition(dbTable, dbPartition, period, snapshotDateTime);
             
             return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name) 
+                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name, DateTime.UtcNow) 
                 : new ValueTask();
         }
         
@@ -79,7 +79,7 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverScheduler.SynchronizeDeleteTable(dbTable, period, snapshotDateTime);
             
             return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name) 
+                ? _snapshotSaverEngine.SynchronizeAsync(dbTable.Name, DateTime.UtcNow) 
                 : new ValueTask();
         }
         

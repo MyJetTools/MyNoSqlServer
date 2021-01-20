@@ -10,7 +10,7 @@ using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
 
-namespace MyNoSqlServer.Api
+namespace MyNoSqlServer.Api.Tcp
 {
     public class ChangesTcpService : TcpContext<IMyNoSqlTcpContract>
     {

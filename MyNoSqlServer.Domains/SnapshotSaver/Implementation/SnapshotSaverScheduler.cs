@@ -16,8 +16,6 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
         private readonly Dictionary<string, PersistTableEventsQueue> _syncTables = new Dictionary<string, PersistTableEventsQueue>();
         private IReadOnlyList<PersistTableEventsQueue> _syncTablesAsList = Array.Empty<PersistTableEventsQueue>();
 
-        
-
         public IReadOnlyList<ITableToSaveEventsQueue> GetEventsQueue()
         {
             lock (_lockObject)
@@ -61,7 +59,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
             lock (_lockObject)
             {
                 GetQueueToEnqueue(dbTable.Name).Enqueue( 
-                    CreateTablePersistEvent.Create(dbTable, dbTable.PersistTable, period, snapshotDateTime));
+                    CreateTablePersistEvent.Create(dbTable, period, snapshotDateTime));
             }
         }
 
