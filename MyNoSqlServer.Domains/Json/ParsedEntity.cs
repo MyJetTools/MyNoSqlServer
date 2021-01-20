@@ -27,7 +27,7 @@ namespace MyNoSqlServer.Domains.Json
                 if (expiresAsString != null)
                     try
                     {
-                        Expires = DateTime.Parse(expiresAsString);
+                        Expires = DateTime.Parse(expiresAsString).ToUniversalTime();
                     }
                     catch (Exception)
                     {

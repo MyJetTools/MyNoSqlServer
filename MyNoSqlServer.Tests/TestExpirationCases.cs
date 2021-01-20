@@ -18,7 +18,7 @@ namespace MyNoSqlServer.Tests
             var table = ioc.CreateTable("myTable");
 
 
-            var expires = DateTime.Parse("2020-01-01T00:00:00");
+            var expires = DateTime.UtcNow;
             var testEntity = new TestEntity
             {
                 PartitionKey = "PK",
