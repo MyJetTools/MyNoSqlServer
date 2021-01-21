@@ -9,5 +9,10 @@ namespace MyNoSqlServer.DataReader
         void Subscribe<T>(string tableName, Action<IReadOnlyList<T>> initAction,
             Action<string, IReadOnlyList<T>> initPartitionAction, Action<IReadOnlyList<T>> updateAction,
             Action<IEnumerable<(string partitionKey, string rowKey)>> deleteActions);
+
+
+
+        void UpdateExpirationDate(string tableName, string partitionKey, string[] rowKeys, 
+            DateTime? expirationTime, bool cleanExpirationTime);
     }
 }

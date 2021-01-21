@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataReader
 {
-    public class MyNoSqlSubscriber : IMyNoSqlSubscriber
+    public abstract class MyNoSqlSubscriber : IMyNoSqlSubscriber
     {
         protected const string SystemAction = "system";
 
@@ -51,7 +50,12 @@ namespace MyNoSqlServer.DataReader
 
             _deleteCallbacks.Add(tableName, deleteActions);
         }
-        
+
+        public abstract void UpdateExpirationDate(string tableName, string partitionKey, string[] rowKeys,
+            DateTime? expirationTime,
+            bool cleanExpirationTime);
+
+
         public void HandleInitTableEvent(string tableName, byte[] data)
         {
             var items = Deserializers[tableName](data);

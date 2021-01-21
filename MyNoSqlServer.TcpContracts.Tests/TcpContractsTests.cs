@@ -9,6 +9,8 @@ namespace MyNoSqlServer.TcpContracts.Tests
     public class TcpContractsTests
     {
 
+        private const int ReadBufferSize = 2048 * 2048;
+
         [Test]
         public void TestPing()
         {
@@ -20,15 +22,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(pingContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
 
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
 
             var tc = new CancellationTokenSource();
             
@@ -51,14 +49,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
 
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
 
             var tc = new CancellationTokenSource();
             
@@ -84,14 +79,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
 
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
 
             
             var tc = new CancellationTokenSource();
@@ -120,13 +112,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
             
             var tc = new CancellationTokenSource();
             var result
@@ -158,14 +147,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
 
 
             var tc = new CancellationTokenSource();
@@ -198,14 +183,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
 
 
             var tc = new CancellationTokenSource();
@@ -236,14 +217,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
 
 
             
@@ -273,14 +250,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
 
             
             var tc = new CancellationTokenSource();
@@ -320,15 +293,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
+            var dataReader = new TcpDataReader(ReadBufferSize, 1024);
+            var memToWrite = dataReader.AllocateBufferToWrite();
+            rawData.CopyTo(memToWrite);
+            dataReader.CommitWrittenData(rawData.Length);
             
             var tc = new CancellationTokenSource();
 

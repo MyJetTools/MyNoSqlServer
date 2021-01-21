@@ -163,7 +163,7 @@ namespace MyNoSqlServer.DataReader
         }
 
 
-        public T Get(string partitionKey, string rowKey, DateTime? updateExpirationTime = null)
+        public T Get(string partitionKey, string rowKey, DateTime? updateExpirationTime = null, bool resetExpirationDate=false)
         {
             _lock.EnterReadLock();
             try
@@ -183,7 +183,7 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public IReadOnlyList<T> Get(string partitionKey, DateTime? updateExpirationTime = null)
+        public IReadOnlyList<T> Get(string partitionKey, DateTime? updateExpirationTime = null, bool resetExpirationDate=false)
         {
             _lock.EnterReadLock();
             try
@@ -201,7 +201,7 @@ namespace MyNoSqlServer.DataReader
 
         }
 
-        public IReadOnlyList<T> Get(string partitionKey, int skip, int take, DateTime? updateExpirationTime = null)
+        public IReadOnlyList<T> Get(string partitionKey, int skip, int take, DateTime? updateExpirationTime = null, bool resetExpirationDate=false)
         {
             _lock.EnterReadLock();
             try
@@ -218,7 +218,8 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public IReadOnlyList<T> Get(string partitionKey, int skip, int take, Func<T, bool> condition, DateTime? updateExpirationTime = null)
+        public IReadOnlyList<T> Get(string partitionKey, int skip, int take, Func<T, bool> condition, 
+            DateTime? updateExpirationTime = null, bool resetExpirationDate=false)
         {
             _lock.EnterReadLock();
             try
@@ -235,7 +236,8 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public IReadOnlyList<T> Get(string partitionKey, Func<T, bool> condition, DateTime? updateExpirationTime = null)
+        public IReadOnlyList<T> Get(string partitionKey, Func<T, bool> condition, 
+            DateTime? updateExpirationTime = null, bool resetExpirationDate=false)
         {
             _lock.EnterReadLock();
             try
@@ -253,7 +255,8 @@ namespace MyNoSqlServer.DataReader
         }
 
         //ToDo - updateExpirationTime
-        public IReadOnlyList<T> Get(Func<T, bool> condition = null, DateTime? updateExpirationTime = null)
+        public IReadOnlyList<T> Get(Func<T, bool> condition = null, 
+            DateTime? updateExpirationTime = null, bool resetExpirationDate=false)
         {
 
             var result = new List<T>();

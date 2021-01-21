@@ -13,7 +13,7 @@ namespace MyNoSqlServer.Api.Services
         public void PublishInitTable(DbTable dbTable)
         {
             ChangesHub.BroadCastInit(dbTable);
-            ChangesTcpService.BroadcastInitTableAsync(dbTable);
+            ChangesTcpService.BroadcastInitTable(dbTable);
         }
 
         public void PublishInitPartition(DbTable dbTable, string partitionKey)

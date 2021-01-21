@@ -44,5 +44,26 @@ namespace MyNoSqlServer.DataReader
         {
             _tcpClient.Stop();
         }
+
+        public override void UpdateExpirationDate(string tableName, string partitionKey, string[] rowKeys, 
+            DateTime? expirationTime,
+            bool cleanExpirationTime)
+        {
+            var ctx = _tcpClient.CurrentTcpContext;
+            
+            if (ctx == null)
+                return;
+
+
+            var contract = new UpdateExpiresTimeTcpContract
+            {
+                TableName = tableName,
+                PartitionKey = partitionKey,
+                RowKeys = rowKeys,
+                Expires = expirationTime,
+            };
+            
+            ctx.SendDataToSocket(contract);
+        }
     }
 }

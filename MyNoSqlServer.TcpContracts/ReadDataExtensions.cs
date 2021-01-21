@@ -20,7 +20,7 @@ namespace MyNoSqlServer.TcpContracts
             
         }
         
-        public static async ValueTask<string[]> ReadPascalStringArrayAsync(this TcpDataReader stream, CancellationToken ct)
+        public static async ValueTask<string[]> ReadPascalStringArrayAsync(this ITcpDataReader stream, CancellationToken ct)
         {
 
             var len = await stream.ReadIntAsync(ct);
@@ -38,7 +38,7 @@ namespace MyNoSqlServer.TcpContracts
         }
 
 
-        private static DateTime UnixTime = new DateTime(1970, 1, 1, 0, 0, 0);
+        private static readonly DateTime UnixTime = new DateTime(1970, 1, 1, 0, 0, 0);
         
         public static void WriteDateTime(this Stream stream, DateTime date)
         {
@@ -59,13 +59,13 @@ namespace MyNoSqlServer.TcpContracts
             stream.WriteDateTime(expiresAt.Value);
         }
         
-        public static async ValueTask<DateTime> ReadDateTimeAsync(this TcpDataReader stream, CancellationToken ct)
+        public static async ValueTask<DateTime> ReadDateTimeAsync(this ITcpDataReader stream, CancellationToken ct)
         {
             var unixTime = await stream.ReadLongAsync(ct);
             return UnixTime.AddMilliseconds(unixTime);
         }
         
-        public static async ValueTask<DateTime?> ReadExpirationDateTimeAsync(this TcpDataReader stream, CancellationToken ct)
+        public static async ValueTask<DateTime?> ReadExpirationDateTimeAsync(this ITcpDataReader stream, CancellationToken ct)
         {
             var unixTime = await stream.ReadLongAsync(ct);
 

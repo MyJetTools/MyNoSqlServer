@@ -145,5 +145,11 @@ namespace MyNoSqlServer.DataReader.Tests
             UpdateAction = items => { updateAction(items.Cast<T>().ToList()); };
             DeleteAction = deleteActions;
         }
+
+        public void UpdateExpirationDate(string tableName, string partitionKey, string[] rowKeys, DateTime? expirationTime,
+            bool cleanExpirationTime)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

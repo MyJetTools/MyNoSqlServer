@@ -44,7 +44,7 @@ namespace MyNoSqlServer.Api.Tcp
 
 
 
-        public static async Task BroadcastInitTableAsync(DbTable dbTable)
+        public static void BroadcastInitTable(DbTable dbTable)
         {
 
             var connections = TableSubscribers.GetConnections(dbTable.Name);
@@ -59,7 +59,7 @@ namespace MyNoSqlServer.Api.Tcp
             };
             
             foreach (var connection in connections)
-                await connection.SendPacketAsync(initTablePacket);
+                connection.SendDataToSocket(initTablePacket);
 
             var partitions = new List<string>();
 
@@ -74,12 +74,12 @@ namespace MyNoSqlServer.Api.Tcp
             foreach (var connection in connections)
             {
                 foreach (var partition in partitions)
-                    await BroadcastInitPartitionAsync(dbTable, partition, connection);   
+                    BroadcastInitPartition(dbTable, partition, connection);   
             }
 
         }
 
-        public static async Task BroadcastInitPartitionAsync(DbTable dbTable, string partitionKey, ChangesTcpService connection)
+        public static void BroadcastInitPartition(DbTable dbTable, string partitionKey, ChangesTcpService connection)
         {
             var packetToBroadcast = new InitPartitionContract
             {
@@ -91,7 +91,7 @@ namespace MyNoSqlServer.Api.Tcp
             
             Console.WriteLine($"Sending InitPartition {packetToBroadcast.PartitionKey} with Size: {packetToBroadcast.Data.Length} to connection: "+connection.ContextName);
             
-            await connection.SendPacketAsync(packetToBroadcast);
+            connection.SendDataToSocket(packetToBroadcast);
         }
 
         public static void BroadcastInitPartition(DbTable dbTable, string partitionKey)
@@ -112,11 +112,11 @@ namespace MyNoSqlServer.Api.Tcp
             Console.WriteLine($"Sent data for Partition: {packetToBroadcast.PartitionKey}. Size: "+packetToBroadcast.Data.Length);
 
             foreach (var connection in connections)
-                connection.SendPacketAsync(packetToBroadcast);
+                connection.SendDataToSocket(packetToBroadcast);
         }
 
 
-        private static async Task SendInitTable(DbTable dbTable, ChangesTcpService connection)
+        private static void SendInitTable(DbTable dbTable, ChangesTcpService connection)
         {
 
             var initTablePacket = new InitTableContract
@@ -125,7 +125,7 @@ namespace MyNoSqlServer.Api.Tcp
                 Data = Array.Empty<DbRow>().ToHubUpdateContract()
             };
 
-            await connection.SendPacketAsync(initTablePacket);
+            connection.SendDataToSocket(initTablePacket);
 
             var partitions = new List<string>();
 
@@ -139,7 +139,7 @@ namespace MyNoSqlServer.Api.Tcp
             
             foreach (var partition in partitions)
             {
-                await BroadcastInitPartitionAsync(dbTable, partition, connection);
+                BroadcastInitPartition(dbTable, partition, connection);
             }
                 
         }
@@ -159,7 +159,7 @@ namespace MyNoSqlServer.Api.Tcp
             };
 
             foreach (var connection in connections)
-                    connection.SendPacketAsync(packetToBroadcast);
+                    connection.SendDataToSocket(packetToBroadcast);
         }
 
         public static void BroadcastRowsDelete(DbTable dbTable, IReadOnlyList<DbRow> dbRows)
@@ -176,7 +176,7 @@ namespace MyNoSqlServer.Api.Tcp
             };
 
             foreach (var connection in connections)
-                connection.SendPacketAsync(packetToBroadcast);
+                connection.SendDataToSocket(packetToBroadcast);
         }
 
         protected override ValueTask HandleIncomingDataAsync(IMyNoSqlTcpContract data)
@@ -184,7 +184,7 @@ namespace MyNoSqlServer.Api.Tcp
             switch (data)
             {
                 case PingContract _:
-                    SendPacketAsync(PongContract.Instance);
+                    SendDataToSocket(PongContract.Instance);
                     if (ContextName.Contains("test"))
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
@@ -198,7 +198,8 @@ namespace MyNoSqlServer.Api.Tcp
                     break;
                 
                 case SubscribeContract subscribeContract:
-                    return HandleSubscribeAsync(subscribeContract);
+                    HandleSubscribe(subscribeContract);
+                    break;
                 
                 
                 case UpdateExpiresTimeTcpContract expiresTimeTcpContract:
@@ -219,7 +220,7 @@ namespace MyNoSqlServer.Api.Tcp
             return new ValueTask();
         }
 
-        private async ValueTask HandleSubscribeAsync(SubscribeContract subscribeContract)
+        private void HandleSubscribe(SubscribeContract subscribeContract)
         {
             if (string.IsNullOrEmpty(subscribeContract.TableName))
                 return;
@@ -246,7 +247,7 @@ namespace MyNoSqlServer.Api.Tcp
             
             Console.WriteLine($"Socket {Id} is subscribed to the table {subscribeContract.TableName}. Initialized records: {rows.Count}");
 
-            await SendInitTable(table, this);
+            SendInitTable(table, this);
         }
         
     }

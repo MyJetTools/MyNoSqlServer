@@ -24,9 +24,9 @@ namespace MyNoSqlServer.TcpContracts.Tests
             return src.AsReadOnlyListAsync().Result;
         }
 
-        public static T AsTestResult<T>(this IAsyncEnumerable<T> src)
+        public static T AsTestResult<T>(this ValueTask<T> src)
         {
-            return src.AsReadOnlyListAsync().Result.First();
+            return src.Result;
         }
         
         
