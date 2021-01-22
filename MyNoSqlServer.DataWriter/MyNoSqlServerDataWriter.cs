@@ -41,14 +41,14 @@ namespace MyNoSqlServer.DataWriter
             GetUrl = getUrl;
             _defaultDataSynchronizationPeriod = dataSynchronizationPeriod;
             TableName = tableName.ToLower();
-            Task.Run(CreateTableIfNotExistsAsync);
         }
 
-        public async Task CreateTableIfNotExistsAsync()
+        public async Task CreateTableIfNotExistsAsync(bool persist)
         {
             await GetUrl()
                 .AppendPathSegments("Tables", "CreateIfNotExists")
                 .WithTableNameAsQueryParam(TableName)
+                .WithPersistAsQueryParam(persist)
                 .WithTimeout(_timeOutPeriod)
                 .PostStringAsync(string.Empty);
         }

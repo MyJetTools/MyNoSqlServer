@@ -37,19 +37,19 @@ namespace MyNoSqlServer.Domains.SnapshotSaver.Implementation
                 
                 case DataSynchronizationPeriod.Sec5:
                     var sec5 = GetSec(now.Second, 5);
-                    var min5 = sec5 == 0 ? now.Minute : now.Minute + 1;
+                    var min5 = sec5 == 0 ? now.Minute+1 : now.Minute;
                     return new DateTime(now.Year, now.Month, now.Day, now.Hour, min5, sec5);
                 
                 
                 case DataSynchronizationPeriod.Sec15:
                     var sec15 = GetSec(now.Second, 15);
-                    var min15 = sec15 == 0 ? now.Minute : now.Minute + 1;
+                    var min15 = sec15 == 0 ? now.Minute+1 : now.Minute ;
                     return new DateTime(now.Year, now.Month, now.Day, now.Hour, min15, sec15);
                 
                 
                 case DataSynchronizationPeriod.Sec30:
                     var sec30 = now.Second < 30 ? 30 : 0;
-                    var min30 = sec30 == 0 ? now.Minute : now.Minute + 1;
+                    var min30 = sec30 == 0 ? now.Minute + 1 : now.Minute;
                     return new DateTime(now.Year, now.Month, now.Day, now.Hour, min30, sec30);
                 
                 case DataSynchronizationPeriod.Min1:

@@ -254,7 +254,6 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        //ToDo - updateExpirationTime
         public IReadOnlyList<T> Get(Func<T, bool> condition = null, 
             DateTime? updateExpirationTime = null, bool resetExpirationDate=false)
         {

@@ -8,6 +8,9 @@ namespace MyNoSqlServer.Api
     public class SettingsModel
     {
         public string BackupAzureConnectString { get; set; }
+        
+        
+        public bool DebugMode { get; set; }
     }
 
     public static class SettingsLoader
@@ -21,14 +24,14 @@ namespace MyNoSqlServer.Api
                 var homeFolder = Environment.GetEnvironmentVariable("HOME");
                 if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, ".mynosqlserver")))
                 {
-                    FileStream fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
+                    var fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
                     configBuilder.AddJsonStream(fileStream);
                 }
 
                 homeFolder = Environment.GetEnvironmentVariable("HOMEDRIVE") + Environment.GetEnvironmentVariable("HOMEPATH");
                 if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, ".mynosqlserver")))
                 {
-                    FileStream fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
+                    var fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
                     configBuilder.AddJsonStream(fileStream);
                 }
 
