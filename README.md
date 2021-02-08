@@ -3,8 +3,9 @@
 
 **Workflows**:
 * ![Release Service](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Server/badge.svg)
-* ![Release Reader nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Reader%20nuget/badge.svg)
-* ![Release Writer nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Writer%20nuget/badge.svg)
+* ![Release Client Nugets (Reader and Writer)](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Client%20Nugets%20(Reader%20and%20Writer)/badge.svg)
+* ![netstandard 2.0 - Release Client Nugets for  (Reader and Writer)](https://github.com/MyJetTools/MyNoSqlServer/workflows/netstandard%202.0%20-%20Release%20Client%20Nugets%20for%20%20(Reader%20and%20Writer)/badge.svg)
+* ![check commit](https://github.com/MyJetTools/MyNoSqlServer/workflows/check%20commit/badge.svg)
 
 
 **Client library:** 
