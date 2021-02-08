@@ -1,0 +1,36 @@
+name: DEV Server release
+on:
+  push:
+    tags: "dev-server-*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.100-rc.2.20479.15
+      - name: Build
+        run: dotnet build --configuration Release  /p:AssemblyVersion=${GITHUB_REF#refs/tags/dev-server-}
+      - name: Test
+        run: dotnet test --no-build --configuration Release
+
+      - name: Publish Server
+        run: dotnet publish --no-build ./MyNoSqlServer.Api/MyNoSqlServer.Api.csproj --output ./publish-api --configuration Release
+
+      - name: ls
+        run: ls ./publish-api
+
+      - name: Publish Server to Registry
+        uses: swisschain/Publish-Docker-Github-Action@master
+        with:
+          name: myjettools/my-nosql-server-dev
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          workdir: ./publish-api
+          # snapshot: true # use snapshot to push an additional image, which is tagged with {YEAR}{MONTH}{DAY}{HOUR}{MINUTE}{SECOND}{first 6 digits of the git sha}
+          tag_names: true
+          tag_name_skip: dev-server-
