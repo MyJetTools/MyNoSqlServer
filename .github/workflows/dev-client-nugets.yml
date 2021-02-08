@@ -36,7 +36,15 @@ jobs:
       - name: Create the package - Writer20
         run: dotnet pack --configuration Release MyNoSqlServer20.DataWriter/MyNoSqlServer20.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/dev-client-} 
 
-      - name: ls
-        run: ls ./MyNoSqlServer.DataWriter/bin/Release
+      - name: Publish the package to GPR - Reader
+        run: dotnet nuget push MyNoSqlServer.DataReader/bin/Release/*.Dev.*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+      - name: Publish the package to GPR - Reader20
+        run: dotnet nuget push MyNoSqlServer20.DataReader/bin/Release/*.Dev.*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+
+      - name: Publish the package to GPR - Writer
+        run: dotnet nuget push MyNoSqlServer.DataWriter/bin/Release/*.Dev.*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+      - name: Publish the package to GPR - Writer20
+        run: dotnet nuget push MyNoSqlServer20.DataWriter/bin/Release/*.Dev.*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+
 
 
