@@ -1,7 +1,7 @@
 
 # RELEASE
 
-**Releases**:
+**Workflows**:
 * ![Release Service](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Server/badge.svg)
 * ![Release Reader nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Reader%20nuget/badge.svg)
 * ![Release Writer nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Writer%20nuget/badge.svg)
@@ -36,6 +36,9 @@ MyNoSqlServerClient - has a nuget https://www.nuget.org/packages/MyNoSqlClient
 
 # DEVELOP
 
+**Workflows:**
+* ![DEV Server release](https://github.com/MyJetTools/MyNoSqlServer/workflows/DEV%20Server%20release/badge.svg)
+* ![DEV Client nuget release](https://github.com/MyJetTools/MyNoSqlServer/workflows/DEV%20Client%20nuget%20release/badge.svg)
 
 **Client library:** 
 * ![MyNoSqlServer.DataReader](https://img.shields.io/nuget/v/MyNoSqlServer.DataReader.dev?label=MyNoSqlServer.DataReader.dev&style=social)
