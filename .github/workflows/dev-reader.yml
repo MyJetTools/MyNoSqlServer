@@ -1,4 +1,4 @@
-name: Release Reader nuget
+name: DEV Client nuget release
 
 on:
   push:

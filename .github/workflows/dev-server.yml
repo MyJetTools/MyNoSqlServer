@@ -1,4 +1,4 @@
-name: Release Server
+name: DEV Server release
 on:
   push:
     tags: "dev-server-*"
