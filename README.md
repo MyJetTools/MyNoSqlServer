@@ -1,8 +1,8 @@
 
 **Releases**:
 * ![Release Service](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Server/badge.svg)
-* ![Release Service](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Reader%20nuget/badge.svg)
-* ![Release Service](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%Writer%20nuget/badge.svg)
+* ![Release Reader nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Reader%20nuget/badge.svg)
+* ![Release Writer nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Writer%20nuget/badge.svg)
 
 
 **Client library:** 
