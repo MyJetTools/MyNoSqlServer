@@ -6,12 +6,14 @@
 
 
 **Client library:** 
-* ![Nuget version](https://img.shields.io/nuget/v/MyNoSqlServer.DataReader?label=MyNoSqlServer.DataReader&style=social)
-* ![Nuget version](https://img.shields.io/nuget/v/MyNoSqlServer.DataWriter?label=MyNoSqlServer.DataWriter&style=social)
+* ![MyNoSqlServer.DataReader](https://img.shields.io/nuget/v/MyNoSqlServer.DataReader?label=MyNoSqlServer.DataReader&style=social)
+* ![MyNoSqlServer.DataWriter](https://img.shields.io/nuget/v/MyNoSqlServer.DataWriter?label=MyNoSqlServer.DataWriter&style=social)
 
-* ![Nuget version](https://img.shields.io/nuget/v/MyNoSqlServer20.DataReader?label=MyNoSqlServer20.DataReader&style=social)
-* ![Nuget version](https://img.shields.io/nuget/v/MyNoSqlServer20.DataWriter?label=MyNoSqlServer20.DataWriter&style=social)
+* ![MyNoSqlServer20.DataReader](https://img.shields.io/nuget/v/MyNoSqlServer20.DataReader?label=MyNoSqlServer20.DataReader&style=social)
+* ![MyNoSqlServer20.DataWriter](https://img.shields.io/nuget/v/MyNoSqlServer20.DataWriter?label=MyNoSqlServer20.DataWriter&style=social)
 
+**Docker**:
+* ![myjettools/my-nosql-server](https://img.shields.io/docker/v/myjettools/my-nosql-server?label=myjettools%2Fmy-nosql-server&style=flat-square)
 
 
 # mynosqlserver
