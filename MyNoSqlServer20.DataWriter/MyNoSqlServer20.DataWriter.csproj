@@ -3,6 +3,7 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>8</LangVersion>
+      <PackageId>MyNoSqlServer20.DataWriter</PackageId>
     </PropertyGroup>
 
 
