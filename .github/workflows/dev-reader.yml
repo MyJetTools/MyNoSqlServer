@@ -1,0 +1,32 @@
+name: Release Reader nuget
+
+on:
+  push:
+    tags: "dev-client-*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.100-rc.2.20479.15
+      - name: Build
+        run: dotnet build --configuration Release
+      - name: Test
+        run: dotnet test --configuration Release
+
+      - name: Create the package - Reader
+        run: dotnet pack --configuration Release MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/dev-reader-} /p:PackageId=MyNoSqlServer.DataReader.DEV
+      - name: Create the package - Reader20
+        run: dotnet pack --configuration Release MyNoSqlServer20.DataReader/MyNoSqlServer20.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/dev-reader-} /p:PackageId=MyNoSqlServer.DataReader.DEV
+
+      - name: Create the package - Writer
+        run: dotnet pack --configuration Release MyNoSqlServer.DataWriter/MyNoSqlServer.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/Writer-} /p:PackageId=MyNoSqlServer.DataWriter.DEV
+      - name: Create the package - Writer20
+        run: dotnet pack --configuration Release MyNoSqlServer20.DataWriter/MyNoSqlServer20.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/Writer-} /p:PackageId=MyNoSqlServer.DataWriter.DEV
+
+
