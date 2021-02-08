@@ -2,8 +2,6 @@ name: DEV Server release
 on:
   push:
     tags: "dev-server-*"
-    branches-ignore: "master"
-    tags-ignore: "server-*"
 
 jobs:
   build:
