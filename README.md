@@ -1,3 +1,23 @@
+
+# RELEASE
+
+**Releases**:
+* ![Release Service](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Server/badge.svg)
+* ![Release Reader nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Reader%20nuget/badge.svg)
+* ![Release Writer nuget](https://github.com/MyJetTools/MyNoSqlServer/workflows/Release%20Writer%20nuget/badge.svg)
+
+
+**Client library:** 
+* ![MyNoSqlServer.DataReader](https://img.shields.io/nuget/v/MyNoSqlServer.DataReader?label=MyNoSqlServer.DataReader&style=social)
+* ![MyNoSqlServer.DataWriter](https://img.shields.io/nuget/v/MyNoSqlServer.DataWriter?label=MyNoSqlServer.DataWriter&style=social)
+
+* ![MyNoSqlServer20.DataReader](https://img.shields.io/nuget/v/MyNoSqlServer20.DataReader?label=MyNoSqlServer20.DataReader&style=social)
+* ![MyNoSqlServer20.DataWriter](https://img.shields.io/nuget/v/MyNoSqlServer20.DataWriter?label=MyNoSqlServer20.DataWriter&style=social)
+
+**Docker**:
+* ![myjettools/my-nosql-server](https://img.shields.io/docker/v/myjettools/my-nosql-server?label=myjettools%2Fmy-nosql-server&style=flat-square)
+
+
 # mynosqlserver
 
 
@@ -12,3 +32,18 @@ As well it has a feature - to subscribe to table changes as SignalR topic to get
 
 
 MyNoSqlServerClient - has a nuget https://www.nuget.org/packages/MyNoSqlClient
+
+
+# DEVELOP
+
+
+**Client library:** 
+* ![MyNoSqlServer.DataReader](https://img.shields.io/nuget/v/MyNoSqlServer.DataReader.dev?label=MyNoSqlServer.DataReader.dev&style=social)
+* ![MyNoSqlServer.DataWriter](https://img.shields.io/nuget/v/MyNoSqlServer.DataWriter.dev?label=MyNoSqlServer.DataWriter.dev&style=social)
+
+* ![MyNoSqlServer20.DataReader](https://img.shields.io/nuget/v/MyNoSqlServer20.DataReader.dev?label=MyNoSqlServer20.DataReader.dev&style=social)
+* ![MyNoSqlServer20.DataWriter](https://img.shields.io/nuget/v/MyNoSqlServer20.DataWriter.dev?label=MyNoSqlServer20.DataWriter.dev&style=social)
+
+**Docker**:
+* ![myjettools/my-nosql-server](https://img.shields.io/docker/v/myjettools/my-nosql-server-dev?label=myjettools%2Fmy-nosql-server-dev&style=flat-square)
+
