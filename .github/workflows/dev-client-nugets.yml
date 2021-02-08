@@ -19,6 +19,13 @@ jobs:
       - name: Test
         run: dotnet test --no-build  --configuration Release
 
+      - name: Replace to dev package id
+        run: |
+          sed -i -e 's%<PackageId>MyNoSqlServer.DataReader</PackageId>%<PackageId>MyNoSqlServer.DataReader.Dev</PackageId>%g' MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj
+          sed -i -e 's%<PackageId>MyNoSqlServer20.DataReader</PackageId>%<PackageId>MyNoSqlServer20.DataReader.Dev</PackageId>%g' MyNoSqlServer20.DataReader/MyNoSqlServer20.DataReader.csproj
+          sed -i -e 's%<PackageId>MyNoSqlServer.DataWriter</PackageId>%<PackageId>MyNoSqlServer.DataWriter.Dev</PackageId>%g' MyNoSqlServer.DataWriter/MyNoSqlServer.DataWriter.csproj
+          sed -i -e 's%<PackageId>MyNoSqlServer20.DataWriter</PackageId>%<PackageId>MyNoSqlServer20.DataWriter.Dev</PackageId>%g' MyNoSqlServer20.DataWriter/MyNoSqlServer20.DataWriter.csproj
+
       - name: Create the package - Reader
         run: dotnet pack --configuration Release MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/dev-client-} /p:PackageId=MyNoSqlServer.DataReader.DEV
       - name: Create the package - Reader20
@@ -28,5 +35,8 @@ jobs:
         run: dotnet pack --configuration Release MyNoSqlServer.DataWriter/MyNoSqlServer.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/dev-client-} /p:PackageId=MyNoSqlServer.DataWriter.DEV
       - name: Create the package - Writer20
         run: dotnet pack --configuration Release MyNoSqlServer20.DataWriter/MyNoSqlServer20.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/dev-client-} /p:PackageId=MyNoSqlServer.DataWriter.DEV
+
+      - name: ls
+        run: ls ./MyNoSqlServer.DataWriter/bin/Release
 
 
