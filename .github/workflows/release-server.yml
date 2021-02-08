@@ -1,7 +1,7 @@
 name: Release Server
 on:
   push:
-    tags: "Server-*"
+    tags: "server-*"
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
         with:
           dotnet-version: 3.1.100
       - name: Build
-        run: dotnet build --configuration Release  /p:AssemblyVersion=${GITHUB_REF#refs/tags/Server-}
+        run: dotnet build --configuration Release  /p:AssemblyVersion=${GITHUB_REF#refs/tags/server-}
       - name: Test
         run: dotnet test --no-build --configuration Release
 
@@ -34,4 +34,4 @@ jobs:
           workdir: ./publish-api
           # snapshot: true # use snapshot to push an additional image, which is tagged with {YEAR}{MONTH}{DAY}{HOUR}{MINUTE}{SECOND}{first 6 digits of the git sha}
           tag_names: true
-          tag_name_skip: Server-
+          tag_name_skip: server-

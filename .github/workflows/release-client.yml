@@ -2,7 +2,7 @@ name: Release Reader nuget
 
 on:
   push:
-    tags: "Reader-*"
+    tags: "client-*"
 
 jobs:
   build:
@@ -21,12 +21,13 @@ jobs:
       run: dotnet test --configuration Release      
       
     - name: Create the package - Reader
-      run: dotnet pack --configuration Release MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-}
-    - name: Create the package - Reader20
-      run: dotnet pack --configuration Release MyNoSqlServer20.DataReader/MyNoSqlServer20.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/Reader-}
+      run: dotnet pack --configuration Release MyNoSqlServer.DataReader/MyNoSqlServer.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/client-}
+
+    - name: Create the package - Writer
+      run: dotnet pack --configuration Release MyNoSqlServer.DataWriter/MyNoSqlServer.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/client-}
 
     - name: Publish the package to GPR - Reader
       run: dotnet nuget push MyNoSqlServer.DataReader/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
-    - name: Publish the package to GPR - Reader20
-      run: dotnet nuget push MyNoSqlServer20.DataReader/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
 
+    - name: Publish the package to GPR - Writer
+      run: dotnet nuget push MyNoSqlServer.DataWriter/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
