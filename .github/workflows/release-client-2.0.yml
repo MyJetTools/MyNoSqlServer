@@ -1,4 +1,4 @@
-name: Release Reader nuget
+name: Release Client Nugets for netstandard 2.0 (Reader and Writer)
 
 on:
   push:
