@@ -36,4 +36,7 @@ jobs:
       - name: Create the package - Writer20
         run: dotnet pack --configuration Release MyNoSqlServer20.DataWriter/MyNoSqlServer20.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/dev-client-} /p:PackageId=MyNoSqlServer.DataWriter.DEV
 
+      - name: ls
+        run: ls ./MyNoSqlServer.DataWriter/bin/Release
+
 
