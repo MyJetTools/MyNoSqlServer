@@ -1,4 +1,4 @@
-name: Release Reader nuget
+name: Release Client Nugets (Reader and Writer)
 
 on:
   push:
