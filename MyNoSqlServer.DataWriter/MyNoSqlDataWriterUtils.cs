@@ -19,7 +19,7 @@ namespace MyNoSqlServer.DataWriter
         {
             return url.SetQueryParam("partitionKey", partitionKey);
         }
-        
+
         public static Url WithRowKeyAsQueryParam(this Url url, string rowKey)
         {
             return url.SetQueryParam("rowKey", rowKey);
@@ -36,8 +36,8 @@ namespace MyNoSqlServer.DataWriter
         {
             return url.SetQueryParam("tableName", tableName);
         }
-        
-        
+
+
         public static async ValueTask<T> ReadAsJsonAsync<T>(this Task<HttpResponseMessage> responseTask)
         {
             var response = await responseTask;
@@ -57,13 +57,13 @@ namespace MyNoSqlServer.DataWriter
             {
                 case 200:
                     return OperationResult.Ok;
-                
+
                 case 404:
-                    return OperationResult.RowNotFound;                
+                    return OperationResult.RecordNotFound;
 
                 case 409:
                     var message = await httpResponseMessage.GetStringAsync();
-                    return (OperationResult) int.Parse(message);
+                    return (OperationResult)int.Parse(message);
 
                 default:
                     var messageUnknown = await httpResponseMessage.GetStringAsync();
