@@ -176,7 +176,7 @@ namespace MyNoSqlServer.DataWriter
                 .AppendPathSegments(RowController)
                 .WithTableNameAsQueryParam(_tableName)
                 .GetAsync()
-                .ReadAsJsonAsync<T[]>();
+                .ReceiveJson<T[]>();
         }
 
         public async ValueTask<IEnumerable<T>> GetAsync(string partitionKey)
@@ -186,7 +186,7 @@ namespace MyNoSqlServer.DataWriter
                 .WithTableNameAsQueryParam(_tableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .GetAsync()
-                .ReadAsJsonAsync<T[]>();
+                .ReceiveJson<T[]>();
         }
 
         public async ValueTask<T> GetAsync(string partitionKey, string rowKey)
@@ -204,7 +204,7 @@ namespace MyNoSqlServer.DataWriter
             if (statusCode == OperationResult.RecordNotFound)
                 return default;
 
-            return await response.ReadAsJsonAsync<T>();
+            return await response.GetJsonAsync<T>();
         }
 
         private static readonly T[] EmptyResponse = new T[0];
@@ -225,7 +225,7 @@ namespace MyNoSqlServer.DataWriter
             if (statusCode == OperationResult.RecordNotFound)
                 return EmptyResponse;
 
-            return await response.ReadAsJsonAsync<List<T>>();
+            return await response.GetJsonAsync<List<T>>();
         }
 
         public async ValueTask<T> DeleteAsync(string partitionKey, string rowKey)
@@ -256,7 +256,7 @@ namespace MyNoSqlServer.DataWriter
                 .SetQueryParam("query", query)
                 .GetAsync();
 
-            return await response.ReadAsJsonAsync<List<T>>();
+            return await response.GetJsonAsync<List<T>>();
 
         }
 
@@ -270,7 +270,7 @@ namespace MyNoSqlServer.DataWriter
                 .SetQueryParam("maxAmount", amount)
                 .GetAsync();
 
-            return await response.ReadAsJsonAsync<List<T>>();
+            return await response.GetJsonAsync<List<T>>();
         }
 
         public ValueTask CleanAndKeepMaxPartitions(int maxAmount)

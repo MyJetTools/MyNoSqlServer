@@ -51,19 +51,22 @@ namespace MyNoSqlServer.DataWriter
         }
 
         internal static async ValueTask<OperationResult> GetOperationResultCodeAsync(
-            this HttpResponseMessage httpResponseMessage)
+            this IFlurlResponse httpResponseMessage)
         {
             switch (httpResponseMessage.StatusCode)
             {
-                case HttpStatusCode.OK:
+                case 200:
                     return OperationResult.Ok;
+                
+                case 404:
+                    return OperationResult.RowNotFound;                
 
-                case HttpStatusCode.Conflict:
-                    var message = await httpResponseMessage.Content.ReadAsStringAsync();
+                case 409:
+                    var message = await httpResponseMessage.GetStringAsync();
                     return (OperationResult) int.Parse(message);
 
                 default:
-                    var messageUnknown = await httpResponseMessage.Content.ReadAsStringAsync();
+                    var messageUnknown = await httpResponseMessage.GetStringAsync();
                     throw new Exception(
                         $"Unknown HTTP result Code{httpResponseMessage.StatusCode}. Message: {messageUnknown}");
             }
