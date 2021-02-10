@@ -73,11 +73,6 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
 
         private readonly Dictionary<string, SyncQueueByTable> _syncTasks = new Dictionary<string, SyncQueueByTable>();
 
-        public SnapshotSaverScheduler()
-        {
-            
-        }
-
         
         public int TasksToSyncCount()
         {
@@ -107,8 +102,6 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         public void SynchronizeSetTablePersist(DbTable dbTable, bool savable)
         {
             EnqueueTask(dbTable, SyncSetTableSavable.Create(dbTable, savable, DataSynchronizationPeriod.Immediately));
-            
-            Console.WriteLine("SynchronizeSetTablePersist Count: "+TasksToSyncCount());
         }
         
         public void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period)
