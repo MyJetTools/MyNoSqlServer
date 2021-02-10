@@ -7,16 +7,43 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
 {
     public interface ISyncTask
     {
-        DateTime SyncDateTime { get; }
+        DateTime SyncDateTime { get; set; }
+        
+        long Id { get; set; }
+
+    }
+
+
+    public interface ICreateTableSyncTask : ISyncTask
+    {
+        
+    }
+
+    public interface ISyncTableTask : ISyncTask
+    {
+        
+    }
+
+    public interface ISyncPartitionTask : ISyncTask
+    {
+        public string PartitionKey { get; }
+    }
+    
+    public interface IDeletePartitionTask : ISyncTask
+    {
+        public string PartitionKey { get; }   
     }
 
     public interface ISnapshotSaverScheduler
     {
+
+        void SynchronizeCreateTable(DbTable dbTable);
+        
         void SynchronizePartition(DbTable dbTable, DbPartition partitionToSave, DataSynchronizationPeriod period);
         
         void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period);
         
-        void SynchronizeDeletePartition(string tableName, string partitionKey, DataSynchronizationPeriod period);
+        void SynchronizeDeletePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period);
 
         ISyncTask GetTaskToSync(bool appIsShuttingDown);
 

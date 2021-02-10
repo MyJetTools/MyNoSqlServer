@@ -26,7 +26,6 @@ namespace MyNoSqlServer.AzureStorage
 
             if (container == null)
             {
-                
                 Console.WriteLine($"{DateTime.UtcNow:s} Skipped synchronizing snapshot: {partitionSnapshot}");
                 return;
             }
@@ -59,30 +58,28 @@ namespace MyNoSqlServer.AzureStorage
             }
         }
 
-        public async ValueTask DeleteTablePartitionAsync(string tableName, string partitionKey)
+        public async ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey)
         {
-            var container = await _storageAccount.GetBlockBlobReferenceAsync(tableName);
+            var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             if (container == null)
             {
-                Console.WriteLine($"{DateTime.UtcNow:s} Skipped deleting snapshot: {tableName}/{partitionKey}");
+                Console.WriteLine($"{DateTime.UtcNow:s} Skipped deleting snapshot: {dbTable.Name}/{partitionKey}");
                 return;
             }
 
             await container.DeletePartitionAsync(partitionKey);
             
-            Console.WriteLine($"{DateTime.UtcNow:s} Snapshot is deleted: {tableName}/{partitionKey}");
+            Console.WriteLine($"{DateTime.UtcNow:s} Snapshot is deleted: {dbTable.Name}/{partitionKey}");
             
         }
 
         public async IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync()
         {
 
-            const string ignoreContainerName = "nosqlsnapshots";
-
             await foreach (var container in _storageAccount.GetListOfContainersAsync())
             {
 
-                if (container.Name == ignoreContainerName)
+                if (container.Name == SystemFileNames.SystemContainerName)
                     continue;
 
                 await foreach (var blockBlob in container.GetListOfBlobsAsync())

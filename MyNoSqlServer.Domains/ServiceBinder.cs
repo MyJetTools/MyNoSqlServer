@@ -9,7 +9,7 @@ namespace MyNoSqlServer.Domains
     {
         public static void BindDomainsServices(this IServiceRegistrator sr)
         {
-            sr.Register(new DbInstance());
+            sr.Register<DbInstance>();
             
             sr.Register<SnapshotSaverEngine>();
             

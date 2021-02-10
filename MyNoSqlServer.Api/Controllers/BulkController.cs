@@ -33,7 +33,10 @@ namespace MyNoSqlServer.Api.Controllers
             if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
                 return Conflict("Bulk insert does not support immediate persistence");
             
-            var table = ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
+            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
+            
+            if (table == null)
+                return this.GetResult(OperationResult.TableNotFound);
 
             var body = await Request.BodyAsIMemoryAsync();
 

@@ -41,7 +41,7 @@ namespace MyNoSqlServer.Domains.DataSynchronization
     {
         ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot);
         ValueTask SaveTableSnapshotAsync(DbTable dbTable);
-        ValueTask DeleteTablePartitionAsync(string tableName, string partitionKey);
+        ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey);
         IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync();
     }
 }

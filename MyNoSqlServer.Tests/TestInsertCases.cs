@@ -33,7 +33,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable");
+            var table = dbInstance.CreateTableIfNotExists("mytable", false);
 
             var now = DateTime.UtcNow;
 

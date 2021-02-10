@@ -33,7 +33,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
             {
                 try
                 {
-                    var table = _dbInstance.CreateTableIfNotExists(snapshot.TableName);
+                    var table = _dbInstance.CreateTableIfNotExists(snapshot.TableName, true);
                     var partition = table.InitPartitionFromSnapshot(snapshot.Snapshot.AsMyMemory());
 
                     if (partition != null)
@@ -74,7 +74,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                                 break;
                             
                             case SyncDeletePartition syncDeletePartition:
-                                await _snapshotStorage.DeleteTablePartitionAsync(syncDeletePartition.TableName,
+                                await _snapshotStorage.DeleteTablePartitionAsync(syncDeletePartition.DbTable,
                                     syncDeletePartition.PartitionKey);
                                 break;
                             

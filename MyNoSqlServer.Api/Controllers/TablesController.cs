@@ -18,7 +18,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("Tables/CreateIfNotExists")]
-        public IActionResult CreateIfNotExists([Required] [FromQuery] string tableName)
+        public IActionResult CreateIfNotExists([Required] [FromQuery] string tableName, [FromQuery]string persist)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -27,12 +27,12 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            ServiceLocator.DbInstance.CreateTableIfNotExists(tableName);
+            ServiceLocator.DbInstance.CreateTableIfNotExists(tableName, persist != "0");
             return this.ResponseOk();
         }
 
         [HttpPost("Tables/Create")]
-        public IActionResult Create([Required] [FromQuery] string tableName)
+        public IActionResult Create([Required] [FromQuery] string tableName, [FromQuery]string persist)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -41,7 +41,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            if (ServiceLocator.DbInstance.CreateTable(tableName))
+            if (ServiceLocator.DbInstance.CreateTable(tableName, persist != "0"))
                 return this.ResponseOk();
 
             return this.GetResult(OperationResult.CanNotCreateObject);

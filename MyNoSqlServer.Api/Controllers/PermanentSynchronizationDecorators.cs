@@ -57,7 +57,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (period == DataSynchronizationPeriod.Immediately)
                 return result.ResponseWithActionAsync(() => ServiceLocator
                     .SnapshotStorage
-                    .DeleteTablePartitionAsync(dbTable.Name, dbPartition.PartitionKey)
+                    .DeleteTablePartitionAsync(dbTable, dbPartition.PartitionKey)
                     .AsTask());
 
             ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(dbTable, dbPartition, period);

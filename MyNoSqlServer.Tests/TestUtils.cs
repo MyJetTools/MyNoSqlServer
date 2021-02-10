@@ -51,7 +51,7 @@ namespace MyNoSqlServer.Tests
             return new ValueTask();
         }
 
-        public ValueTask DeleteTablePartitionAsync(string tableName, string partitionKey)
+        public ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey)
         {
             return new ValueTask();
         }

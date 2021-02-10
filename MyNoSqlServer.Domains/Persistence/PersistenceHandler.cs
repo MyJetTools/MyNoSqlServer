@@ -51,7 +51,7 @@ namespace MyNoSqlServer.Domains.Persistence
 
             if (period == DataSynchronizationPeriod.Immediately)
                 return new ValueTask<OperationResult>(_snapshotStorage
-                    .DeleteTablePartitionAsync(dbTable.Name, dbPartition.PartitionKey)
+                    .DeleteTablePartitionAsync(dbTable, dbPartition.PartitionKey)
                     .AsTask()
                     .ContinueWith(itm => OperationResult.Ok));
 

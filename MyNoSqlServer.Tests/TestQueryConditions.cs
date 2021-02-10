@@ -21,7 +21,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable");
+            var dbTable = DbTable.CreateByRequest("myTable", false);
 
             var recordToInsert = new TestRecord
             {
@@ -49,7 +49,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable");
+            var dbTable = DbTable.CreateByRequest("myTable", false);
 
             for (var i = 0; i < 100; i++)
             {
@@ -83,7 +83,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeAboveQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable");
+            var dbTable = DbTable.CreateByRequest("myTable", false);
 
             for (var i = 0; i <= 100; i++)
             {

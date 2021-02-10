@@ -36,7 +36,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable");
+            var table = dbInstance.CreateTableIfNotExists("mytable", false);
 
             var rawClass1 = new MergeEntity1
             {
@@ -84,7 +84,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable");
+            var table = dbInstance.CreateTableIfNotExists("mytable", false);
 
             var rawClass1 = new MergeEntity1
             {

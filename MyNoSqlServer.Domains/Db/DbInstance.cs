@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.SnapshotSaver;
 
 namespace MyNoSqlServer.Domains.Db
 {
     public class DbInstance
     {
+        private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
         private readonly object _lockObject = new object();
         
         private Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
@@ -14,55 +16,90 @@ namespace MyNoSqlServer.Domains.Db
         private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
 
 
-        private DbTable CreateTableAndUpdateDictionary(string tableName)
+        public DbInstance(ISnapshotSaverScheduler snapshotSaverScheduler)
         {
-            var tableInstance = DbTable.CreateByRequest(tableName);
-            
-            var tables = new Dictionary<string, DbTable>(_tables);
-
-            tables.Add(tableInstance.Name, tableInstance);
-            
-            _tables = tables;
-
-            _tableNames = _tables.Keys.ToList();
-
-            _tablesAsArray = _tables.Values.ToList();
-
-            return tableInstance;
+            _snapshotSaverScheduler = snapshotSaverScheduler;
         }
 
-        public DbTable CreateTableIfNotExists(string tableName)
+        private (DbTable table, bool createdNow) TryToCreateNewTable(string tableName, bool persistTable)
         {
-            var tables = _tables;
-            if (tables.ContainsKey(tableName))
-                return tables[tableName];
 
-            lock (_lockObject)
+            DbTable syncCreateTable = null;
+            try
             {
-                if (_tables.ContainsKey(tableName))
-                    return _tables[tableName];
+                lock (_lockObject)
+                {
 
-                return CreateTableAndUpdateDictionary(tableName);
+                    if (_tables.TryGetValue(tableName, out var result))
+                    {
+                        if (result.PersistThisTable != persistTable)
+                            syncCreateTable = result;
+                        return (result, false);
+                    }
+                        
+
+        
+                    
+                    var tableInstance = DbTable.CreateByRequest(tableName, persistTable);
+
+                    var tables = new Dictionary<string, DbTable>(_tables)
+                    {
+                        {tableInstance.Name, tableInstance}
+                    };
+
+                    _tables = tables;
+
+                    _tableNames = _tables.Keys.ToList();
+
+                    _tablesAsArray = _tables.Values.ToList();
+                    syncCreateTable = tableInstance;
+
+                    return (tableInstance, true);
+                }
+            }
+            finally
+            {
+                if (syncCreateTable != null)
+                    _snapshotSaverScheduler.SynchronizeCreateTable(syncCreateTable);
             }
 
+  
+        }
+        
+
+        public DbTable CreateTableIfNotExists(string tableName, bool persistTable)
+        {
+            tableName = tableName.ToLower();
+            
+            var tables = _tables;
+
+            if (tables.TryGetValue(tableName, out var foundTable))
+            {
+                if (foundTable.PersistThisTable != persistTable)
+                    _snapshotSaverScheduler.SynchronizeCreateTable(foundTable);
+
+                return foundTable;
+            }
+
+            var createdTable = TryToCreateNewTable(tableName, persistTable);
+            return createdTable.table;
         }
 
-        public bool CreateTable(string tableName)
+        public bool CreateTable(string tableName, bool persistTable)
         {
 
+            tableName = tableName.ToLower();
+
             var tables = _tables;
-            if (tables.ContainsKey(tableName))
-                return false;
-
-            lock (_lockObject)
+            if (tables.TryGetValue(tableName, out var foundTable))
             {
-                if (_tables.ContainsKey(tableName))
-                    return false;
+                if (foundTable.PersistThisTable != persistTable)
+                    _snapshotSaverScheduler.SynchronizeCreateTable(foundTable);
 
-                CreateTableAndUpdateDictionary(tableName);
                 return true;
             }
-            
+
+            return false;
         }
         
         public IReadOnlyList<DbTable> GetTables()

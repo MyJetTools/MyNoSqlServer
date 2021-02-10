@@ -14,14 +14,17 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
     public class DbTable
     {
-        private DbTable(string name)
+        
+        public bool PersistThisTable { get; private set; }
+        private DbTable(string name, bool persistThisTable)
         {
             Name = name;
+            PersistThisTable = persistThisTable;
         }
 
-        public static DbTable CreateByRequest(string name)
+        public static DbTable CreateByRequest(string name, bool persistThisTable)
         {
-            return new DbTable(name);
+            return new DbTable(name, persistThisTable);
         }
 
         public string Name { get; }
