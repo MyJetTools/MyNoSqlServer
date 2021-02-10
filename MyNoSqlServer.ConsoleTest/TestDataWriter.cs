@@ -30,7 +30,7 @@ namespace MyNoSqlServer.ConsoleTest
         public static async Task TestReplaceAsync(string serverUrl)
         {
             var dataWriter =
-                new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test");
+                new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test", false);
             
             var replaceEntity = new ReplaceEntity
             {
@@ -59,13 +59,13 @@ namespace MyNoSqlServer.ConsoleTest
         public static async Task TestMergeAsync(string serverUrl)
         {
             var dataWriter1 =
-                new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test");
+                new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test", false);
 
             var dataWriter2 =
-                new MyNoSqlServerDataWriter<MergeEntity>(() => serverUrl, "test");
+                new MyNoSqlServerDataWriter<MergeEntity>(() => serverUrl, "test", false);
 
             var dataWriterMerged =
-                new MyNoSqlServerDataWriter<MergedEntity>(() => serverUrl, "test");
+                new MyNoSqlServerDataWriter<MergedEntity>(() => serverUrl, "test", false);
             
             var replaceEntity = new ReplaceEntity
             {
@@ -105,7 +105,7 @@ namespace MyNoSqlServer.ConsoleTest
 
         public static async Task TestReplaceAsync(string hostPort, string serverUrl)
         {
-            var dataWriter = new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test");
+            var dataWriter = new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test", false);
 
             var client = new MyNoSqlTcpClient(() => hostPort, "test-app");
             client.Start();

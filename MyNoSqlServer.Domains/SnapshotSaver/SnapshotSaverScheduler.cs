@@ -2,24 +2,27 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Tables;
 
 namespace MyNoSqlServer.Domains.SnapshotSaver
 {
 
-    public class SyncCreateTable : ICreateTableSyncTask
+    public class SyncSetTableSavable : ISetTableSavable
     {
         public DbTable DbTable { get; private set; }
         public DateTime SyncDateTime { get; set; }
         public long Id { get;  set; }
+        
 
-        public static SyncCreateTable Create(DbTable dbTable, DataSynchronizationPeriod period)
+        public bool Savable { get; private set; }
+        
+        public static SyncSetTableSavable Create(DbTable dbTable, bool savable, DataSynchronizationPeriod period)
         {
-            return new SyncCreateTable
+            return new SyncSetTableSavable
             {
                 DbTable = dbTable,
-                SyncDateTime = DateTime.UtcNow.GetNextPeriod(period)
+                SyncDateTime = DateTime.UtcNow.GetNextPeriod(period),
+                Savable = savable
             };
         }
     }
@@ -45,40 +48,21 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     {
         public long Id { get;  set; }
         public DbTable DbTable { get; private set; }
-        public DbPartition DbPartition { get; set; }
 
-
-        public string PartitionKey => DbPartition.PartitionKey;
+        public string PartitionKey { get; private set; }
         
         public DateTime SyncDateTime { get; set; }
 
-        public static SyncPartition Create(DbTable dbTable, DbPartition dbPartition, DataSynchronizationPeriod period)
+        public static SyncPartition Create(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period)
         {
             return new SyncPartition
             {
                 DbTable = dbTable,
-                DbPartition = dbPartition,
-                SyncDateTime = DateTime.UtcNow.GetNextPeriod(period)
-            };
-        }
-    
-    }
-
-    public class SyncDeletePartition: IDeletePartitionTask
-    {
-        public long Id { get;  set; }
-        public DbTable DbTable { get; private set; }
-        public string PartitionKey { get; private set; }
-        public DateTime SyncDateTime { get; set; }
-        public static SyncDeletePartition Create(DbTable table, string partitionKey, DataSynchronizationPeriod period)
-        {
-            return new SyncDeletePartition
-            {
-                DbTable = table,
                 PartitionKey = partitionKey,
                 SyncDateTime = DateTime.UtcNow.GetNextPeriod(period)
             };
         }
+    
     }
     
     public class SnapshotSaverScheduler : ISnapshotSaverScheduler
@@ -89,6 +73,11 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
 
         private readonly Dictionary<string, SyncQueueByTable> _syncTasks = new Dictionary<string, SyncQueueByTable>();
 
+        public SnapshotSaverScheduler()
+        {
+            
+        }
+
         
         public int TasksToSyncCount()
         {
@@ -97,7 +86,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
 
 
-        private long _taskId = 0;
+        private long _taskId;
 
         private void EnqueueTask(DbTable dbTable, ISyncTask syncTask)
         {
@@ -115,9 +104,11 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
 
 
-        public void SynchronizeCreateTable(DbTable dbTable)
+        public void SynchronizeSetTablePersist(DbTable dbTable, bool savable)
         {
-            EnqueueTask(dbTable, SyncCreateTable.Create(dbTable, DataSynchronizationPeriod.Immediately));
+            EnqueueTask(dbTable, SyncSetTableSavable.Create(dbTable, savable, DataSynchronizationPeriod.Immediately));
+            
+            Console.WriteLine("SynchronizeSetTablePersist Count: "+TasksToSyncCount());
         }
         
         public void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period)
@@ -125,27 +116,49 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
             EnqueueTask(dbTable, SyncTable.Create(dbTable, period));
         }
 
-
-
-        public void SynchronizePartition(DbTable dbTable, DbPartition partitionToSave, DataSynchronizationPeriod period)
+        public void SynchronizePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period)
         {
-            EnqueueTask(dbTable, SyncPartition.Create(dbTable, partitionToSave, period));
-        }
-
-        public void SynchronizeDeletePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period)
-        {
-            EnqueueTask(dbTable, SyncDeletePartition.Create(dbTable, partitionKey, period));
+            EnqueueTask(dbTable, SyncPartition.Create(dbTable, partitionKey, period));
         }
         
         public ISyncTask GetTaskToSync(bool appIsShuttingDown)
         {
 
             var dt = appIsShuttingDown ? DateTime.UtcNow.AddYears(20) : DateTime.UtcNow;
+
             lock (_lockObject)
             {
-                var queue = _syncTasks.Values.FirstOrDefault(itm => itm.Count > 0);
-                return queue?.Dequeue(dt);
+                foreach (var tableQueue in _syncTasks.Values)
+                {
+                    var result = tableQueue.Dequeue(dt);
+                    if (result != null)
+                        return result;
+
+                }
             }
+
+            return null;
+        }
+
+        public IReadOnlyList<ISyncTask> GetTasksToSync(string tableName)
+        {
+            var result = new List<ISyncTask>();
+            lock (_lockObject)
+            {
+
+                if (!_syncTasks.TryGetValue(tableName, out var queueByTable))
+                    return result;
+
+                var nextTask = queueByTable.Dequeue(DateTime.UtcNow.AddYears(20));
+
+                while (nextTask != null)
+                {
+                    result.Add(nextTask);
+                    nextTask = queueByTable.Dequeue(DateTime.UtcNow.AddYears(20));
+                }
+            }
+
+            return result;
         }
 
 

@@ -32,8 +32,11 @@ namespace MyNoSqlServer.Domains.Db
 
                     if (_tables.TryGetValue(tableName, out var result))
                     {
-                        if (result.PersistThisTable != persistTable)
+                        if (result.Persist != persistTable)
+                        {
+                            result.UpdatePersist(persistTable);
                             syncCreateTable = result;
+                        }
                         return (result, false);
                     }
                         
@@ -60,7 +63,7 @@ namespace MyNoSqlServer.Domains.Db
             finally
             {
                 if (syncCreateTable != null)
-                    _snapshotSaverScheduler.SynchronizeCreateTable(syncCreateTable);
+                    _snapshotSaverScheduler.SynchronizeSetTablePersist(syncCreateTable, persistTable);
             }
 
   
@@ -69,14 +72,15 @@ namespace MyNoSqlServer.Domains.Db
 
         public DbTable CreateTableIfNotExists(string tableName, bool persistTable)
         {
-            tableName = tableName.ToLower();
-            
             var tables = _tables;
 
             if (tables.TryGetValue(tableName, out var foundTable))
             {
-                if (foundTable.PersistThisTable != persistTable)
-                    _snapshotSaverScheduler.SynchronizeCreateTable(foundTable);
+                if (foundTable.Persist != persistTable)
+                {
+                    foundTable.UpdatePersist(persistTable);
+                    _snapshotSaverScheduler.SynchronizeSetTablePersist(foundTable, persistTable);
+                }
 
                 return foundTable;
             }
@@ -85,21 +89,39 @@ namespace MyNoSqlServer.Domains.Db
             return createdTable.table;
         }
 
+        public DbTable RestoreTable(string tableName, bool persist)
+        {
+            lock (_lockObject)
+            {
+                var result = new DbTable(tableName, persist);
+                _tables.Add(tableName, result);
+                
+                _tableNames = _tables.Keys.ToList();
+
+                _tablesAsArray = _tables.Values.ToList();
+
+                return result;
+            }
+        }
+
         public bool CreateTable(string tableName, bool persistTable)
         {
-
-            tableName = tableName.ToLower();
 
             var tables = _tables;
             if (tables.TryGetValue(tableName, out var foundTable))
             {
-                if (foundTable.PersistThisTable != persistTable)
-                    _snapshotSaverScheduler.SynchronizeCreateTable(foundTable);
+                if (foundTable.Persist != persistTable)
+                {
+                    foundTable.UpdatePersist(persistTable);
+                    _snapshotSaverScheduler.SynchronizeSetTablePersist(foundTable, persistTable);
+                }
 
-                return true;
+                return false;
             }
 
-            return false;
+            var createdTable = TryToCreateNewTable(tableName, persistTable);
+
+            return createdTable.createdNow;
         }
         
         public IReadOnlyList<DbTable> GetTables()

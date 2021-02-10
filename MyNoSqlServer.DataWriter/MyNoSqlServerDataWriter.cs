@@ -13,23 +13,26 @@ namespace MyNoSqlServer.DataWriter
         private const string RowController = "Row";
         
         private readonly Func<string> _getUrl;
+        private readonly bool _persist;
         private readonly DataSynchronizationPeriod _dataSynchronizationPeriod;
         private readonly string _tableName;
 
-        public MyNoSqlServerDataWriter(Func<string> getUrl, string tableName,
+        public MyNoSqlServerDataWriter(Func<string> getUrl, string tableName, bool persist,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
             _getUrl = getUrl;
+            _persist = persist;
             _dataSynchronizationPeriod = dataSynchronizationPeriod;
             _tableName = tableName.ToLower();
             Task.Run(CreateTableIfNotExistsAsync);
         }
 
-        private async Task CreateTableIfNotExistsAsync()
+        public async Task CreateTableIfNotExistsAsync()
         {
             await _getUrl()
                 .AppendPathSegments("Tables", "CreateIfNotExists")
                 .WithTableNameAsQueryParam(_tableName)
+                .WithPersistTableAsQueryParam(_persist)
                 .PostStringAsync(string.Empty);
         }
 

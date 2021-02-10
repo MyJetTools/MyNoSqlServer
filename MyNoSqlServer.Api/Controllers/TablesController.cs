@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
@@ -13,8 +14,12 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("Tables/List")]
         public IActionResult List()
         {
-            var list = ServiceLocator.DbInstance.GetTablesList();
-            return Json(list);
+            var list = ServiceLocator.DbInstance.GetTables();
+            return Json(list.Select(itm => new
+            {
+                itm.Name,
+                itm.Persist
+            }));
         }
 
         [HttpPost("Tables/CreateIfNotExists")]
@@ -41,6 +46,8 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
+            tableName = tableName.ToLower();
+
             if (ServiceLocator.DbInstance.CreateTable(tableName, persist != "0"))
                 return this.ResponseOk();
 
@@ -65,10 +72,34 @@ namespace MyNoSqlServer.Api.Controllers
             table.Clean();
 
             ServiceLocator.DataSynchronizer.PublishInitTable(table);
+            await ServiceLocator.PersistenceHandler.SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
 
-            return await Ok().SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
+            return Ok();
 
-        }    
+        }
+        [HttpPost("Tables/UpdatePersist")]
+        public IActionResult UpdatePersist([Required] [FromQuery] string tableName,
+            [FromQuery] string persist)
+        {
+            var shutDown = this.CheckOnShuttingDown();
+            if (shutDown != null)
+                return shutDown;
+
+            if (string.IsNullOrEmpty(tableName))
+                return this.GetResult(OperationResult.TableNameIsEmpty);
+
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
+
+            var persistAsBool = persist != "0";
+            
+            table.UpdatePersist(persistAsBool);
+            ServiceLocator.SnapshotSaverScheduler.SynchronizeSetTablePersist(table, persistAsBool);
+
+            return Ok();
+        } 
 
     }
     

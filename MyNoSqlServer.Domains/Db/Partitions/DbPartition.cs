@@ -18,6 +18,8 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         public string PartitionKey { get; private set; }
         
         private readonly SortedList<string, DbRow> _rows = new SortedList<string, DbRow>();
+
+        private IReadOnlyList<DbRow> _rowsAsList = null;
         
         public DateTime LastAccessTime { get; private set; }
 
@@ -27,6 +29,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
                 return false;
             
             _rows.Add(row.RowKey, row);
+            _rowsAsList = null;
             LastAccessTime = now;
             
             return true;
@@ -38,6 +41,8 @@ namespace MyNoSqlServer.Domains.Db.Partitions
                 _rows[row.RowKey] = row;
             else
                 _rows.Add(row.RowKey, row);
+            
+            _rowsAsList = null;
             
             LastAccessTime = DateTime.UtcNow;
         }
@@ -56,7 +61,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         
         public IReadOnlyList<DbRow> GetAllRows()
         {
-            return _rows.Values.ToList();
+            return _rowsAsList ??= _rows.Values.ToList();
         }
         
         public IReadOnlyList<DbRow> GetRowsWithLimit(int? limit, int? skip)
@@ -92,6 +97,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
 
             var result = _rows[rowKey];
             _rows.Remove(rowKey);
+            _rowsAsList = null;
             return result;
         }
 

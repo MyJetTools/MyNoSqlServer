@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
-using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.AzureStorage
 {
@@ -20,9 +19,9 @@ namespace MyNoSqlServer.AzureStorage
             _storageAccount = CloudStorageAccount.Parse(connectionString);
         }
 
-        public async ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot)
+        public async ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot)
         {
-            var container = await _storageAccount.GetBlockBlobReferenceAsync(partitionSnapshot.TableName);
+            var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
 
             if (container == null)
             {
@@ -73,33 +72,29 @@ namespace MyNoSqlServer.AzureStorage
             
         }
 
-        public async IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync()
+        public async IAsyncEnumerable<ITableLoader> LoadTablesAsync()
         {
 
             await foreach (var container in _storageAccount.GetListOfContainersAsync())
             {
-
                 if (container.Name == SystemFileNames.SystemContainerName)
                     continue;
 
-                await foreach (var blockBlob in container.GetListOfBlobsAsync())
-                {
-                    var memoryStream = new MemoryStream();
+                var tableMetadata = await TableMetadataSaver.GetTableMetadataAsync(container);
 
-                    await blockBlob.DownloadToStreamAsync(memoryStream);
+                var loader = new AzurePartitionsLoader(container, tableMetadata.Persist);
 
-                    var snapshot = new PartitionSnapshot
-                    {
-                        TableName = container.Name,
-                        PartitionKey = blockBlob.Name.Base64ToString(),
-                        Snapshot = memoryStream.ToArray()
-                    };
-
-                    yield return snapshot;
-                    Console.WriteLine("Loaded snapshot: " + snapshot);
-                }
+                yield return loader;
             }
+        }
 
+        public async ValueTask SetTableSavableAsync(DbTable dbTable, bool savable)
+        {
+            var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
+            await TableMetadataSaver.SaveTableMetadataAsync(container, savable);
+
+            if (!savable)
+                await container.CleanContainerAsync();
         }
 
         public async IAsyncEnumerable<string> GetPersistedTablesAsync()

@@ -37,6 +37,11 @@ namespace MyNoSqlServer.DataWriter
             return url.SetQueryParam("tableName", tableName);
         }
 
+        public static Url WithPersistTableAsQueryParam(this Url url, bool persist)
+        {
+            return persist ? url.SetQueryParam("persist", "1") : url;
+        }
+
 
         public static async ValueTask<T> ReadAsJsonAsync<T>(this Task<HttpResponseMessage> responseTask)
         {

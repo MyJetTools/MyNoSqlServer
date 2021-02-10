@@ -21,7 +21,7 @@ namespace MyNoSqlServer.Domains
         }
 
 
-        public ValueTask<OperationResult> InsertAsync(DbTable table, IMyMemory myMemory,
+        public async ValueTask<OperationResult> InsertAsync(DbTable table, IMyMemory myMemory,
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             
@@ -29,46 +29,48 @@ namespace MyNoSqlServer.Domains
 
 
             if (string.IsNullOrEmpty(entity.PartitionKey))
-                return new ValueTask<OperationResult>(OperationResult.PartitionKeyIsNull);
+                return OperationResult.PartitionKeyIsNull;
 
             if (string.IsNullOrEmpty(entity.RowKey))
-                return new ValueTask<OperationResult>(OperationResult.RowKeyIsNull);
+                return OperationResult.RowKeyIsNull;
 
             if (table.HasRecord(entity))
-                return new ValueTask<OperationResult>(OperationResult.RecordExists);
+                return OperationResult.RecordExists;
             
             var (result, dbPartition, dbRow) = table.Insert(entity, now);
             
             if (result != OperationResult.Ok)
-                return new ValueTask<OperationResult>(result);
+                return result;
             
             _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
 
-            return _persistenceHandler.SynchronizePartitionAsync(table, dbPartition, synchronizationPeriod);
+            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
+            return OperationResult.Ok;
         }
         
 
 
-        public ValueTask<OperationResult> InsertOrReplaceAsync(DbTable table, IMyMemory myMemory, 
+        public async ValueTask<OperationResult> InsertOrReplaceAsync(DbTable table, IMyMemory myMemory, 
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             var entity = myMemory.ParseDynamicEntity();
 
             if (string.IsNullOrEmpty(entity.PartitionKey))
-                return new ValueTask<OperationResult>(OperationResult.PartitionKeyIsNull);
+                return OperationResult.PartitionKeyIsNull;
 
             if (string.IsNullOrEmpty(entity.RowKey))
-                return new ValueTask<OperationResult>(OperationResult.RowKeyIsNull);
+                return OperationResult.RowKeyIsNull;
             
             var (dbPartition, dbRow) = table.InsertOrReplace(entity, now);
             
             _dataSynchronizer.SynchronizeUpdate(table, new[]{dbRow});
 
-            return _persistenceHandler.SynchronizePartitionAsync(table, dbPartition, synchronizationPeriod);
-            
+            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
+
+            return OperationResult.Ok;
         }
         
-        public ValueTask<OperationResult> ReplaceAsync(DbTable table, IMyMemory myMemory, 
+        public async ValueTask<OperationResult> ReplaceAsync(DbTable table, IMyMemory myMemory, 
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             
@@ -78,14 +80,16 @@ namespace MyNoSqlServer.Domains
             var (result, partition, dbRow) = table.Replace(entity, now);
             
             if (result != OperationResult.Ok)
-                return new ValueTask<OperationResult>(result);
+                return result;
             
             _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
 
-            return _persistenceHandler.SynchronizePartitionAsync(table, partition, synchronizationPeriod);
+            await _persistenceHandler.SynchronizePartitionAsync(table, partition.PartitionKey, synchronizationPeriod);
+
+            return OperationResult.Ok;
         }
 
-        public ValueTask<OperationResult> MergeAsync(DbTable table, IMyMemory myMemory,
+        public async ValueTask<OperationResult> MergeAsync(DbTable table, IMyMemory myMemory,
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             var entity = myMemory.ParseDynamicEntity();
@@ -93,29 +97,31 @@ namespace MyNoSqlServer.Domains
             var (result, partition, dbRow) = table.Merge(entity, now);
             
             if (result != OperationResult.Ok)
-                return new ValueTask<OperationResult>(result);
+                return result;
             
             _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
 
-            return _persistenceHandler.SynchronizePartitionAsync(table, partition, synchronizationPeriod);
-
+            await _persistenceHandler.SynchronizePartitionAsync(table, partition.PartitionKey, synchronizationPeriod);
+            
+            return OperationResult.Ok;
         }
 
-        public ValueTask<OperationResult> DeleteAsync(DbTable table, string partitionKey, string rowKey, 
+        public async ValueTask<OperationResult> DeleteAsync(DbTable table, string partitionKey, string rowKey, 
             DataSynchronizationPeriod synchronizationPeriod)
         {
             var (dbPartition, dbRow) = table.DeleteRow(partitionKey, rowKey);
 
             if (dbPartition == null) 
-                return new ValueTask<OperationResult>(OperationResult.RowNotFound);
+                return OperationResult.RowNotFound;
          
             _dataSynchronizer.SynchronizeDelete(table, new[]{dbRow});
             
-            return _persistenceHandler.SynchronizeDeletePartitionAsync(table, dbPartition, synchronizationPeriod);
+            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
+            return OperationResult.Ok;
         }
 
 
-        public ValueTask<OperationResult> CleanAndKeepLastRecordsAsync(DbTable table, string partitionKey, int amount, 
+        public async ValueTask<OperationResult> CleanAndKeepLastRecordsAsync(DbTable table, string partitionKey, int amount, 
             DataSynchronizationPeriod synchronizationPeriod)
         {
             var (dbPartition, dbRows) = table.CleanAndKeepLastRecords(partitionKey, amount);
@@ -124,10 +130,10 @@ namespace MyNoSqlServer.Domains
             {
                 _dataSynchronizer.SynchronizeDelete(table, dbRows);
                 
-                return _persistenceHandler.SynchronizePartitionAsync(table, dbPartition, synchronizationPeriod);
+                await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
             }
             
-            return new ValueTask<OperationResult>(OperationResult.Ok);
+            return OperationResult.Ok;
         }
         
     }

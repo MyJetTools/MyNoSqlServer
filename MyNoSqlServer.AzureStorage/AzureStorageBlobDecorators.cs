@@ -77,7 +77,7 @@ namespace MyNoSqlServer.AzureStorage
                 continuationToken = response.ContinuationToken;
 
                 foreach (var blob in response.Results.Cast<CloudBlockBlob>())
-                    yield return blob;
+                        yield return blob;
 
             } while (continuationToken != null);
 
@@ -95,8 +95,8 @@ namespace MyNoSqlServer.AzureStorage
 
             await blob.UploadFromByteArrayAsync(data, 0, data.Length);
         }
-        
-        internal static async Task DeleteBlobAsync(this CloudBlob blob)
+
+        private static async Task DeleteBlobAsync(this CloudBlob blob)
         {
 
             try
@@ -122,7 +122,11 @@ namespace MyNoSqlServer.AzureStorage
             {
 
                 await foreach (var cloudBlob in container.GetListOfBlobsAsync())
-                    await cloudBlob.DeleteBlobAsync(); 
+                {
+                    if (cloudBlob.Name != SystemFileNames.TableMetadataFileName)
+                        await cloudBlob.DeleteBlobAsync();    
+                }
+                     
                    
             }
             catch (Exception e)

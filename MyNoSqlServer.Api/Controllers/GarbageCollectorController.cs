@@ -12,7 +12,7 @@ namespace MyNoSqlServer.Api.Controllers
     public class GarbageCollectorController : Controller
     {
         [HttpPost("CleanAndKeepMaxPartitions")]
-        public IActionResult CleanAndKeepMaxPartitions([FromQuery] [Required] string tableName,
+        public async ValueTask<IActionResult> CleanAndKeepMaxPartitions([FromQuery] [Required] string tableName,
             [FromQuery] [Required] int maxAmount)
         {
             
@@ -23,12 +23,13 @@ namespace MyNoSqlServer.Api.Controllers
 
             var result = table.KeepMaxPartitions(maxAmount);
 
-            var response = Ok("Ok");
-
             foreach (var dbPartition in result)
-                response.SynchronizeDeletePartitionAsync(table, dbPartition, DataSynchronizationPeriod.Sec1);
+            {
+                ServiceLocator.DataSynchronizer.PublishInitPartition(table, dbPartition);
+                await ServiceLocator.PersistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, DataSynchronizationPeriod.Sec5);
+            }
 
-            return response;
+            return Ok("Ok");
         }
 
 
@@ -51,8 +52,8 @@ namespace MyNoSqlServer.Api.Controllers
             {
                 ServiceLocator.DataSynchronizer.SynchronizeDelete(table, dbRows);
 
-                return await this.ResponseOk()
-                    .SynchronizePartitionAsync(table, dbPartition, syncPeriod.ParseSynchronizationPeriodContract());
+                await ServiceLocator.PersistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, 
+                    syncPeriod.ParseDataSynchronizationPeriod(DataSynchronizationPeriod.Sec5));
             }
 
             return this.ResponseOk();

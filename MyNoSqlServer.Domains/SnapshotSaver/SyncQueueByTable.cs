@@ -15,12 +15,34 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
 
 
+        private void OptimizeTime()
+        {
+            var lowestTime = _queue.Values.Min(itm => itm.SyncDateTime);
+
+            var taskWithLowestTime = _queue.Values.FirstOrDefault(itm => itm.SyncDateTime == lowestTime);
+            
+            if (taskWithLowestTime == null)
+                return;
+
+            foreach (var syncTask in _queue.Values)
+            {
+                if (syncTask.Id >= taskWithLowestTime.Id)
+                    break;
+                
+                if (syncTask.SyncDateTime > taskWithLowestTime.SyncDateTime)
+                    syncTask.SyncDateTime = lowestTime;
+            }
+        }
+
+
         public ISyncTask Dequeue(DateTime utcNow)
         {
 
             var nextTaskToDo = _queue.Values.FirstOrDefault();
             if (nextTaskToDo == null)
                 return null;
+            
+            OptimizeTime();
 
             if (nextTaskToDo.SyncDateTime > utcNow)
                 return null;

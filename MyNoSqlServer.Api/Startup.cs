@@ -100,10 +100,7 @@ namespace MyNoSqlServer.Api
 
         private void OnShutdown()
         {
-            ServiceLocator.GlobalVariables.IsShuttingDown = true;
-            Task.Delay(500).Wait();
-
-            ServiceLocator.SnapshotSaverEngine.Stop();
+            ServiceLocator.Stop();
         }
     }
 }

@@ -7,6 +7,8 @@ namespace MyNoSqlServer.Domains.Db.Rows
     
     public static class DbRowUtils
     {
+        
+        
         public static ChunkedStream ToJsonArray(this IEnumerable<DbRow> dbRows)
         {
             var result = new ChunkedStream();

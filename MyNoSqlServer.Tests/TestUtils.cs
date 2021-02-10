@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.Tests
 {
@@ -46,6 +48,11 @@ namespace MyNoSqlServer.Tests
             return new ValueTask();
         }
 
+        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot)
+        {
+            return new ValueTask();
+        }
+
         public ValueTask SaveTableSnapshotAsync(DbTable dbTable)
         {
             return new ValueTask();
@@ -56,9 +63,17 @@ namespace MyNoSqlServer.Tests
             return new ValueTask();
         }
 
-        public IAsyncEnumerable<PartitionSnapshot> LoadSnapshotsAsync()
+        public async IAsyncEnumerable<ITableLoader> LoadTablesAsync()
         {
-            throw new System.NotImplementedException();
+            foreach (var itm in Array.Empty<ITableLoader>())
+            {
+                yield return itm;
+            }
+        }
+
+        public ValueTask SetTableSavableAsync(DbTable dbTable, bool savable)
+        {
+            return new ValueTask();
         }
     }
 

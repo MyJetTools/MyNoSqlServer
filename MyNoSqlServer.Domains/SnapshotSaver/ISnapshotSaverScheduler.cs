@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Generic;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Tables;
 
 namespace MyNoSqlServer.Domains.SnapshotSaver
@@ -14,7 +14,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     }
 
 
-    public interface ICreateTableSyncTask : ISyncTask
+    public interface ISetTableSavable : ISyncTask
     {
         
     }
@@ -28,25 +28,18 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     {
         public string PartitionKey { get; }
     }
-    
-    public interface IDeletePartitionTask : ISyncTask
-    {
-        public string PartitionKey { get; }   
-    }
 
     public interface ISnapshotSaverScheduler
     {
 
-        void SynchronizeCreateTable(DbTable dbTable);
+        void SynchronizeSetTablePersist(DbTable dbTable, bool savable);
         
-        void SynchronizePartition(DbTable dbTable, DbPartition partitionToSave, DataSynchronizationPeriod period);
+        void SynchronizePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period);
         
         void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period);
-        
-        void SynchronizeDeletePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period);
 
         ISyncTask GetTaskToSync(bool appIsShuttingDown);
-
+        IReadOnlyList<ISyncTask> GetTasksToSync(string tableName);
 
         int TasksToSyncCount();
 

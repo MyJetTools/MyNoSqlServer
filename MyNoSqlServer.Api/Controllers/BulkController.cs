@@ -20,7 +20,6 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery]string syncPeriod)
         {
             
-            
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
                 return shutDown;
@@ -47,7 +46,7 @@ namespace MyNoSqlServer.Api.Controllers
             ServiceLocator.DataSynchronizer.SynchronizeUpdate(table, dbRows);
             
             foreach (var dbPartition in dbPartitions)
-                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition, theSyncPeriod);
+                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition.PartitionKey, theSyncPeriod);
             
             return this.ResponseOk();
 
@@ -60,7 +59,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             foreach (var dbPartition in partitionsToSynchronize)
             {
-                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition, syncPeriod);
+                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition.PartitionKey, syncPeriod);
                 ServiceLocator.DataSynchronizer?.PublishInitPartition(table, dbPartition); 
             }
         }

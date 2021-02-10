@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Json;
+using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Domains.Db.Tables
@@ -15,11 +17,11 @@ namespace MyNoSqlServer.Domains.Db.Tables
     public class DbTable
     {
         
-        public bool PersistThisTable { get; private set; }
-        private DbTable(string name, bool persistThisTable)
+        public bool Persist { get; private set; }
+        public DbTable(string name, bool persistThisTable)
         {
             Name = name;
-            PersistThisTable = persistThisTable;
+            Persist = persistThisTable;
         }
 
         public static DbTable CreateByRequest(string name, bool persistThisTable)
@@ -27,6 +29,10 @@ namespace MyNoSqlServer.Domains.Db.Tables
             return new DbTable(name, persistThisTable);
         }
 
+        public void UpdatePersist(bool persist)
+        {
+            Persist = persist;
+        }
         public string Name { get; }
 
         private readonly ReaderWriterLockSlim _readerWriterLockSlim = new ReaderWriterLockSlim();
@@ -62,27 +68,27 @@ namespace MyNoSqlServer.Domains.Db.Tables
         }
 
 
-        public DbPartition InitPartitionFromSnapshot(IMyMemory data)
+        public void InitPartitionFromSnapshot(PartitionSnapshot partitionSnapshot)
         {
-            DbPartition partition = null;
+
             _readerWriterLockSlim.EnterWriteLock();
             try
             {
-                foreach (var dbRowMemory in data.SplitJsonArrayToObjects())
+
+                var partition = DbPartition.Create(partitionSnapshot.PartitionKey);
+                
+                if (_partitions.ContainsKey(partitionSnapshot.PartitionKey))
+                    return;
+                
+                _partitions.Add(partition.PartitionKey, partition);
+
+
+                var partitionAsMyMemory = new MyMemoryAsByteArray(partitionSnapshot.Snapshot);
+                
+                foreach (var dbRowMemory in partitionAsMyMemory.SplitJsonArrayToObjects())
                 {
-
-                    var entity = dbRowMemory.ParseDynamicEntity();
-
-                    if (!_partitions.ContainsKey(entity.PartitionKey))
-                    {
-                        partition = DbPartition.Create(entity.PartitionKey);
-                        _partitions.Add(entity.PartitionKey, partition);
-                    }
-
-                    partition ??= _partitions[entity.PartitionKey];
-                    
+                    var entity = partitionSnapshot.Snapshot.ParseDynamicEntity();
                     var dbRow = DbRow.RestoreSnapshot(entity, dbRowMemory);
-
                     partition.InsertOrReplace(dbRow);
                 }
             }
@@ -90,9 +96,6 @@ namespace MyNoSqlServer.Domains.Db.Tables
             {
                 _readerWriterLockSlim.ExitWriteLock();
             }
-            
-            return partition;
-
         }
 
         public (OperationResult result, DbPartition partition, DbRow dbRow) 
@@ -180,7 +183,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             return result;
         }
 
-        public IEnumerable<DbRow> GetRecords(string partitionKey, int? limit, int? skip)
+        public IReadOnlyList<DbRow> GetRecords(string partitionKey, int? limit, int? skip)
         {
             _readerWriterLockSlim.EnterReadLock();
             try
@@ -662,5 +665,24 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
 
         }
+
+        public PartitionSnapshot GetPartitionSnapshot(string partitionKey)
+        {
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                if (!_partitions.TryGetValue(partitionKey, out var dbPartition)) 
+                    return null;
+                
+                var rowsAsBytes = dbPartition.GetAllRows().ToJsonArray().AsArray();
+                return PartitionSnapshot.Create(partitionKey, rowsAsBytes);
+
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+        }
+        
     }
 }
