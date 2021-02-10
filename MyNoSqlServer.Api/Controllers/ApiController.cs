@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using MyNoSqlServer.Api.Hubs;
+using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -32,20 +35,21 @@ namespace MyNoSqlServer.Api.Controllers
         {
             var connections = ServiceLocator.TcpServer.GetConnections();
 
+            var signalRConnections = ChangesHub.Connections.Get();
+            
+            var result = new List<UiModel>();
+
             var dt = DateTime.UtcNow;
 
-            var result = connections.Cast<ChangesTcpService>().Select(itm =>
-                new
-                {
-                    name = itm.ContextName,
-                    ip = itm.TcpClient.Client.RemoteEndPoint.ToString(),
-                    tables = itm.Tables,
-                    connectedTime = (dt - itm.SocketStatistic.ConnectionTime).ToString("g"),
-                    lastIncomingTime = (dt -itm.SocketStatistic.LastReceiveTime).ToString("g"),
-                    id = itm.Id
-                }).OrderBy(iym => iym.id);
+
+            result.AddRange(connections.Cast<ChangesTcpService>().Select(UiModel.Create));
             
-            return Json(result);
+            
+            result.AddRange(signalRConnections.Select(UiModel.Create));
+            
+            
+            
+            return Json(result.OrderBy(iym => iym.Id));
         }
         
     }

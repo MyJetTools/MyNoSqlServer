@@ -11,14 +11,24 @@ using MyTcpSockets;
 
 namespace MyNoSqlServer.Api
 {
-    public class ChangesTcpService : TcpContext<IMyNoSqlTcpContract>
+    public class ChangesTcpService : TcpContext<IMyNoSqlTcpContract>, IReaderConnection
     {
-        
         
         private  IReadOnlyList<string> _tablesSubscribed = new List<string>();
 
-        public IReadOnlyList<string> Tables => _tablesSubscribed;
+        public string Ip => TcpClient.Client.RemoteEndPoint.ToString();
         
+        public IEnumerable<string> Tables => _tablesSubscribed;
+
+        string IReaderConnection.Name => ContextName;
+
+        public DateTime ConnectedTime  => SocketStatistic.ConnectionTime;
+
+        public DateTime LastIncomingTime => SocketStatistic.LastReceiveTime;
+
+        string IReaderConnection.Id => Id.ToString();
+        
+
         protected override ValueTask OnConnectAsync()
         {
             return new ValueTask();

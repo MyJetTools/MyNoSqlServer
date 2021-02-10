@@ -88,7 +88,20 @@ namespace MyNoSqlServer.Api.Controllers
                 _ => ctx.ResponseConflict(result)
             };
         }
-    
+        
+        private static string TryGetHeaderValue(this HttpRequest request, string headerName)
+        {
+            return request.Headers.ContainsKey(headerName) 
+                ? request.Headers[headerName].ToString() 
+                : null;
+        }
+
+        public static string GetIp(this HttpContext ctx)
+        {
+            return ctx.Request.TryGetHeaderValue("CF-Connecting-IP")
+                   ?? ctx.Request.TryGetHeaderValue("X-Forwarded-For")
+                   ?? ctx.Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
 
     }
 }
