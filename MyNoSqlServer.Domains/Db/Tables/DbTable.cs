@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
@@ -84,9 +85,10 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
                 var partitionAsMyMemory = new MyMemoryAsByteArray(partitionSnapshot.Snapshot);
                 
+                
                 foreach (var dbRowMemory in partitionAsMyMemory.SplitJsonArrayToObjects())
                 {
-                    var entity = partitionSnapshot.Snapshot.ParseDynamicEntity();
+                    var entity = dbRowMemory.ParseDynamicEntity();
                     var dbRow = DbRow.RestoreSnapshot(entity, dbRowMemory);
                     partition.InsertOrReplace(dbRow);
                 }
