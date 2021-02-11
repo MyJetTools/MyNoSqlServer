@@ -92,9 +92,6 @@ namespace MyNoSqlServer.AzureStorage
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             await TableMetadataSaver.SaveTableMetadataAsync(container, savable);
-
-            if (!savable)
-                await container.CleanContainerAsync();
         }
 
         public async IAsyncEnumerable<string> GetPersistedTablesAsync()
