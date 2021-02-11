@@ -23,7 +23,7 @@ namespace MyNoSqlServer.AzureStorage
         {
             return new TableMetadata
             {
-                Persist = false
+                Persist = true
             };
         }
         
