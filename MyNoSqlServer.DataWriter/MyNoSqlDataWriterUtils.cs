@@ -39,7 +39,8 @@ namespace MyNoSqlServer.DataWriter
 
         public static Url WithPersistTableAsQueryParam(this Url url, bool persist)
         {
-            return persist ? url.SetQueryParam("persist", "1") : url;
+            var value = persist ? "1" : "0";
+            return url.SetQueryParam("persist", value);
         }
 
 
