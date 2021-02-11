@@ -24,6 +24,8 @@ namespace MyNoSqlServer.DataReader
 
         private void Init(IReadOnlyList<T> items)
         {
+            IReadOnlyList<T> updated;
+            IReadOnlyList<T> deleted;
 
             _lock.EnterWriteLock();
             try
@@ -41,11 +43,9 @@ namespace MyNoSqlServer.DataReader
                     partition.Update(item);
                 }
 
-                var (updated, deleted) = oldOne.GetTotalDifference(_cache);
+                (updated, deleted) = oldOne.GetTotalDifference(_cache);
 
-                NotifyChanged(updated);
-
-                NotifyDeleted(deleted);
+   
 
             }
             finally
@@ -53,11 +53,19 @@ namespace MyNoSqlServer.DataReader
                 _lock.ExitWriteLock();
             }
 
+            
+            if (updated != null)
+                NotifyChanged(updated);
 
+            if (deleted != null)
+                NotifyDeleted(deleted);
         }
 
         private void InitPartition(string partitionKey, IReadOnlyList<T> items)
         {
+            
+            IReadOnlyList<T> updated;
+            IReadOnlyList<T> deleted;
 
             _lock.EnterWriteLock();
             try
@@ -85,17 +93,22 @@ namespace MyNoSqlServer.DataReader
                     return;
                 }
 
-                var (updated, deleted) = oldPartition.FindDifference(_cache[partitionKey]);
+                (updated, deleted) = oldPartition.FindDifference(_cache[partitionKey]);
 
-                NotifyChanged(updated);
 
-                NotifyDeleted(deleted);
 
             }
             finally
             {
                 _lock.ExitWriteLock();
             }
+            
+            
+            if (updated != null)
+                NotifyChanged(updated);
+
+            if (deleted != null)
+                NotifyDeleted(deleted);
 
 
         }
@@ -115,7 +128,7 @@ namespace MyNoSqlServer.DataReader
                     partition.Update(item);
                 }
 
-                NotifyChanged(items);
+         
 
             }
             catch (Exception ex)
@@ -126,16 +139,19 @@ namespace MyNoSqlServer.DataReader
             {
                 _lock.ExitWriteLock();
             }
-
+            
+            NotifyChanged(items);
         }
 
 
         private void Delete(IEnumerable<(string partitionKey, string rowKey)> dataToDelete)
         {
+            List<T> deleted = null;
+            
             _lock.EnterWriteLock();
             try
             {
-                List<T> deleted = null;
+     
                 foreach (var (partitionKey, rowKey) in dataToDelete)
                 {
                     if (!_cache.ContainsKey(partitionKey))
@@ -154,12 +170,14 @@ namespace MyNoSqlServer.DataReader
                         _cache.Remove(partitionKey);
                 }
 
-                NotifyDeleted(deleted);
+
             }
             finally
             {
                 _lock.ExitWriteLock();
             }
+            
+            NotifyDeleted(deleted);
         }
 
 
@@ -170,7 +188,7 @@ namespace MyNoSqlServer.DataReader
             {
 
                 if (!_cache.ContainsKey(partitionKey))
-                    return default(T);
+                    return default;
 
                 var partition = _cache[partitionKey];
 

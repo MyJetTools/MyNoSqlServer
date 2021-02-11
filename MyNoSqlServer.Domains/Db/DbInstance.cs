@@ -12,9 +12,7 @@ namespace MyNoSqlServer.Domains.Db
         private readonly object _lockObject = new object();
         
         private Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
-        private IReadOnlyList<string> _tableNames = Array.Empty<string>();
         private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
-
 
         public DbInstance(ISnapshotSaverScheduler snapshotSaverScheduler)
         {
@@ -23,7 +21,6 @@ namespace MyNoSqlServer.Domains.Db
 
         private (DbTable table, bool createdNow) TryToCreateNewTable(string tableName, bool persistTable)
         {
-
             DbTable syncCreateTable = null;
             try
             {
@@ -52,9 +49,8 @@ namespace MyNoSqlServer.Domains.Db
 
                     _tables = tables;
 
-                    _tableNames = _tables.Keys.ToList();
-
                     _tablesAsArray = _tables.Values.ToList();
+                    
                     syncCreateTable = tableInstance;
 
                     return (tableInstance, true);
@@ -65,7 +61,6 @@ namespace MyNoSqlServer.Domains.Db
                 if (syncCreateTable != null)
                     _snapshotSaverScheduler.SynchronizeSetTablePersist(syncCreateTable, persistTable);
             }
-
   
         }
         
@@ -95,11 +90,7 @@ namespace MyNoSqlServer.Domains.Db
             {
                 var result = new DbTable(tableName, persist);
                 _tables.Add(tableName, result);
-                
-                _tableNames = _tables.Keys.ToList();
-
                 _tablesAsArray = _tables.Values.ToList();
-
                 return result;
             }
         }
@@ -127,13 +118,6 @@ namespace MyNoSqlServer.Domains.Db
         public IReadOnlyList<DbTable> GetTables()
         {
             return _tablesAsArray;
-        }
-
-
-        public IReadOnlyList<string> GetTablesList()
-        {
-            return _tableNames;
-
         }
         
         public DbTable TryGetTable(string tableName)

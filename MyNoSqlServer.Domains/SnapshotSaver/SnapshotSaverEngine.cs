@@ -21,7 +21,6 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
             _snapshotSaverScheduler = snapshotSaverScheduler;
         }
         
-        
         public async Task LoadSnapshotsAsync()
         {
 
@@ -33,8 +32,11 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                     var started = DateTime.UtcNow;
                     var table = _dbInstance.RestoreTable(tableLoader.TableName, tableLoader.Persist);
 
-                    await foreach (var partitionSnapshot in tableLoader.GetPartitionsAsync())
-                        table.InitPartitionFromSnapshot(partitionSnapshot); 
+                    if (tableLoader.Persist)
+                    {
+                        await foreach (var partitionSnapshot in tableLoader.GetPartitionsAsync())
+                            table.InitPartitionFromSnapshot(partitionSnapshot); 
+                    }
                     
                     Console.WriteLine("Restored table: '"+tableLoader.TableName+"' in "+(DateTime.UtcNow - started));
 
@@ -63,7 +65,6 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                     break;
                             
                 case SyncPartition syncPartition:
-
                     var snapshot = syncPartition.DbTable.GetPartitionSnapshot(syncPartition.PartitionKey);
                                 
                     if (snapshot == null)

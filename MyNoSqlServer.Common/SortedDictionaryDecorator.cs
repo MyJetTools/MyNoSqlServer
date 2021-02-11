@@ -118,8 +118,6 @@ namespace MyNoSqlServer.Common
         
         public static IEnumerable<KeyValuePair<string,TValue>> GetRange<TValue>(this SortedList<string, TValue> src, string keyFrom, string keyTo, RangeInclude rangeInclude)
         {
-
-
             var rangeIncludeFunc = rangeInclude.GetRangePredicateFunction();
             
             if (string.CompareOrdinal(keyFrom, keyTo) > 0)
