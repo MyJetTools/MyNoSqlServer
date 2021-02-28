@@ -29,6 +29,7 @@ namespace MyNoSqlServer.DataWriter
 
         public async Task CreateTableIfNotExistsAsync()
         {
+            
             await _getUrl()
                 .AppendPathSegments("Tables", "CreateIfNotExists")
                 .WithTableNameAsQueryParam(_tableName)

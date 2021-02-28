@@ -9,7 +9,7 @@ namespace MyNoSqlServer.TcpContracts
     public class MyNoSqlTcpSerializer : ITcpSerializer<IMyNoSqlTcpContract>
     {
 
-        public ValueTask<IMyNoSqlTcpContract> DeserializeAsync(TcpDataReader dataReader, CancellationToken ct)
+        public ValueTask<IMyNoSqlTcpContract> DeserializeAsync(ITcpDataReader dataReader, CancellationToken ct)
         {
             return SerializerDeserializer.DeserializeAsync(dataReader, ct);
         }

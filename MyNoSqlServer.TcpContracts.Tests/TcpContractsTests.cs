@@ -1,5 +1,5 @@
-using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using MyTcpSockets.Extensions;
 using NUnit.Framework;
 
@@ -8,8 +8,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
     public class TcpContractsTests
     {
 
+        private const int ReadBufferSize = 1024;
+        
+
         [Test]
-        public void TestPing()
+        public async Task TestPing()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
@@ -17,60 +20,47 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var pingContract = new PingContract();
 
+            var dataReader = new TcpDataReader(ReadBufferSize);
+            
             var rawData = serializer.Serialize(pingContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
+            await dataReader.NewPackageAsync(rawData);
 
             var tc = new CancellationTokenSource();
-            
+
             var result
-                = serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = await serializer
+                    .DeserializeAsync(dataReader, tc.Token);
 
             Assert.IsTrue(typeof(PingContract) == result.GetType());
         }
 
         [Test]
-        public void TestPong()
+        public async Task TestPong()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
 
 
             var testContract = new PongContract();
+            
+            var dataReader = new TcpDataReader(ReadBufferSize);
 
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
+            await dataReader.NewPackageAsync(rawData);
 
             var tc = new CancellationTokenSource();
-            
+
             var result
-                = serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = await serializer
+                    .DeserializeAsync(dataReader, tc.Token);
 
             Assert.IsTrue(typeof(PongContract) == result.GetType());
         }
 
         [Test]
-        public void TestGreetingContract()
+        public async Task TestGreetingContract()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
@@ -81,31 +71,23 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Name = "Test"
             };
 
+            var dataReader = new TcpDataReader(ReadBufferSize);
+            
             var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
-            
-            var tc = new CancellationTokenSource();
+            await dataReader.NewPackageAsync(rawData);
 
             var result
-                = (GreetingContract)serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = (GreetingContract)
+                await serializer
+                    .DeserializeAsync(dataReader, CancellationToken.None);
 
             Assert.AreEqual(testContract.Name, result.Name);
         }
 
 
         [Test]
-        public void TestInitTableContract()
+        public async Task TestInitTableContract()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
@@ -117,24 +99,16 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Data = new byte[] {1, 2, 3}
             };
 
-            var rawData = serializer.Serialize(testContract);
-
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
 
 
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
-
+            var dataReader = new TcpDataReader(ReadBufferSize);
             
-            var tc = new CancellationTokenSource();
+            var rawData = serializer.Serialize(testContract);
+            await dataReader.NewPackageAsync(rawData);
+            
             var result
-                = (InitTableContract) serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = (InitTableContract) await serializer
+                    .DeserializeAsync(dataReader, CancellationToken.None);
 
             Assert.AreEqual(testContract.TableName, result.TableName);
             Assert.AreEqual(testContract.Data.Length, result.Data.Length);
@@ -145,7 +119,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
 
         [Test]
-        public void TestInitPartitionContract()
+        public async Task TestInitPartitionContract()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
@@ -158,23 +132,14 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Data = new byte[] {1, 2, 3}
             };
 
+            var dataReader = new TcpDataReader(ReadBufferSize);
+            
             var rawData = serializer.Serialize(testContract);
+            await dataReader.NewPackageAsync(rawData);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
-
-            var tc = new CancellationTokenSource();
             var result
-                = (InitPartitionContract) serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = (InitPartitionContract) await serializer
+                    .DeserializeAsync(dataReader, CancellationToken.None);
 
             Assert.AreEqual(testContract.TableName, result.TableName);
             Assert.AreEqual(testContract.PartitionKey, result.PartitionKey);
@@ -186,7 +151,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
         
         
         [Test]
-        public void TestUpdateRowsContract()
+        public async Task TestUpdateRowsContract()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
@@ -198,23 +163,14 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Data = new byte[] {1, 2, 3}
             };
 
+            var dataReader = new TcpDataReader(ReadBufferSize);
+            
             var rawData = serializer.Serialize(testContract);
+            await dataReader.NewPackageAsync(rawData);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
-
-            var tc = new CancellationTokenSource();
             var result
-                = (UpdateRowsContract) serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = (UpdateRowsContract) await serializer
+                    .DeserializeAsync(dataReader, CancellationToken.None);
 
             Assert.AreEqual(testContract.TableName, result.TableName);
             Assert.AreEqual(testContract.Data.Length, result.Data.Length);
@@ -225,43 +181,32 @@ namespace MyNoSqlServer.TcpContracts.Tests
         
         
         [Test]
-        public void TestSubscribeContract()
+        public async Task TestSubscribeContract()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
-
 
             var testContract = new SubscribeContract
             {
                 TableName = "Test"
             };
 
-            var rawData = serializer.Serialize(testContract);
 
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
-
+            var dataReader = new TcpDataReader(ReadBufferSize);
             
-            var tc = new CancellationTokenSource();
+            var rawData = serializer.Serialize(testContract);
+            await dataReader.NewPackageAsync(rawData);
             
             var result
-                = (SubscribeContract) serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = (SubscribeContract) await serializer
+                    .DeserializeAsync(dataReader, CancellationToken.None);
 
             Assert.AreEqual(testContract.TableName, result.TableName);
 
         }
         
         [Test]
-        public void TestDeleteRowsContract()
+        public async Task TestDeleteRowsContract()
         {
 
             var serializer = new MyNoSqlTcpSerializer();
@@ -273,24 +218,14 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 RowsToDelete = new[]{("pk1", "rk1"), ("pk2", "rk2")}
             };
 
+            var dataReader = new TcpDataReader(ReadBufferSize);
             var rawData = serializer.Serialize(testContract);
-
-            var memStream = new MemoryStream(rawData.ToArray())
-            {
-                Position = 0
-            };
-
-
-            var dataReader = new TcpDataReader();
-            dataReader.NewPackage(memStream.ToArray());
-
             
-            var tc = new CancellationTokenSource();
+            await dataReader.NewPackageAsync(rawData);
 
             var result
-                = (DeleteRowsContract) serializer
-                    .DeserializeAsync(dataReader, tc.Token)
-                    .AsTestResult();
+                = (DeleteRowsContract) await serializer
+                    .DeserializeAsync(dataReader, CancellationToken.None);
 
             Assert.AreEqual(testContract.TableName, result.TableName);
             

@@ -16,7 +16,7 @@ namespace MyNoSqlServer.Api
         
         private  IReadOnlyList<string> _tablesSubscribed = new List<string>();
 
-        public string Ip => TcpClient.Client.RemoteEndPoint.ToString();
+        public string Ip => TcpClient.Client.RemoteEndPoint?.ToString() ?? "unknown";
         
         public IEnumerable<string> Tables => _tablesSubscribed;
 
@@ -68,7 +68,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                    connection.SendPacketAsync(packetToBroadcast);
+                    connection.SendDataToSocket(packetToBroadcast);
         }
 
         public static void BroadcastInitPartition(DbTable dbTable, DbPartition partition)
@@ -87,7 +87,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                connection.SendPacketAsync(packetToBroadcast);
+                connection.SendDataToSocket(packetToBroadcast);
         }
 
         public static void BroadcastRowsUpdate(DbTable dbTable, IReadOnlyList<DbRow> entities)
@@ -105,7 +105,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                    connection.SendPacketAsync(packetToBroadcast);
+                    connection.SendDataToSocket(packetToBroadcast);
         }
 
         public static void BroadcastRowsDelete(DbTable dbTable, IReadOnlyList<DbRow> dbRows)
@@ -122,7 +122,7 @@ namespace MyNoSqlServer.Api
             };
 
             foreach (var connection in connections)
-                connection.SendPacketAsync(packetToBroadcast);
+                connection.SendDataToSocket(packetToBroadcast);
         }
 
         protected override ValueTask HandleIncomingDataAsync(IMyNoSqlTcpContract data)
@@ -130,7 +130,7 @@ namespace MyNoSqlServer.Api
             switch (data)
             {
                 case PingContract _:
-                    SendPacketAsync(PongContract.Instance);
+                    SendDataToSocket(PongContract.Instance);
                     if (ContextName.Contains("test"))
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
@@ -185,7 +185,7 @@ namespace MyNoSqlServer.Api
                 Data = rows.ToHubUpdateContract() 
             };
 
-            SendPacketAsync(initContract);
+            SendDataToSocket(initContract);
         }
         
     }

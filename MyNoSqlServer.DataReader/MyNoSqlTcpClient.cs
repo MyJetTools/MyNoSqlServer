@@ -15,7 +15,8 @@ namespace MyNoSqlServer.DataReader
 
             _tcpClient
                 .RegisterTcpContextFactory(() => new MyNoSqlServerClientTcpContext(this, appName))
-                .AddLog((c, m) => Console.WriteLine("MyNoSql: " + m))
+                .Logs.AddLogInfo((c, m) => Console.WriteLine("MyNoSql: " + m))
+                .Logs.AddLogException((c, m) => Console.WriteLine("MyNoSql: " + m))
                 .RegisterTcpSerializerFactory(() => new MyNoSqlTcpSerializer());
         }
 
