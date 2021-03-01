@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db;
@@ -32,9 +33,9 @@ namespace MyNoSqlServer.Tests
         {
             var ioc = TestUtils.GetTestIoc();
 
-            var dbOperations =  ioc.GetService<DbOperations>();
+            var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetService<DbInstance>();
+            var dbInstance = ioc.GetRequiredService<DbInstance>();
 
             var table = dbInstance.CreateTableIfNotExists("mytable", false);
 
@@ -80,9 +81,9 @@ namespace MyNoSqlServer.Tests
         {
             var ioc = TestUtils.GetTestIoc();
 
-            var dbOperations =  ioc.GetService<DbOperations>();
+            var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetService<DbInstance>();
+            var dbInstance = ioc.GetRequiredService<DbInstance>();
 
             var table = dbInstance.CreateTableIfNotExists("mytable", false);
 

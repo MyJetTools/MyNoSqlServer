@@ -1,16 +1,16 @@
-using MyDependencies;
+using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.AzureStorage
 {
     public static class AzureStorageBinder
     {
-        public static void BindAzureStorage(this IServiceRegistrator sr,  string connectionString)
+        public static void BindAzureStorage(this IServiceCollection services, string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString))
                 return;
             
-            sr.Register<ISnapshotStorage>(new AzureBlobSnapshotStorage(connectionString));
+            services.AddSingleton<ISnapshotStorage>(new AzureBlobSnapshotStorage(connectionString));
 
         }
     }

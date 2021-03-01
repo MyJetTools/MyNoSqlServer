@@ -1,10 +1,8 @@
-﻿using System.Threading.Tasks;
-using Autofac;
+﻿using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using MyDependencies;
 using MyNoSqlServer.Api.Hubs;
 using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
@@ -22,14 +20,16 @@ namespace MyNoSqlServer.Api
         }
 
         public IConfiguration Configuration { get; }
-        
-        public static MyIoc IoC = new MyIoc();
 
         public SettingsModel _settings;
+
+        private IServiceCollection _services;
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
+            _services = services;
 
             services.AddApplicationInsightsTelemetry(Configuration);
 
@@ -41,12 +41,9 @@ namespace MyNoSqlServer.Api
 
             _settings = SettingsLoader.LoadSettings();
             
-            IoC.BindDomainsServices();
-            IoC.BindAzureStorage(_settings.BackupAzureConnectString);
-            IoC.BindApiServices();
-            
-            
-            ServiceLocator.Init(IoC);
+            services.BindDomainsServices();
+            services.BindAzureStorage(_settings.BackupAzureConnectString);
+            services.BindApiServices();
 
         }
 
@@ -94,6 +91,9 @@ namespace MyNoSqlServer.Api
                 endpoints.MapHub<ChangesHub>("/changes");
                 endpoints.MapMetrics();
             });
+
+            var sp = _services.BuildServiceProvider();
+            ServiceLocator.Init(sp);
             
             ServiceLocator.Start();
         }

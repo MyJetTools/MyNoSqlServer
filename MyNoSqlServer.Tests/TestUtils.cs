@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using MyDependencies;
+using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.DataSynchronization;
@@ -16,15 +16,15 @@ namespace MyNoSqlServer.Tests
     public static class TestUtils
     {
 
-        public static MyIoc GetTestIoc()
+        public static ServiceProvider GetTestIoc()
         {
-            var result = new MyIoc();
+            var result = new ServiceCollection();
             result.BindDomainsServices();
-            result.Register<ISnapshotStorage>(new SnapshotStorageMock());
+            result.AddSingleton<ISnapshotStorage>(new SnapshotStorageMock());
             
-            result.Register<IReplicaSynchronizationService>(new ReplicaSynchronizationServiceMock());
+            result.AddSingleton<IReplicaSynchronizationService>(new ReplicaSynchronizationServiceMock());
 
-            return result;
+            return result.BuildServiceProvider();
         }
 
 

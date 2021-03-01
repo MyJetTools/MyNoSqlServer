@@ -1,4 +1,4 @@
-using MyDependencies;
+using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
@@ -7,19 +7,19 @@ namespace MyNoSqlServer.Domains
 {
     public static class ServiceBinder
     {
-        public static void BindDomainsServices(this IServiceRegistrator sr)
+        public static void BindDomainsServices(this IServiceCollection services)
         {
-            sr.Register<DbInstance>();
+            services.AddSingleton<DbInstance>();
             
-            sr.Register<SnapshotSaverEngine>();
+            services.AddSingleton<SnapshotSaverEngine>();
             
-            sr.Register<ISnapshotSaverScheduler, SnapshotSaverScheduler>();
+            services.AddSingleton<ISnapshotSaverScheduler, SnapshotSaverScheduler>();
             
-            sr.Register<PersistenceHandler>();
+            services.AddSingleton<PersistenceHandler>();
             
-            sr.Register<GlobalVariables>();
+            services.AddSingleton<GlobalVariables>();
             
-            sr.Register<DbOperations>();
+            services.AddSingleton<DbOperations>();
         }
     }
 }

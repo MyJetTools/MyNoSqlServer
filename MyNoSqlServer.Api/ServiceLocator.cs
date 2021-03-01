@@ -4,7 +4,7 @@ using System.Net;
 using System.Reflection;
 using System.Threading;
 using DotNetCoreDecorators;
-using MyDependencies;
+using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Api.Services;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.DataSynchronization;
@@ -93,20 +93,20 @@ namespace MyNoSqlServer.Api
 
         private static readonly TaskTimer TimerSaver = new TaskTimer(TimeSpan.FromSeconds(1));
 
-        public static void Init(IServiceResolver sr)
+        public static void Init(ServiceProvider sr)
         {
-            DbInstance = sr.GetService<DbInstance>();
+            DbInstance = sr.GetRequiredService<DbInstance>();
             
             DataSynchronizer = new ChangesPublisherToSocket();
-            _snapshotSaverEngine = sr.GetService<SnapshotSaverEngine>();
+            _snapshotSaverEngine = sr.GetRequiredService<SnapshotSaverEngine>();
 
-            GlobalVariables = sr.GetService<GlobalVariables>();
+            GlobalVariables = sr.GetRequiredService<GlobalVariables>();
 
-            DbOperations = sr.GetService<DbOperations>();
+            DbOperations = sr.GetRequiredService<DbOperations>();
 
-            PersistenceHandler = sr.GetService<PersistenceHandler>();
+            PersistenceHandler = sr.GetRequiredService<PersistenceHandler>();
 
-            SnapshotSaverScheduler = sr.GetService<ISnapshotSaverScheduler>();
+            SnapshotSaverScheduler = sr.GetRequiredService<ISnapshotSaverScheduler>();
 
         }
 
