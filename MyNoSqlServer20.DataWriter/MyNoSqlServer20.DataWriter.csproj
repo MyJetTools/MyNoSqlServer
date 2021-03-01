@@ -18,6 +18,9 @@
 
 
     <ItemGroup>
+      <Compile Include="..\MyNoSqlServer.DataWriter\Builders\BulkDeleteBuilder.cs">
+        <Link>Builders\BulkDeleteBuilder.cs</Link>
+      </Compile>
       <Compile Include="..\MyNoSqlServer.DataWriter\MyNoSqlDataWriterUtils.cs">
         <Link>MyNoSqlDataWriterUtils.cs</Link>
       </Compile>
