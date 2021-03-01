@@ -102,6 +102,29 @@ namespace MyNoSqlServer.Api.Controllers
             return this.ResponseOk();
         }
 
+        public IActionResult Delete([Required] [FromQuery] string tableName, [FromQuery] string syncPeriod,
+            [FromBody] [Required] Dictionary<string, List<string>> partitionsAndRows)
+        {
+            var (getTableResult, table) = this.GetTable(tableName);
+            
+            if (getTableResult != null)
+                return getTableResult;
+            
+            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
+
+            if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
+                return Conflict("CleanAndBulkInsert insert does not support immediate persistence");
+
+            var result = table.BulkDelete(partitionsAndRows);
+
+            if (result)
+            {
+                ServiceLocator.SnapshotSaverScheduler.SynchronizeTable(table, theSyncPeriod);
+                ServiceLocator.DataSynchronizer?.PublishInitTable(table);
+            }
+            return this.ResponseOk();
+        }
+
     }
 
 }

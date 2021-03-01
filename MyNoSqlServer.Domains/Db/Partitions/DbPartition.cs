@@ -92,11 +92,9 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         public DbRow DeleteRow(string rowKey)
         {
             LastAccessTime = DateTime.UtcNow;
-            if (!_rows.ContainsKey(rowKey))
+            if (!_rows.Remove(rowKey, out var result))
                 return null;
 
-            var result = _rows[rowKey];
-            _rows.Remove(rowKey);
             _rowsAsList = null;
             return result;
         }
