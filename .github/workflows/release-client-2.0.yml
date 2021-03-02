@@ -14,11 +14,11 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.100
+        dotnet-version: 5.0.*
     - name: Build
-      run: dotnet build --configuration Release
+      run: dotnet build  --configuration Release
     - name: Test
-      run: dotnet test --configuration Release      
+      run: dotnet test --no-build --configuration Release      
       
     - name: Create the package - Reader20
       run: dotnet pack --configuration Release MyNoSqlServer20.DataReader/MyNoSqlServer20.DataReader.csproj /p:Version=${GITHUB_REF#refs/tags/client20-}
