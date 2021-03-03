@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="MyTcpSockets" Version="1.6.0" />
+      <PackageReference Include="MyTcpSockets" Version="1.6.1" />
     </ItemGroup>
 
 
