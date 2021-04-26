@@ -36,6 +36,12 @@ namespace MyNoSqlServer.DataWriter
         {
             return url.SetQueryParam("tableName", tableName);
         }
+        
+        public static Url WithTransactionIdAsQueryParam(this Url url, string transactionId)
+        {
+            return url.SetQueryParam("transactionId", transactionId);
+        }
+        
 
         public static Url WithPersistTableAsQueryParam(this Url url, bool persist)
         {

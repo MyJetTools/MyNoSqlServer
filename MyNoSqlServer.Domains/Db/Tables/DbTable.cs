@@ -41,6 +41,20 @@ namespace MyNoSqlServer.Domains.Db.Tables
         private readonly SortedList<string, DbPartition> _partitions = new SortedList<string, DbPartition>();
 
 
+        public IReadOnlyList<string> GetAllPartitionNames()
+        {
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                return _partitions.Keys.ToList();
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+        }
+        
+        
         public IReadOnlyList<DbPartition> GetAllPartitions()
         {
             _readerWriterLockSlim.EnterReadLock();
@@ -204,6 +218,28 @@ namespace MyNoSqlServer.Domains.Db.Tables
             finally
             {
                 _readerWriterLockSlim.ExitReadLock();
+            }
+        }
+
+        public DbPartition DeleteRows(string partitionKey, IEnumerable<string> rowKeys)
+        {
+            _readerWriterLockSlim.EnterWriteLock();
+            try
+            {
+                if (!_partitions.ContainsKey(partitionKey))
+                    return null;
+
+                var partition = _partitions[partitionKey];
+
+
+                foreach (var rowKey in rowKeys)
+                    partition.DeleteRow(rowKey);
+
+                return partition;
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
             }
         }
 
@@ -397,6 +433,32 @@ namespace MyNoSqlServer.Domains.Db.Tables
             {
                 _readerWriterLockSlim.ExitWriteLock();
             }
+        }
+        
+        public IReadOnlyList<DbPartition> CleanPartitions(IEnumerable<string> partitions)
+        {
+            List<DbPartition> cleared = null;
+            
+            _readerWriterLockSlim.EnterWriteLock();
+
+            try
+            {
+                foreach (var partitionKey in partitions)
+                {
+                    if (_partitions.Remove(partitionKey, out var dbPartition))
+                    {
+                        cleared ??= new List<DbPartition>();
+                        cleared.Add(dbPartition);
+                    }
+         
+                }
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
+            }
+
+            return (IReadOnlyList<DbPartition>) cleared ?? Array.Empty<DbPartition>();
         }
 
 

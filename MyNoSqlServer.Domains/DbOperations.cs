@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.DataSynchronization;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Persistence;
@@ -68,6 +70,60 @@ namespace MyNoSqlServer.Domains
             await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
 
             return OperationResult.Ok;
+        }
+
+
+        public async ValueTask ApplyTransactionsAsync(DbTable table, IEnumerable<IUpdateTransaction> transactions)
+        {
+            foreach (var transaction in transactions)
+            {
+                switch (transaction)
+                {
+                    case ICleanTableTransaction:
+                        table.Clean();
+                        await _persistenceHandler.SynchronizeTableAsync(table, DataSynchronizationPeriod.Sec5); 
+                        _dataSynchronizer.PublishInitTable(table);
+                        break;
+                    case ICleanPartitionsTransaction cleanPartitionsTransaction:
+                    {
+                        var cleaned = table.CleanPartitions(cleanPartitionsTransaction.Partitions);
+
+                        foreach (var dbPartition in cleaned)
+                        {
+                            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey,  DataSynchronizationPeriod.Sec5);
+                            _dataSynchronizer.PublishInitPartition(table, dbPartition);
+                        }
+
+                        break;
+                    }
+                    case IDeleteRowsTransaction deleteRows:
+                        table.DeleteRows(deleteRows.PartitionKey, deleteRows.RowKeys);
+                        await _persistenceHandler.SynchronizePartitionAsync(table, deleteRows.PartitionKey,  DataSynchronizationPeriod.Sec5);
+                        break;
+
+                    case IInsertOrUpdateTransaction insertOrUpdate:
+                    {
+                        var updateRows = new Dictionary<string, List<DbRow>>();
+                        foreach (var entity in insertOrUpdate.Entities)
+                        {
+                            var (dbPartition, dbRow) = table.InsertOrReplace(entity, DateTime.UtcNow);
+                            
+                            if (!updateRows.ContainsKey(dbPartition.PartitionKey))
+                                updateRows.Add(dbPartition.PartitionKey, new List<DbRow>());
+                            
+                            updateRows[dbPartition.PartitionKey].Add(dbRow);
+                        }
+
+                        foreach (var (partitionKey, rowsToUpdate) in updateRows)
+                        {
+                            _dataSynchronizer.SynchronizeUpdate(table, rowsToUpdate);
+                            await _persistenceHandler.SynchronizePartitionAsync(table, partitionKey,  DataSynchronizationPeriod.Sec5);
+                        }
+                        break;
+                    }
+                }
+            }
+
         }
         
         public async ValueTask<OperationResult> ReplaceAsync(DbTable table, IMyMemory myMemory, 

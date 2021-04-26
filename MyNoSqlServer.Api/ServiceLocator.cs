@@ -93,6 +93,10 @@ namespace MyNoSqlServer.Api
 
         private static readonly TaskTimer TimerSaver = new TaskTimer(TimeSpan.FromSeconds(1));
 
+        public static readonly MultiPartGetSnapshots MultiPartGetSnapshots = new();
+
+        public static readonly PostTransactionsList PostTransactionsList = new();
+
         public static void Init(ServiceProvider sr)
         {
             DbInstance = sr.GetRequiredService<DbInstance>();

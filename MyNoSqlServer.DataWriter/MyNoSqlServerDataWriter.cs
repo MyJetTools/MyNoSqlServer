@@ -5,6 +5,7 @@ using Flurl;
 using Flurl.Http;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.DataWriter.Builders;
+using Newtonsoft.Json;
 
 namespace MyNoSqlServer.DataWriter
 {
@@ -317,7 +318,27 @@ namespace MyNoSqlServer.DataWriter
         {
             return new BulkDeleteBuilder<T>(this);
         }
+
+
+        public async ValueTask<TransactionsBuilder<T>> StartTransactionAsync()
+        {
+            var response = await GetUrl()
+                .AppendPathSegments("Transaction", "Start")
+                .PostStringAsync("")
+                .ReceiveString();
+
+            var jsonModel = Newtonsoft.Json.JsonConvert.DeserializeObject<StartTransactionResponseModel>(response);
+
+            return new TransactionsBuilder<T>(GetUrl, TableName, jsonModel.TransactionId);
+        }
         
+    }
+
+
+    internal class StartTransactionResponseModel
+    {
+        [JsonProperty("transactionId")]
+        public string TransactionId { get; set; }
     }
     
 }

@@ -71,7 +71,7 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         private readonly object _lockObject = new object();
 
 
-        private readonly Dictionary<string, SyncQueueByTable> _syncTasks = new Dictionary<string, SyncQueueByTable>();
+        private readonly Dictionary<string, SyncQueueByTable> _syncTasks = new ();
 
         
         public int TasksToSyncCount()

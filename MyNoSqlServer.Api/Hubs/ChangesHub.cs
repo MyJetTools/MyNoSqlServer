@@ -123,10 +123,12 @@ namespace MyNoSqlServer.Api.Hubs
                 clientProxy.SendAsync(dbTable.Name, "i", packetToBroadcast);
             }
         }
-        
+
         public static void BroadCastInit(DbTable dbTable, DbPartition partition)
         {
-            var clientsToSend = Connections.Get(itm => itm.SubscribedToTable(dbTable.Name)).Select(itm => itm.Client);
+            var clientsToSend 
+                = Connections.Get(itm => itm.SubscribedToTable(dbTable.Name))
+                    .Select(itm => itm.Client);
 
             byte[] packetToBroadcast = null;
 
@@ -135,7 +137,7 @@ namespace MyNoSqlServer.Api.Hubs
                 if (packetToBroadcast == null)
                     packetToBroadcast = partition.GetAllRows().ToHubUpdateContract();
 
-                clientProxy.SendAsync(dbTable.Name, "i:"+partition.PartitionKey, packetToBroadcast);
+                clientProxy.SendAsync(dbTable.Name, "i:" + partition.PartitionKey, packetToBroadcast);
             }
         }
 

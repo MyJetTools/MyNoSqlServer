@@ -8,7 +8,7 @@ namespace MyNoSqlServer.Domains.DataSynchronization
     public interface IReplicaSynchronizationService
     {
         void PublishInitTable(DbTable dbTable);
-        void PublishInitPartition(DbTable dbTable, DbPartition partition);
+        void PublishInitPartition(DbTable dbTable, DbPartition partitionKey);
         void SynchronizeUpdate(DbTable dbTable, IReadOnlyList<DbRow> dbRow);
         void SynchronizeDelete(DbTable dbTable, IReadOnlyList<DbRow> dbRows);
     }
