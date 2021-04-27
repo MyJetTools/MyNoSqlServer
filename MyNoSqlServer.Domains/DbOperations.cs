@@ -8,6 +8,7 @@ using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Persistence;
+using MyNoSqlServer.Domains.Transactions;
 
 namespace MyNoSqlServer.Domains
 {
@@ -73,7 +74,7 @@ namespace MyNoSqlServer.Domains
         }
 
 
-        public async ValueTask ApplyTransactionsAsync(DbTable table, IEnumerable<IUpdateTransaction> transactions)
+        public async ValueTask ApplyTransactionsAsync(DbTable table, IEnumerable<IDbTransaction> transactions)
         {
             foreach (var transaction in transactions)
             {
@@ -101,7 +102,7 @@ namespace MyNoSqlServer.Domains
                         await _persistenceHandler.SynchronizePartitionAsync(table, deleteRows.PartitionKey,  DataSynchronizationPeriod.Sec5);
                         break;
 
-                    case IInsertOrUpdateTransaction insertOrUpdate:
+                    case IInsertOrReplaceEntitiesTransaction insertOrUpdate:
                     {
                         var updateRows = new Dictionary<string, List<DbRow>>();
                         foreach (var entity in insertOrUpdate.Entities)

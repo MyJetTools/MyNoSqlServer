@@ -66,16 +66,10 @@ namespace MyNoSqlServer.Domains.Json
             throw new Exception("Invalid Json at position: "+str);
         }
 
-        public static DynamicEntity ParseDynamicEntity(this byte[] rawData)
-        {
-            return new MyMemoryAsByteArray(rawData).ParseDynamicEntity();
-        }
 
-        public static DynamicEntity ParseDynamicEntity(
-            this IMyMemory inData)
+        public static Dictionary<string, IJsonFirstLine> ParseFirstLine(this IMyMemory inData)
         {
-
-            var result = new Dictionary<string, IJsonFirstLine>();
+                        var result = new Dictionary<string, IJsonFirstLine>();
             
             var expectedToken = ExpectedToken.OpenBracket;
 
@@ -320,6 +314,20 @@ namespace MyNoSqlServer.Domains.Json
                 throw new Exception("Invalid Json");
 
 
+            return result;
+        }
+        
+        
+
+        public static DynamicEntity ParseDynamicEntity(this byte[] rawData)
+        {
+            return new MyMemoryAsByteArray(rawData).ParseDynamicEntity();
+        }
+
+        public static DynamicEntity ParseDynamicEntity(
+            this IMyMemory inData)
+        {
+            var result = inData.ParseFirstLine();
             return new DynamicEntity(result);
         }
 
@@ -369,6 +377,8 @@ namespace MyNoSqlServer.Domains.Json
             var escapeMode = false;
 
             var startIndex = -1;
+            
+    
 
             foreach (var (itm, i) in seq.Enumerate())
             {

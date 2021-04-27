@@ -13,7 +13,7 @@ namespace MyNoSqlServer.DataWriter.Builders
         private readonly string _tableName;
         private string Id { get; }
 
-        private readonly List<object> _transactionObjects = new List<object>();
+        private readonly TransactionDataSerializer<T> _transactionSerializer = new TransactionDataSerializer<T>();
 
         public TransactionsBuilder(Func<string> getUrl, string tableName, string id)
         {
@@ -24,67 +24,48 @@ namespace MyNoSqlServer.DataWriter.Builders
         
         public TransactionsBuilder<T> CleanTable()
         {
-            var transactionModel = new CleanTableRequestModel
-            {
-                Type = "CleanTable",
-            };
-
-            _transactionObjects.Add(transactionModel);
-
+            _transactionSerializer.CleanTable();
             return this;
         }
         
-        public TransactionsBuilder<T> CleanPartitions(string[] partitions)
+        public TransactionsBuilder<T> DeletePartitions(string[] partitions)
         {
-            var transactionModel = new CleanPartitionsRequestModel
-            {
-                Type = "CleanPartitions",
-                Partitions = partitions,
-            };
-
-            _transactionObjects.Add(transactionModel);
-
+            _transactionSerializer.DeletePartitions(partitions);
+            return this;
+        }
+        
+        public TransactionsBuilder<T> DeletePartition(string partition)
+        {
+            _transactionSerializer.DeletePartitions(new[]{partition} );
             return this;
         }
 
 
         public TransactionsBuilder<T> DeleteRows(string partitionKey, string[] rowKeys)
         {
-            var transactionModel = new DeleteRowsRequestModel
-            {
-                Type = "DeletePartitions",
-                PartitionKey = partitionKey,
-                RowKeys = rowKeys
-            };
-
-            _transactionObjects.Add(transactionModel);
-
+            _transactionSerializer.DeleteRows(partitionKey, rowKeys);
             return this;
         }
         
         public TransactionsBuilder<T> InsertOrReplace(IEnumerable<T> entities)
         {
-            var transactionModel = new InsertOrUpdateRequestModel<T>
-            {
-                Type = "InsertOrUpdate",
-                Entities = entities
-            };
-
-            
-            _transactionObjects.Add(transactionModel);
-
+            _transactionSerializer.InsertOrReplace(entities);
             return this;
         }
 
-        public async ValueTask<TransactionsBuilder<T>> PostTransactionSteps()
+        public async ValueTask<TransactionsBuilder<T>> PostAsync()
         {
+
+            if (_transactionSerializer.Count == 0)
+                return this;
+            
+            var json = _transactionSerializer.Serialize();
+            
             await _getUrl()
                 .AppendPathSegments("Transaction", "NewSteps")
                 .WithTableNameAsQueryParam(_tableName)
                 .WithTransactionIdAsQueryParam(Id)
-                .PostJsonAsync(_transactionObjects);
-            
-            _transactionObjects.Clear();
+                .PostStringAsync(json);
 
             return this;
         }
@@ -92,9 +73,8 @@ namespace MyNoSqlServer.DataWriter.Builders
 
         public async ValueTask CommitAsync()
         {
-            if (_transactionObjects.Count > 0)
-                await PostTransactionSteps();
-            
+            await PostAsync();
+
             await _getUrl()
                 .AppendPathSegments("Transaction", "Commit")
                 .WithTransactionIdAsQueryParam(Id)
@@ -103,30 +83,7 @@ namespace MyNoSqlServer.DataWriter.Builders
     }
     
     
-    internal class CleanTableRequestModel
-    {
-        public string Type { get; set; }
-    }
-    
-    internal class CleanPartitionsRequestModel
-    {
-        public string Type { get; set; }
-        public string[] Partitions { get; set; }
-    }
-    
-    internal class DeleteRowsRequestModel
-    {
-        public string Type { get; set; }
-        public string PartitionKey { get; set; }
-        public string[] RowKeys { get; set; }
 
-    }
-    
-    internal class InsertOrUpdateRequestModel<T> where T:IMyNoSqlDbEntity, new()
-    {
-        public string Type { get; set; }
-        public IEnumerable<T> Entities { get; set; }
-    }
     
     
     

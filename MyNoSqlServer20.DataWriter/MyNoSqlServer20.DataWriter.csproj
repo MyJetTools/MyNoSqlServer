@@ -21,6 +21,9 @@
       <Compile Include="..\MyNoSqlServer.DataWriter\Builders\BulkDeleteBuilder.cs">
         <Link>Builders\BulkDeleteBuilder.cs</Link>
       </Compile>
+      <Compile Include="..\MyNoSqlServer.DataWriter\Builders\TransactionDataSerializer.cs">
+        <Link>Builders\TransactionDataSerializer.cs</Link>
+      </Compile>
       <Compile Include="..\MyNoSqlServer.DataWriter\Builders\TransactionsBuilder.cs">
         <Link>Builders\TransactionsBuilder.cs</Link>
       </Compile>

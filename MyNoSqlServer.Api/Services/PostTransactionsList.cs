@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Transactions;
 
 namespace MyNoSqlServer.Api.Services
 {
@@ -10,7 +11,7 @@ namespace MyNoSqlServer.Api.Services
 
     public class UpdateTransactionsSequence
     {
-        private readonly Dictionary<string, List<IUpdateTransaction>> _transactions =
+        private readonly Dictionary<string, List<IDbTransaction>> _transactions =
             new ();
 
         private readonly object _lockObject = new();
@@ -23,7 +24,7 @@ namespace MyNoSqlServer.Api.Services
         public string Id { get; }
 
 
-        public (string tableName, IReadOnlyList<IUpdateTransaction>) GetNextTransactionsToExecute()
+        public (string tableName, IReadOnlyList<IDbTransaction>) GetNextTransactionsToExecute()
         {
             lock (_lockObject)
             {
@@ -39,12 +40,12 @@ namespace MyNoSqlServer.Api.Services
 
         }
         
-        public void PostTransactions(string tableName, IEnumerable<IUpdateTransaction> transactions)
+        public void PostTransactions(string tableName, IEnumerable<IDbTransaction> transactions)
         {
             lock (_lockObject)
             {
                 if (!_transactions.ContainsKey(tableName))
-                    _transactions.Add(tableName, new List<IUpdateTransaction>());
+                    _transactions.Add(tableName, new List<IDbTransaction>());
 
                 var byTable = _transactions[tableName];
                 

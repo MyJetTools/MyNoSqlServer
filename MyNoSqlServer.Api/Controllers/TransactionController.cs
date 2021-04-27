@@ -1,9 +1,9 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
+using MyNoSqlServer.Domains.Transactions;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -39,7 +39,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var body = await Request.BodyAsIMemoryAsync();
 
-            var transactions = TransactionsDeserializer.GetTransactions(body);
+            var transactions = DbTransactionsJsonDeserializer.GetTransactions(body);
             
             transaction.PostTransactions(tableName, transactions);
 
