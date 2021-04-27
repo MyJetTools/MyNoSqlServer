@@ -12,20 +12,29 @@ namespace MyNoSqlServer.Api.Controllers
     {
 
         [HttpPost("/Transaction/Start")]
-        public StartTransactionResponse Start()
+        public IActionResult Start()
         {
+            var shutDown = this.CheckOnShuttingDown();
+            if (shutDown != null)
+                return shutDown;
 
             var transaction = ServiceLocator.PostTransactionsList.StartTransaction();
 
-            return new StartTransactionResponse
+            var result = new StartTransactionResponse
             {
                 TransactionId = transaction.Id
             };
+
+            return Json(result);
         }
 
         [HttpPost("/Transaction/Append")]
         public async ValueTask<IActionResult> Append([Required] string transactionId, [Required] string tableName)
         {
+            var shutDown = this.CheckOnShuttingDown();
+            if (shutDown != null)
+                return shutDown;
+
             var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
             if (table == null)
@@ -49,6 +58,11 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpPost("/Transaction/Commit")]
         public async Task<IActionResult> Commit([Required] string transactionId)
         {
+
+            var shutDown = this.CheckOnShuttingDown();
+            if (shutDown != null)
+                return shutDown;
+
             var transaction = ServiceLocator.PostTransactionsList.TryDelete(transactionId);
 
             var (tableName, transactions) = transaction.GetNextTransactionsToExecute();

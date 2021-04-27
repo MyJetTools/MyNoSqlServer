@@ -53,8 +53,8 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitReadLock();
             }
         }
-        
-        
+
+
         public IReadOnlyList<DbPartition> GetAllPartitions()
         {
             _readerWriterLockSlim.EnterReadLock();
@@ -140,6 +140,20 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         }
 
+        public int GetPartitionsCount()
+        {
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                return _partitions.Count;
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+
+            }
+        }
+
         public (DbPartition partition, DbRow dbRow) InsertOrReplace(DynamicEntity entity, DateTime now)
         {
 
@@ -183,12 +197,12 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 else
                 {
                     foreach (var partition in _partitions.Values)
-                    foreach (var dbRow in partition.GetAllRows())
-                    {
-                        result.Add(dbRow);
-                        if (result.Count >= limit.Value)
-                            return result;
-                    }
+                        foreach (var dbRow in partition.GetAllRows())
+                        {
+                            result.Add(dbRow);
+                            if (result.Count >= limit.Value)
+                                return result;
+                        }
                 }
             }
             finally
@@ -434,11 +448,11 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitWriteLock();
             }
         }
-        
+
         public IReadOnlyList<DbPartition> CleanPartitions(IEnumerable<string> partitions)
         {
             List<DbPartition> cleared = null;
-            
+
             _readerWriterLockSlim.EnterWriteLock();
 
             try
@@ -450,7 +464,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                         cleared ??= new List<DbPartition>();
                         cleared.Add(dbPartition);
                     }
-         
+
                 }
             }
             finally
@@ -458,7 +472,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitWriteLock();
             }
 
-            return (IReadOnlyList<DbPartition>) cleared ?? Array.Empty<DbPartition>();
+            return (IReadOnlyList<DbPartition>)cleared ?? Array.Empty<DbPartition>();
         }
 
 
@@ -475,8 +489,8 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 conditionsDict.Remove(RowJsonUtils.PartitionKeyFieldName);
 
             foreach (var partition in partitions)
-            foreach (var dbRow in partition.ApplyQuery(conditionsDict))
-                yield return dbRow;
+                foreach (var dbRow in partition.ApplyQuery(conditionsDict))
+                    yield return dbRow;
 
         }
 
@@ -783,7 +797,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             {
                 _readerWriterLockSlim.ExitWriteLock();
             }
-            
+
             return result;
         }
     }

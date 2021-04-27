@@ -23,7 +23,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("Tables/CreateIfNotExists")]
-        public IActionResult CreateIfNotExists([Required] [FromQuery] string tableName, [FromQuery]string persist)
+        public IActionResult CreateIfNotExists([Required][FromQuery] string tableName, [FromQuery] string persist)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -37,7 +37,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("Tables/Create")]
-        public IActionResult Create([Required] [FromQuery] string tableName, [FromQuery]string persist)
+        public IActionResult Create([Required][FromQuery] string tableName, [FromQuery] string persist)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -55,7 +55,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpDelete("Tables/Clean")]
-        public async ValueTask<IActionResult> Clean([Required] [FromQuery] string tableName, [FromQuery] string syncPeriod)
+        public async ValueTask<IActionResult> Clean([Required][FromQuery] string tableName, [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -65,7 +65,7 @@ namespace MyNoSqlServer.Api.Controllers
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
             var (getTableResult, table) = this.GetTable(tableName);
-            
+
             if (getTableResult != null)
                 return getTableResult;
 
@@ -78,7 +78,7 @@ namespace MyNoSqlServer.Api.Controllers
 
         }
         [HttpPost("Tables/UpdatePersist")]
-        public IActionResult UpdatePersist([Required] [FromQuery] string tableName,
+        public IActionResult UpdatePersist([Required][FromQuery] string tableName,
             [FromQuery] string persist)
         {
             var shutDown = this.CheckOnShuttingDown();
@@ -89,18 +89,34 @@ namespace MyNoSqlServer.Api.Controllers
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
             var (getTableResult, table) = this.GetTable(tableName);
-            
+
             if (getTableResult != null)
                 return getTableResult;
 
             var persistAsBool = persist != "0";
-            
+
             table.UpdatePersist(persistAsBool);
             ServiceLocator.SnapshotSaverScheduler.SynchronizeSetTablePersist(table, persistAsBool);
 
             return Ok();
-        } 
+        }
+
+
+        [HttpGet("Tables/PartitionsCount")]
+        public IActionResult PartitionsCount([Required][FromQuery] string tableName)
+        {
+
+            var (getTableResult, table) = this.GetTable(tableName);
+
+
+            if (string.IsNullOrEmpty(tableName))
+                return this.GetResult(OperationResult.TableNameIsEmpty);
+
+            var result = table.GetPartitionsCount();
+
+            return Content(result.ToString());
+        }
 
     }
-    
+
 }

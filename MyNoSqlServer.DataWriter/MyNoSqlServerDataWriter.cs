@@ -191,6 +191,7 @@ namespace MyNoSqlServer.DataWriter
             var response = await GetUrl()
                 .AppendPathSegments("Multipart", "Next")
                 .SetQueryParam("requestId", id)
+                .AllowNonOkCodes()
                 .GetAsync();
 
             if (response.StatusCode == 404)
