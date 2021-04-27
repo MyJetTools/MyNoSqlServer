@@ -17,7 +17,7 @@ jobs:
         run: |
           ver=${GITHUB_REF#refs/tags/server-}
           res=$(echo $ver | sed 's/-rc/./g')
-          res=$(echo $ver | sed 's/-RC/./g')
+          res=$(echo $res | sed 's/-RC/./g')
           echo $res
           dotnet build --configuration Release /p:AssemblyVersion=$res        
       - name: Test
