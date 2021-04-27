@@ -35,6 +35,8 @@ namespace MyNoSqlServer.Api.Services
 
                 var result = _transactions[nextTable];
 
+                _transactions.Remove(nextTable);
+
                 return (nextTable, result);
             }
 
