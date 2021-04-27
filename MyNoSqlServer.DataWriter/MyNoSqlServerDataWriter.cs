@@ -185,7 +185,7 @@ namespace MyNoSqlServer.DataWriter
                 .ReceiveJson<T[]>();
         }
 
-        #if NET50 || NETSTANDARD2_1
+        #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
         private async ValueTask<IReadOnlyList<T>> GetMultiPartDataAsync(string id)
         {
             var response = await GetUrl()

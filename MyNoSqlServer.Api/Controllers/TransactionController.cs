@@ -8,7 +8,7 @@ using MyNoSqlServer.Domains.Transactions;
 namespace MyNoSqlServer.Api.Controllers
 {
     [ApiController]
-    public class TransactionController: Controller
+    public class TransactionController : Controller
     {
 
         [HttpPost("/Transaction/Start")]
@@ -23,29 +23,29 @@ namespace MyNoSqlServer.Api.Controllers
             };
         }
 
-        [HttpPost("/Transaction/NewSteps")]
-        public async ValueTask<IActionResult> NewSteps([Required]string transactionId, [Required]string tableName)
+        [HttpPost("/Transaction/Append")]
+        public async ValueTask<IActionResult> Append([Required] string transactionId, [Required] string tableName)
         {
             var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-            
+
             if (table == null)
                 return this.GetResult(OperationResult.TableNotFound);
-            
+
             var transaction = ServiceLocator.PostTransactionsList.TryGet(transactionId);
 
             if (transaction == null)
                 return NotFound("Transaction not found with Id: " + transactionId);
-                
+
 
             var body = await Request.BodyAsIMemoryAsync();
 
             var transactions = DbTransactionsJsonDeserializer.GetTransactions(body);
-            
+
             transaction.PostTransactions(tableName, transactions);
 
             return this.ResponseOk();
         }
-        
+
         [HttpPost("/Transaction/Commit")]
         public async Task<IActionResult> Commit([Required] string transactionId)
         {
@@ -60,12 +60,12 @@ namespace MyNoSqlServer.Api.Controllers
 
                 if (table != null)
                     await ServiceLocator.DbOperations.ApplyTransactionsAsync(table, transactions);
-                
+
                 (tableName, transactions) = transaction.GetNextTransactionsToExecute();
             }
 
             return this.ResponseOk();
         }
-        
+
     }
 }

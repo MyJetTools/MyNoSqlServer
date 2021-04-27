@@ -23,7 +23,7 @@ namespace MyNoSqlServer.Abstractions
         
         ValueTask<IEnumerable<T>> GetAsync();
         
-        #if NET50 || NETSTANDARD2_1
+        #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
         IAsyncEnumerable<T> GetAllAsync();
         #endif
         
