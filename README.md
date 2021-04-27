@@ -55,8 +55,8 @@ MyNoSqlServerClient - has a nuget https://www.nuget.org/packages/MyNoSqlClient
 
 Server 1.0.54-RC
 
-Added ability to get all data Partition by partition
-Added ability to update data transactionally (only 100% executable operations are support):
+* Added ability to get all data Partition by partition
+* Added ability to update data transactionally (only 100% executable operations are support):
   * Clean table;
   * Clean Partitions;
   * Delete Rows;

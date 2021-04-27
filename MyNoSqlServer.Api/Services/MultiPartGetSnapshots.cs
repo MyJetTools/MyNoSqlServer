@@ -7,33 +7,37 @@ namespace MyNoSqlServer.Api.Services
     public class MultiPartGetItem
     {
 
-        private readonly Queue<string> _items = new ();
+        private readonly Queue<string> _items = new();
 
-        public MultiPartGetItem(string tableName, IEnumerable<string> initPartitions)
+        public MultiPartGetItem(string id, string tableName, IEnumerable<string> initPartitions)
         {
+            Id = id;
             TableName = tableName;
             foreach (var partition in initPartitions)
                 _items.Enqueue(partition);
         }
 
-        public DateTime Created { get; } = DateTime.UtcNow;
+        public DateTimeOffset Created { get; } = DateTime.UtcNow;
 
-        
+
         public string TableName { get; }
 
         public string GetNext()
         {
             return _items.Dequeue();
         }
+        
+        public string Id { get; }
 
 
         public int Count => _items.Count;
     }
-    
-    
+
+
     public class MultiPartGetSnapshots
     {
-        private readonly Dictionary<string, MultiPartGetItem> _partitionsToDeliver = new Dictionary<string, MultiPartGetItem>();
+        private readonly Dictionary<string, MultiPartGetItem> _partitionsToDeliver =
+            new Dictionary<string, MultiPartGetItem>();
 
         private readonly object _lockObject = new();
 
@@ -42,8 +46,8 @@ namespace MyNoSqlServer.Api.Services
             lock (_lockObject)
             {
                 var requestId = Guid.NewGuid().ToString("N");
-            
-                _partitionsToDeliver.Add(requestId, new MultiPartGetItem(tableName, partitions));
+
+                _partitionsToDeliver.Add(requestId, new MultiPartGetItem(requestId, tableName, partitions));
                 return requestId;
             }
         }
@@ -53,9 +57,9 @@ namespace MyNoSqlServer.Api.Services
         {
             lock (_lockObject)
             {
-                if (!_partitionsToDeliver.TryGetValue(requestId, out var multiPartGetItem)) 
+                if (!_partitionsToDeliver.TryGetValue(requestId, out var multiPartGetItem))
                     return (null, null);
-                
+
                 var nextPartitionKey = multiPartGetItem.GetNext();
 
                 if (_partitionsToDeliver.Count == 0)
@@ -64,5 +68,45 @@ namespace MyNoSqlServer.Api.Services
                 return (nextPartitionKey, multiPartGetItem.TableName);
             }
         }
+
+        public static TimeSpan GcTimeSpan = TimeSpan.FromMinutes(1);
+
+        private IReadOnlyList<MultiPartGetItem> FindItemsToGc()
+        {
+            List<MultiPartGetItem> result = null;
+
+            var now = DateTimeOffset.UtcNow;
+
+            foreach (var partitionToDeliver in _partitionsToDeliver.Values)
+            {
+                if (now - partitionToDeliver.Created > GcTimeSpan)
+                {
+                    result ??= new List<MultiPartGetItem>();
+                    
+                    result.Add(partitionToDeliver);
+                }
+
+            }
+
+            return result;
+        }
+
+
+
+        public void Gc()
+        {
+
+            lock (_lockObject)
+            {
+                var itemsToGc = FindItemsToGc();
+
+                if (itemsToGc == null)
+                    return;
+
+                foreach (var item in itemsToGc)
+                    _partitionsToDeliver.Remove(item.Id);
+            }
+        }
+
     }
 }

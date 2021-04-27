@@ -51,9 +51,12 @@ namespace MyNoSqlServer.Api.Services
                 
                 byTable.AddRange(transactions);
             }
+            
+            LastAccessTime = DateTimeOffset.UtcNow;
         }
 
-        
+        public DateTimeOffset LastAccessTime { get; private set; } = DateTimeOffset.UtcNow;
+
     }
     
     
@@ -104,6 +107,63 @@ namespace MyNoSqlServer.Api.Services
             {
                 _lock.ExitWriteLock();
             }
+        }
+
+
+        public static TimeSpan _gcTranactionTimeSpan = TimeSpan.FromMinutes(10);
+
+        public IReadOnlyList<UpdateTransactionsSequence> GetTransactionsToGc()
+        {
+            List<UpdateTransactionsSequence> result = null;
+
+            var now = DateTimeOffset.UtcNow;
+            
+            _lock.EnterReadLock();
+            try
+            {
+
+                foreach (var transaction in _transactions.Values)
+                {
+
+                    if (now - transaction.LastAccessTime > _gcTranactionTimeSpan)
+                    {
+                        result ??= new List<UpdateTransactionsSequence>();
+                        result.Add(transaction);
+                    } 
+                    
+                }
+
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+
+            return result;
+        }
+
+
+        public void GcTransactions()
+        {
+            var transactionsToGc = GetTransactionsToGc();
+
+            if (transactionsToGc == null)
+                return;
+
+            _lock.EnterWriteLock();
+            try
+            {
+                foreach (var transaction in transactionsToGc)
+                {
+                    if (_transactions.ContainsKey(transaction.Id))
+                        _transactions.Remove(transaction.Id);
+                }
+            }
+            finally
+            {
+                _lock.ExitWriteLock();
+            }
+
         }
 
     }

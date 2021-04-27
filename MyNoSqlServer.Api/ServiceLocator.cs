@@ -78,10 +78,7 @@ namespace MyNoSqlServer.Api
                 .SetService(()=>new ChangesTcpService())
                 .Logs.AddLogInfo((c, msg)=>
                 {
-                    if (c == null)
-                        Logger.WriteInfo("*:5125", msg);
-                    else
-                        Logger.WriteInfo($"*:5125. ConnectionId:{c.Id}", msg);
+                    Logger.WriteInfo(c == null ? "*:5125" : $"*:5125. ConnectionId:{c.Id}", msg);
                 })
                 .Logs.AddLogException((c, e)=>
                 {
@@ -93,6 +90,8 @@ namespace MyNoSqlServer.Api
 
 
         private static readonly TaskTimer TimerSaver = new TaskTimer(TimeSpan.FromSeconds(1));
+
+        private static readonly TaskTimer TimerOneMinute = new TaskTimer(TimeSpan.FromMinutes(1));
 
         public static readonly MultiPartGetSnapshots MultiPartGetSnapshots = new();
 
@@ -124,12 +123,26 @@ namespace MyNoSqlServer.Api
             
             _snapshotSaverEngine.LoadSnapshotsAsync().Wait();
 
+            TimerOneMinute.Register("GC transactions", () =>
+            {
+                PostTransactionsList.GcTransactions();
+                return new ValueTask();
+            });
+
+            TimerOneMinute.Register("GC Multipart Reads", () =>
+            {
+                MultiPartGetSnapshots.Gc();
+                return new ValueTask();
+            });
+
             TimerSaver.Register("Persist", ()=> _snapshotSaverEngine.IterateAsync(GlobalVariables.IsShuttingDown));
             TimerSaver.RegisterExceptionHandler((msg, e) =>
             {
                 Logger.WriteError(msg, e);
                 return new ValueTask();
             });
+            
+            TimerOneMinute.Start();
             
             TimerSaver.Start();
             TcpServer.Start();
