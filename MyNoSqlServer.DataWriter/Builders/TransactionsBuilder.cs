@@ -21,22 +21,22 @@ namespace MyNoSqlServer.DataWriter.Builders
             _tableName = tableName;
             Id = id;
         }
-        
+
         public TransactionsBuilder<T> CleanTable()
         {
             _transactionSerializer.CleanTable();
             return this;
         }
-        
+
         public TransactionsBuilder<T> DeletePartitions(string[] partitions)
         {
             _transactionSerializer.DeletePartitions(partitions);
             return this;
         }
-        
+
         public TransactionsBuilder<T> DeletePartition(string partition)
         {
-            _transactionSerializer.DeletePartitions(new[]{partition} );
+            _transactionSerializer.DeletePartitions(new[] { partition });
             return this;
         }
 
@@ -46,7 +46,14 @@ namespace MyNoSqlServer.DataWriter.Builders
             _transactionSerializer.DeleteRows(partitionKey, rowKeys);
             return this;
         }
-        
+
+
+        public TransactionsBuilder<T> InsertOrReplace(T entity)
+        {
+            _transactionSerializer.InsertOrReplace(new[] { entity });
+            return this;
+        }
+
         public TransactionsBuilder<T> InsertOrReplace(IEnumerable<T> entities)
         {
             _transactionSerializer.InsertOrReplace(entities);
@@ -58,11 +65,11 @@ namespace MyNoSqlServer.DataWriter.Builders
 
             if (_transactionSerializer.Count == 0)
                 return this;
-            
+
             var json = _transactionSerializer.Serialize();
-            
+
             await _getUrl()
-                .AppendPathSegments("Transaction", "NewSteps")
+                .AppendPathSegments("Transaction", "Append")
                 .WithTableNameAsQueryParam(_tableName)
                 .WithTransactionIdAsQueryParam(Id)
                 .PostStringAsync(json);
@@ -81,11 +88,11 @@ namespace MyNoSqlServer.DataWriter.Builders
                 .PostAsync();
         }
     }
-    
-    
 
-    
-    
-    
-    
+
+
+
+
+
+
 }

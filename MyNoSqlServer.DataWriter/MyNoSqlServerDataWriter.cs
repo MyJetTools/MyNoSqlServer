@@ -13,7 +13,7 @@ namespace MyNoSqlServer.DataWriter
     {
 
         private const string RowController = "Row";
-        
+
         internal readonly Func<string> GetUrl;
         private readonly bool _persist;
         private readonly DataSynchronizationPeriod _dataSynchronizationPeriod;
@@ -31,7 +31,7 @@ namespace MyNoSqlServer.DataWriter
 
         public async Task CreateTableIfNotExistsAsync()
         {
-            
+
             await GetUrl()
                 .AppendPathSegments("Tables", "CreateIfNotExists")
                 .WithTableNameAsQueryParam(TableName)
@@ -127,7 +127,7 @@ namespace MyNoSqlServer.DataWriter
         }
 
 
-        private async ValueTask<OperationResult> ExecuteUpdateHttpAsync(T entity, string method, 
+        private async ValueTask<OperationResult> ExecuteUpdateHttpAsync(T entity, string method,
             DataSynchronizationPeriod syncPeriod)
         {
             var response = await GetUrl()
@@ -141,8 +141,8 @@ namespace MyNoSqlServer.DataWriter
         }
 
 
-        private async ValueTask<OperationResult> ExecuteUpdateProcessAsync(string partitionKey, string rowKey, 
-            string method, Func<T, bool> updateCallback, 
+        private async ValueTask<OperationResult> ExecuteUpdateProcessAsync(string partitionKey, string rowKey,
+            string method, Func<T, bool> updateCallback,
             DataSynchronizationPeriod syncPeriod)
         {
             while (true)
@@ -170,7 +170,7 @@ namespace MyNoSqlServer.DataWriter
             return ExecuteUpdateProcessAsync(partitionKey, rowKey, "Replace", updateCallback, syncPeriod);
         }
 
-        public ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey, 
+        public ValueTask<OperationResult> MergeAsync(string partitionKey, string rowKey,
             Func<T, bool> updateCallback, DataSynchronizationPeriod syncPeriod = DataSynchronizationPeriod.Sec5)
         {
             return ExecuteUpdateProcessAsync(partitionKey, rowKey, "Merge", updateCallback, syncPeriod);
@@ -185,7 +185,7 @@ namespace MyNoSqlServer.DataWriter
                 .ReceiveJson<T[]>();
         }
 
-        #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
+#if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
         private async ValueTask<IReadOnlyList<T>> GetMultiPartDataAsync(string id, int maxRecordsCount)
         {
             var response = await GetUrl()
@@ -203,24 +203,24 @@ namespace MyNoSqlServer.DataWriter
         }
         public async IAsyncEnumerable<T> GetAllAsync(int bulkRecordsCount)
         {
-           var firstResponse =  await GetUrl()
-                .AppendPathSegments("Multipart", "First")
-                .WithTableNameAsQueryParam(TableName)
-                .GetAsync()
-                .ReceiveJson<StartReadingMultiPartContract>();
+            var firstResponse = await GetUrl()
+                 .AppendPathSegments("Multipart", "First")
+                 .WithTableNameAsQueryParam(TableName)
+                 .GetAsync()
+                 .ReceiveJson<StartReadingMultiPartContract>();
 
-           var response = await GetMultiPartDataAsync(firstResponse.SnapshotId, bulkRecordsCount);
+            var response = await GetMultiPartDataAsync(firstResponse.SnapshotId, bulkRecordsCount);
 
-           while (response != null)
-           {
+            while (response != null)
+            {
 
-               foreach (var itm in response)
-                   yield return itm;
-               
-               response = await GetMultiPartDataAsync(firstResponse.SnapshotId, bulkRecordsCount);
-           }
+                foreach (var itm in response)
+                    yield return itm;
+
+                response = await GetMultiPartDataAsync(firstResponse.SnapshotId, bulkRecordsCount);
+            }
         }
-        #endif
+#endif
 
         public async ValueTask<IEnumerable<T>> GetAsync(string partitionKey)
         {
@@ -262,9 +262,9 @@ namespace MyNoSqlServer.DataWriter
                 .AllowNonOkCodes()
                 .PostJsonAsync(rowKeys);
 
-            
+
             var statusCode = await response.GetOperationResultCodeAsync();
-            
+
             if (statusCode == OperationResult.RecordNotFound)
                 return EmptyResponse;
 
@@ -356,7 +356,7 @@ namespace MyNoSqlServer.DataWriter
         }
 
 
-        public async ValueTask<TransactionsBuilder<T>> StartTransactionAsync()
+        public async ValueTask<TransactionsBuilder<T>> BeginTransactionAsync()
         {
             var response = await GetUrl()
                 .AppendPathSegments("Transaction", "Start")
@@ -367,10 +367,10 @@ namespace MyNoSqlServer.DataWriter
 
             return new TransactionsBuilder<T>(GetUrl, TableName, jsonModel.TransactionId);
         }
-        
+
     }
 
 
 
-    
+
 }

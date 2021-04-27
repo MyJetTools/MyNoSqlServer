@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -70,6 +71,8 @@ namespace MyNoSqlServer.Api.Controllers
             while (tableName != null)
             {
 
+                Console.WriteLine("TableName: "+tableName);
+                
                 var table = ServiceLocator.DbInstance.TryGetTable(tableName);
 
                 if (table != null)
