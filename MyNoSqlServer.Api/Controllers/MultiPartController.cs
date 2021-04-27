@@ -31,7 +31,7 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("/Multipart/Next")]
         public IActionResult GetNext([Required] string requestId)
         {
-            var (partitionKey, tableName) = ServiceLocator.MultiPartGetSnapshots.GetNextPartitionId(requestId);
+            var (tableName, partitionKey) = ServiceLocator.MultiPartGetSnapshots.GetNextPartitionId(requestId);
 
             if (tableName == null)
                 return NotFound();

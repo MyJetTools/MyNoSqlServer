@@ -17,16 +17,16 @@ namespace MyNoSqlServer.Api.Services
                 _items.Enqueue(partition);
         }
 
-        public DateTimeOffset Created { get; } = DateTime.UtcNow;
-
+        public DateTimeOffset LastAccess { get; private set; } = DateTimeOffset.UtcNow;
 
         public string TableName { get; }
 
         public string GetNext()
         {
+            LastAccess = DateTimeOffset.UtcNow;
             return _items.Dequeue();
         }
-        
+
         public string Id { get; }
 
 
@@ -62,10 +62,10 @@ namespace MyNoSqlServer.Api.Services
 
                 var nextPartitionKey = multiPartGetItem.GetNext();
 
-                if (_partitionsToDeliver.Count == 0)
+                if (multiPartGetItem.Count == 0)
                     _partitionsToDeliver.Remove(requestId);
 
-                return (nextPartitionKey, multiPartGetItem.TableName);
+                return (multiPartGetItem.TableName, nextPartitionKey);
             }
         }
 
@@ -79,10 +79,10 @@ namespace MyNoSqlServer.Api.Services
 
             foreach (var partitionToDeliver in _partitionsToDeliver.Values)
             {
-                if (now - partitionToDeliver.Created > GcTimeSpan)
+                if (now - partitionToDeliver.LastAccess > GcTimeSpan)
                 {
                     result ??= new List<MultiPartGetItem>();
-                    
+
                     result.Add(partitionToDeliver);
                 }
 
