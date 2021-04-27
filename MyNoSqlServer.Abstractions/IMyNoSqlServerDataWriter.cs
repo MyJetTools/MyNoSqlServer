@@ -22,6 +22,11 @@ namespace MyNoSqlServer.Abstractions
         
         
         ValueTask<IEnumerable<T>> GetAsync();
+        
+        #if NET50 || NETSTANDARD2_1
+        IAsyncEnumerable<T> GetAllAsync();
+        #endif
+        
         ValueTask<IEnumerable<T>> GetAsync(string partitionKey);
         ValueTask<T> GetAsync(string partitionKey, string rowKey);
         

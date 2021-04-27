@@ -5,7 +5,6 @@ using Flurl;
 using Flurl.Http;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.DataWriter.Builders;
-using Newtonsoft.Json;
 
 namespace MyNoSqlServer.DataWriter
 {
@@ -186,6 +185,41 @@ namespace MyNoSqlServer.DataWriter
                 .ReceiveJson<T[]>();
         }
 
+        #if NET50 || NETSTANDARD2_1
+        private async ValueTask<IReadOnlyList<T>> GetMultiPartDataAsync(string id)
+        {
+            var response = await GetUrl()
+                .AppendPathSegments("Multipart", "Next")
+                .SetQueryParam("requestId", id)
+                .GetAsync();
+
+            if (response.StatusCode == 404)
+                return null;
+
+            return await response.GetJsonAsync<List<T>>();
+
+        }
+        public async IAsyncEnumerable<T> GetAllAsync()
+        {
+           var firstResponse =  await GetUrl()
+                .AppendPathSegments("Multipart", "First")
+                .WithTableNameAsQueryParam(TableName)
+                .GetAsync()
+                .ReceiveJson<StartReadingMultiPartContract>();
+
+           var response = await GetMultiPartDataAsync(firstResponse.SnapshotId);
+
+           while (response != null)
+           {
+               foreach (var itm in response)
+               {
+                   yield return itm;
+                   response = await GetMultiPartDataAsync(firstResponse.SnapshotId);
+               }
+           }
+        }
+        #endif
+
         public async ValueTask<IEnumerable<T>> GetAsync(string partitionKey)
         {
             return await GetUrl()
@@ -327,7 +361,7 @@ namespace MyNoSqlServer.DataWriter
                 .PostStringAsync("")
                 .ReceiveString();
 
-            var jsonModel = Newtonsoft.Json.JsonConvert.DeserializeObject<StartTransactionResponseModel>(response);
+            var jsonModel = Newtonsoft.Json.JsonConvert.DeserializeObject<StartTransactionResponseContract>(response);
 
             return new TransactionsBuilder<T>(GetUrl, TableName, jsonModel.TransactionId);
         }
@@ -335,10 +369,6 @@ namespace MyNoSqlServer.DataWriter
     }
 
 
-    internal class StartTransactionResponseModel
-    {
-        [JsonProperty("transactionId")]
-        public string TransactionId { get; set; }
-    }
+
     
 }

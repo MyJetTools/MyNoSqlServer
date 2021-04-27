@@ -91,10 +91,6 @@ namespace MyNoSqlServer.DataWriter.Tests
             Assert.AreEqual("PK2",  entitiesTransaction.Entities[1].PartitionKey);
             Assert.AreEqual("RK2",  entitiesTransaction.Entities[1].RowKey);
             Assert.IsTrue(entitiesTransaction.Entities[1].Raw.ContainsKey("MyField"));
-            
-
-
-
         }
     }
 }
