@@ -15,7 +15,7 @@ jobs:
           dotnet-version: 5.0.*
       - name: Build
         run: |
-          ver=${GITHUB_REF#refs/tags/Server-}
+          ver=${GITHUB_REF#refs/tags/server-}
           res=$(echo $ver | sed 's/-rc/./g')
           echo $res
           dotnet build --configuration Release /p:AssemblyVersion=$res        
