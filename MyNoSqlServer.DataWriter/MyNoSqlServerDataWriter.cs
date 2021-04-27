@@ -210,8 +210,11 @@ namespace MyNoSqlServer.DataWriter
 
            var response = await GetMultiPartDataAsync(firstResponse.SnapshotId);
 
+           var i = 0;
            while (response != null)
            {
+               Console.WriteLine(i);
+               i++;
                foreach (var itm in response)
                {
                    yield return itm;

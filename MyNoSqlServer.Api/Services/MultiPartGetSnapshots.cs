@@ -37,7 +37,7 @@ namespace MyNoSqlServer.Api.Services
     public class MultiPartGetSnapshots
     {
         private readonly Dictionary<string, MultiPartGetItem> _partitionsToDeliver =
-            new Dictionary<string, MultiPartGetItem>();
+            new ();
 
         private readonly object _lockObject = new();
 
@@ -61,6 +61,8 @@ namespace MyNoSqlServer.Api.Services
                     return (null, null);
 
                 var nextPartitionKey = multiPartGetItem.GetNext();
+                
+                Console.WriteLine("Amount: "+multiPartGetItem.Count);
 
                 if (multiPartGetItem.Count == 0)
                     _partitionsToDeliver.Remove(requestId);
