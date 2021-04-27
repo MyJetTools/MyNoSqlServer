@@ -51,6 +51,9 @@ namespace MyNoSqlServer.Abstractions
 
         public static DataSynchronizationPeriod ParseDataSynchronizationPeriod(this string src, DataSynchronizationPeriod @default)
         {
+            if (string.IsNullOrEmpty(src))
+                return @default;
+
             return PeriodAsEnum.ContainsKey(src) ? PeriodAsEnum[src] : @default;
             
         }
