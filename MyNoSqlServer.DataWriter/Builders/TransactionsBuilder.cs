@@ -7,10 +7,16 @@ using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataWriter.Builders
 {
-    public class TransactionsBuilder<T> where T : IMyNoSqlDbEntity, new()
+#if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
+    public class TransactionsBuilder<T> : IAsyncDisposable where T : IMyNoSqlDbEntity, new()
+    #else
+        public class TransactionsBuilder<T> : IDisposable where T : IMyNoSqlDbEntity, new()
+#endif
     {
         private readonly Func<string> _getUrl;
         private readonly string _tableName;
+
+        private bool _commited = false;
         private string Id { get; }
 
         private readonly TransactionDataSerializer<T> _transactionSerializer = new TransactionDataSerializer<T>();
@@ -86,11 +92,41 @@ namespace MyNoSqlServer.DataWriter.Builders
                 .AppendPathSegments("Transaction", "Commit")
                 .WithTransactionIdAsQueryParam(Id)
                 .PostAsync();
+
+            _commited = true;
         }
+
+#if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
+        public ValueTask DisposeAsync()
+        {
+            if (_commited)
+                return new ValueTask();
+            
+            var task = _getUrl()
+                .AppendPathSegments("Transaction", "Cancel")
+                .WithTransactionIdAsQueryParam(Id)
+                .PostAsync();
+
+            return new ValueTask(task);
+        }
+
+#else
+        public void Dispose()
+        {
+            if (_commited)
+                return;
+            
+            _getUrl()
+                .AppendPathSegments("Transaction", "Cancel")
+                .WithTransactionIdAsQueryParam(Id)
+                .PostAsync();
+
+        }
+
+#endif
+
+
     }
-
-
-
 
 
 

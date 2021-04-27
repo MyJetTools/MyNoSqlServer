@@ -84,5 +84,12 @@ namespace MyNoSqlServer.Api.Controllers
             return this.ResponseOk();
         }
 
+        [HttpPost("/Transaction/Cancel")]
+        public IActionResult Cancel([Required] string transactionId)
+        {
+            ServiceLocator.PostTransactionsList.TryDelete(transactionId);
+            return this.ResponseOk();
+        }
+
     }
 }
