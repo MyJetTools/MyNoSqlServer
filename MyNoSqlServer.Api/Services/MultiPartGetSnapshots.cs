@@ -37,7 +37,7 @@ namespace MyNoSqlServer.Api.Services
 
     public class MultiPartGetSnapshots
     {
-        private readonly Dictionary<string, MultiPartGetItem> _partitionsToDeliver =
+        private readonly Dictionary<string, MultiPartGetItem> _rowsToDeliver =
             new ();
 
         private readonly object _lockObject = new();
@@ -48,7 +48,7 @@ namespace MyNoSqlServer.Api.Services
             {
                 var requestId = Guid.NewGuid().ToString("N");
 
-                _partitionsToDeliver.Add(requestId, new MultiPartGetItem(requestId, tableName, records));
+                _rowsToDeliver.Add(requestId, new MultiPartGetItem(requestId, tableName, records));
                 return requestId;
             }
         }
@@ -59,22 +59,32 @@ namespace MyNoSqlServer.Api.Services
             List<DbRow> result = null;
             lock (_lockObject)
             {
-                if (!_partitionsToDeliver.TryGetValue(requestId, out var multiPartGetItem))
+
+                if (!_rowsToDeliver.TryGetValue(requestId, out var multiPartGetItem))
                     return Array.Empty<DbRow>();
-
-                var dbRow = multiPartGetItem.GetNext();
-
-                while (dbRow != null)
+                
+                try
                 {
+                    var dbRow = multiPartGetItem.GetNext();
 
-                    result ??= new List<DbRow>();
-                    result.Add(dbRow);
+                    while (dbRow != null)
+                    {
+
+                        result ??= new List<DbRow>();
+                        result.Add(dbRow);
                     
-                    if (result.Count >= maxAmount)
-                        break;
+                        if (result.Count >= maxAmount)
+                            break;
                     
-                    dbRow = multiPartGetItem.GetNext();
+                        dbRow = multiPartGetItem.GetNext();
+                    }
                 }
+                finally
+                {
+                    if (multiPartGetItem.Count == 0)
+                        _rowsToDeliver.Remove(multiPartGetItem.Id);
+                }
+
             }
             return result;
         }
@@ -87,7 +97,7 @@ namespace MyNoSqlServer.Api.Services
 
             var now = DateTimeOffset.UtcNow;
 
-            foreach (var partitionToDeliver in _partitionsToDeliver.Values)
+            foreach (var partitionToDeliver in _rowsToDeliver.Values)
             {
                 if (now - partitionToDeliver.LastAccess > GcTimeSpan)
                 {
@@ -114,7 +124,7 @@ namespace MyNoSqlServer.Api.Services
                     return;
 
                 foreach (var item in itemsToGc)
-                    _partitionsToDeliver.Remove(item.Id);
+                    _rowsToDeliver.Remove(item.Id);
             }
         }
 

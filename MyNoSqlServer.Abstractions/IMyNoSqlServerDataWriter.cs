@@ -24,7 +24,7 @@ namespace MyNoSqlServer.Abstractions
         ValueTask<IEnumerable<T>> GetAsync();
         
         #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
-        IAsyncEnumerable<T> GetAllAsync();
+        IAsyncEnumerable<T> GetAllAsync(int bulkRecordsCount);
         #endif
         
         ValueTask<IEnumerable<T>> GetAsync(string partitionKey);

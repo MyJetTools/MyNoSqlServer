@@ -186,11 +186,12 @@ namespace MyNoSqlServer.DataWriter
         }
 
         #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
-        private async ValueTask<IReadOnlyList<T>> GetMultiPartDataAsync(string id)
+        private async ValueTask<IReadOnlyList<T>> GetMultiPartDataAsync(string id, int maxRecordsCount)
         {
             var response = await GetUrl()
                 .AppendPathSegments("Multipart", "Next")
                 .SetQueryParam("requestId", id)
+                .SetQueryParam("maxRecordsCount", maxRecordsCount)
                 .AllowNonOkCodes()
                 .GetAsync();
 
@@ -200,7 +201,7 @@ namespace MyNoSqlServer.DataWriter
             return await response.GetJsonAsync<List<T>>();
 
         }
-        public async IAsyncEnumerable<T> GetAllAsync()
+        public async IAsyncEnumerable<T> GetAllAsync(int bulkRecordsCount)
         {
            var firstResponse =  await GetUrl()
                 .AppendPathSegments("Multipart", "First")
@@ -208,7 +209,7 @@ namespace MyNoSqlServer.DataWriter
                 .GetAsync()
                 .ReceiveJson<StartReadingMultiPartContract>();
 
-           var response = await GetMultiPartDataAsync(firstResponse.SnapshotId);
+           var response = await GetMultiPartDataAsync(firstResponse.SnapshotId, bulkRecordsCount);
 
            while (response != null)
            {
@@ -216,7 +217,7 @@ namespace MyNoSqlServer.DataWriter
                foreach (var itm in response)
                    yield return itm;
                
-               response = await GetMultiPartDataAsync(firstResponse.SnapshotId);
+               response = await GetMultiPartDataAsync(firstResponse.SnapshotId, bulkRecordsCount);
            }
         }
         #endif
