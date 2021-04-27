@@ -51,3 +51,15 @@ MyNoSqlServerClient - has a nuget https://www.nuget.org/packages/MyNoSqlClient
 **Docker**:
 * ![myjettools/my-nosql-server](https://img.shields.io/docker/v/myjettools/my-nosql-server-dev?label=myjettools%2Fmy-nosql-server-dev&style=flat-square)
 
+# RELEASE NOTES
+
+Server 1.0.54-RC
+
+Added ability to get all data Partition by partition
+Added ability to update data transactionally (only 100% executable operations are support):
+  * Clean table;
+  * Clean Partitions;
+  * Delete Rows;
+  * InsertOrReplace partitions;
+
+
