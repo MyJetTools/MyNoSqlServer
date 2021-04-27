@@ -5,11 +5,15 @@ using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains;
 
 namespace MyNoSqlServer.AzureStorage
 {
     public static class AzureStorageBlobDecorators
     {
+        
+        
+        private static MyNoSqlLogger Logger { get; set; }
         
         private static readonly BlobRequestOptions RequestOptions=
             new BlobRequestOptions
@@ -106,7 +110,7 @@ namespace MyNoSqlServer.AzureStorage
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Can not delete blob: {blob.Name}. Reason:{e.Message}");
+                Logger?.WriteError($"Can not delete blob: {blob.Name}. Reason:{e.Message}", e);
             }
         }
         
@@ -131,7 +135,7 @@ namespace MyNoSqlServer.AzureStorage
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Can not clean container: {container.Name}. Reason:{e.Message}");
+                Logger?.WriteError($"Can not clean container: {container.Name}. Reason:{e.Message}", e);
             }
         }
 

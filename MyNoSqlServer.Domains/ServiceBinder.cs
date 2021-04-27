@@ -20,6 +20,8 @@ namespace MyNoSqlServer.Domains
             services.AddSingleton<GlobalVariables>();
             
             services.AddSingleton<DbOperations>();
+
+            services.AddSingleton<MyNoSqlLogger>();
         }
     }
 }

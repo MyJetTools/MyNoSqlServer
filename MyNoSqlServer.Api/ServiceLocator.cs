@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using DotNetCoreDecorators;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Api.Services;
@@ -75,19 +76,19 @@ namespace MyNoSqlServer.Api
             new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
                 .RegisterSerializer(()=> new MyNoSqlTcpSerializer())
                 .SetService(()=>new ChangesTcpService())
-                .Logs.AddLogInfo((c, d)=>
+                .Logs.AddLogInfo((c, msg)=>
                 {
                     if (c == null)
-                        Console.WriteLine($"DateTime: {DateTime.UtcNow}. "+d);
+                        Logger.WriteInfo("*:5125", msg);
                     else
-                        Console.WriteLine($"DateTime: {DateTime.UtcNow}. ConnectionId:{c.Id}. "+d);
+                        Logger.WriteInfo($"*:5125. ConnectionId:{c.Id}", msg);
                 })
-                .Logs.AddLogException((c, d)=>
+                .Logs.AddLogException((c, e)=>
                 {
                     if (c == null)
-                        Console.WriteLine($"DateTime: {DateTime.UtcNow}. "+d);
+                        Logger.WriteError("*:5125", e);
                     else
-                        Console.WriteLine($"DateTime: {DateTime.UtcNow}. ConnectionId:{c.Id}. "+d);
+                        Console.WriteLine($"*:5125. ConnectionId:{c.Id}", e);
                 });
 
 
@@ -96,6 +97,8 @@ namespace MyNoSqlServer.Api
         public static readonly MultiPartGetSnapshots MultiPartGetSnapshots = new();
 
         public static readonly PostTransactionsList PostTransactionsList = new();
+        
+        public static MyNoSqlLogger Logger { get; private set; }
 
         public static void Init(ServiceProvider sr)
         {
@@ -112,6 +115,8 @@ namespace MyNoSqlServer.Api
 
             SnapshotSaverScheduler = sr.GetRequiredService<ISnapshotSaverScheduler>();
 
+            Logger = sr.GetRequiredService<MyNoSqlLogger>();
+
         }
 
         public static void Start()
@@ -120,6 +125,12 @@ namespace MyNoSqlServer.Api
             _snapshotSaverEngine.LoadSnapshotsAsync().Wait();
 
             TimerSaver.Register("Persist", ()=> _snapshotSaverEngine.IterateAsync(GlobalVariables.IsShuttingDown));
+            TimerSaver.RegisterExceptionHandler((msg, e) =>
+            {
+                Logger.WriteError(msg, e);
+                return new ValueTask();
+            });
+            
             TimerSaver.Start();
             TcpServer.Start();
         }

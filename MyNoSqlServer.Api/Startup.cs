@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MyNoSqlServer.Api.Hubs;
+using MyNoSqlServer.Api.Middlewares;
 using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
@@ -76,13 +77,14 @@ namespace MyNoSqlServer.Api
             });
 
             //  app.UseForwardedHeaders();
-
             
             app.UseStaticFiles();
+            
 
             app.UseOpenApi();
             app.UseSwaggerUi3();
 
+            app.UseErrorMiddleware();
             app.UseRouting();
 
             app.UseEndpoints(endpoints =>

@@ -14,9 +14,6 @@ namespace MyNoSqlServer.Domains.Transactions
             foreach (var transactionItem in memory.SplitJsonArrayToObjects())
             {
                 var json = Encoding.UTF8.GetString(transactionItem.Span);
-                Console.WriteLine("");
-                Console.WriteLine("TransactionData: "+json);
-                Console.WriteLine("");
                 
                 var baseTransaction = JsonSerializer.Deserialize<BaseTransaction>(json);
 
@@ -46,7 +43,6 @@ namespace MyNoSqlServer.Domains.Transactions
                     
                     foreach (var entity in mem.SplitJsonArrayToObjects())
                     {
-                        Console.WriteLine("Entity: "+Encoding.UTF8.GetString(entity.Span));
                         result.Entities.Add(entity.ParseDynamicEntity());
                     }
 

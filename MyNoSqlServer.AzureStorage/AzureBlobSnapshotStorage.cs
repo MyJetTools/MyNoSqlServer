@@ -25,6 +25,7 @@ namespace MyNoSqlServer.AzureStorage
             if (container == null)
             {
                 Console.WriteLine($"{DateTime.UtcNow:s} Skipped synchronizing snapshot: {partitionSnapshot}");
+                
                 return;
             }
 
