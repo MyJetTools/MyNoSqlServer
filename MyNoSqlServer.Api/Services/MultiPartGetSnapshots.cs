@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MyNoSqlServer.Domains.Db.Rows;
 
 namespace MyNoSqlServer.Api.Services
 {
@@ -7,24 +8,24 @@ namespace MyNoSqlServer.Api.Services
     public class MultiPartGetItem
     {
 
-        private readonly Queue<string> _items = new();
+        private readonly Queue<DbRow> _items = new();
 
-        public MultiPartGetItem(string id, string tableName, IEnumerable<string> initPartitions)
+        public MultiPartGetItem(string id, string tableName, IEnumerable<DbRow> records)
         {
             Id = id;
             TableName = tableName;
-            foreach (var partition in initPartitions)
-                _items.Enqueue(partition);
+            foreach (var dbRow in records)
+                _items.Enqueue(dbRow);
         }
 
         public DateTimeOffset LastAccess { get; private set; } = DateTimeOffset.UtcNow;
 
         public string TableName { get; }
 
-        public string GetNext()
+        public DbRow GetNext()
         {
             LastAccess = DateTimeOffset.UtcNow;
-            return _items.Dequeue();
+            return _items.Count == 0 ? null : _items.Dequeue();
         }
 
         public string Id { get; }
@@ -41,34 +42,41 @@ namespace MyNoSqlServer.Api.Services
 
         private readonly object _lockObject = new();
 
-        public string Init(string tableName, IEnumerable<string> partitions)
+        public string Init(string tableName, IEnumerable<DbRow> records)
         {
             lock (_lockObject)
             {
                 var requestId = Guid.NewGuid().ToString("N");
 
-                _partitionsToDeliver.Add(requestId, new MultiPartGetItem(requestId, tableName, partitions));
+                _partitionsToDeliver.Add(requestId, new MultiPartGetItem(requestId, tableName, records));
                 return requestId;
             }
         }
 
 
-        public (string tableName, string partitionKey) GetNextPartitionId(string requestId)
+        public IReadOnlyList<DbRow> GetNextPartitionId(string requestId, int maxAmount)
         {
+            List<DbRow> result = null;
             lock (_lockObject)
             {
                 if (!_partitionsToDeliver.TryGetValue(requestId, out var multiPartGetItem))
-                    return (null, null);
+                    return Array.Empty<DbRow>();
 
-                var nextPartitionKey = multiPartGetItem.GetNext();
-                
-                Console.WriteLine("Amount: "+multiPartGetItem.Count);
+                var dbRow = multiPartGetItem.GetNext();
 
-                if (multiPartGetItem.Count == 0)
-                    _partitionsToDeliver.Remove(requestId);
+                while (dbRow != null)
+                {
 
-                return (multiPartGetItem.TableName, nextPartitionKey);
+                    result ??= new List<DbRow>();
+                    result.Add(dbRow);
+                    
+                    if (result.Count >= maxAmount)
+                        break;
+                    
+                    dbRow = multiPartGetItem.GetNext();
+                }
             }
+            return result;
         }
 
         public static TimeSpan GcTimeSpan = TimeSpan.FromMinutes(1);

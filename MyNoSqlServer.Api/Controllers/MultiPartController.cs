@@ -20,11 +20,9 @@ namespace MyNoSqlServer.Api.Controllers
             if (errorResult != null)
                 return errorResult;
 
-            var partitions = table.GetAllPartitionNames();
+            var records = table.GetAllRecords(null);
 
-            var requestId = ServiceLocator.MultiPartGetSnapshots.Init(tableName, partitions);
-
-            ServiceLocator.Logger.WriteInfo("New Transaction Start. Id:" + requestId, "Count: " + partitions.Count);
+            var requestId = ServiceLocator.MultiPartGetSnapshots.Init(tableName, records);
 
             var result = new MultiPartFirstRequestModel
             {
@@ -35,24 +33,18 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpGet("/Multipart/Next")]
-        public IActionResult GetNext([Required] string requestId)
+        public IActionResult GetNext([Required] string requestId, [Required] int maxRecordsCount)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
                 return shutDown;
 
-            var (tableName, partitionKey) = ServiceLocator.MultiPartGetSnapshots.GetNextPartitionId(requestId);
+            var dbRows = ServiceLocator.MultiPartGetSnapshots.GetNextPartitionId(requestId, maxRecordsCount);
 
-            if (tableName == null)
+            if (dbRows.Count == 0)
                 return NotFound();
 
-            var (errorResult, table) = this.GetTable(tableName);
-
-            if (errorResult != null)
-                return errorResult;
-
-            var entities = table.GetRecords(partitionKey, null, null);
-            return this.ToDbRowsResult(entities);
+            return this.ToDbRowsResult(dbRows);
         }
     }
 }
