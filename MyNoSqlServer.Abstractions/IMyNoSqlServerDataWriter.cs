@@ -42,6 +42,8 @@ namespace MyNoSqlServer.Abstractions
         ValueTask CleanAndKeepMaxRecords(string partitionKey, int maxAmount);
 
         ValueTask<int> GetCountAsync(string partitionKey);
+
+        ValueTask<ITransactionsBuilder<T>> BeginTransactionAsync();
     }
 
 

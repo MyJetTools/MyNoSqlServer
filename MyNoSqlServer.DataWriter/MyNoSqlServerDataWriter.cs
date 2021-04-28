@@ -356,7 +356,7 @@ namespace MyNoSqlServer.DataWriter
         }
 
 
-        public async ValueTask<TransactionsBuilder<T>> BeginTransactionAsync()
+        public async ValueTask<ITransactionsBuilder<T>> BeginTransactionAsync()
         {
             var response = await GetUrl()
                 .AppendPathSegments("Transaction", "Start")

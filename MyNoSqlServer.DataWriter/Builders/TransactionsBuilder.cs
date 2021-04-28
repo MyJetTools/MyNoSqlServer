@@ -7,11 +7,8 @@ using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.DataWriter.Builders
 {
-#if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
-    public class TransactionsBuilder<T> : IAsyncDisposable where T : IMyNoSqlDbEntity, new()
-    #else
-        public class TransactionsBuilder<T> : IDisposable where T : IMyNoSqlDbEntity, new()
-#endif
+    public class TransactionsBuilder<T> : ITransactionsBuilder<T> where T : IMyNoSqlDbEntity, new()
+
     {
         private readonly Func<string> _getUrl;
         private readonly string _tableName;
@@ -28,45 +25,45 @@ namespace MyNoSqlServer.DataWriter.Builders
             Id = id;
         }
 
-        public TransactionsBuilder<T> CleanTable()
+        public ITransactionsBuilder<T> CleanTable()
         {
             _transactionSerializer.CleanTable();
             return this;
         }
 
-        public TransactionsBuilder<T> DeletePartitions(string[] partitions)
+        public ITransactionsBuilder<T> DeletePartitions(string[] partitions)
         {
             _transactionSerializer.DeletePartitions(partitions);
             return this;
         }
 
-        public TransactionsBuilder<T> DeletePartition(string partition)
+        public ITransactionsBuilder<T> DeletePartition(string partition)
         {
             _transactionSerializer.DeletePartitions(new[] { partition });
             return this;
         }
 
 
-        public TransactionsBuilder<T> DeleteRows(string partitionKey, string[] rowKeys)
+        public ITransactionsBuilder<T> DeleteRows(string partitionKey, string[] rowKeys)
         {
             _transactionSerializer.DeleteRows(partitionKey, rowKeys);
             return this;
         }
 
 
-        public TransactionsBuilder<T> InsertOrReplace(T entity)
+        public ITransactionsBuilder<T> InsertOrReplace(T entity)
         {
             _transactionSerializer.InsertOrReplace(new[] { entity });
             return this;
         }
 
-        public TransactionsBuilder<T> InsertOrReplace(IEnumerable<T> entities)
+        public ITransactionsBuilder<T> InsertOrReplace(IEnumerable<T> entities)
         {
             _transactionSerializer.InsertOrReplace(entities);
             return this;
         }
 
-        public async ValueTask<TransactionsBuilder<T>> PostAsync()
+        public async ValueTask<ITransactionsBuilder<T>> PostAsync()
         {
 
             if (_transactionSerializer.Count == 0)
