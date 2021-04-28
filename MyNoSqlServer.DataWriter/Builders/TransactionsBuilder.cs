@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
@@ -12,6 +13,8 @@ namespace MyNoSqlServer.DataWriter.Builders
 #if NET5_0
         private static readonly System.Diagnostics.ActivitySource _source = new("MyNoSql.TransactionsBuilder");
 #endif
+
+        private static HttpClient _httpClient = new();
 
         private readonly Func<string> _getUrl;
         private readonly string _tableName;
@@ -72,16 +75,12 @@ namespace MyNoSqlServer.DataWriter.Builders
             if (_transactionSerializer.Count == 0)
                 return this;
 
-#if NET5_0
-            using var act = _source.StartActivity("PostAsync.Serialize");
-#endif
-
-            var json = _transactionSerializer.Serialize();
+            var json = SerializeTransaction();
 
 #if NET5_0
             using var actPost = _source.StartActivity("PostAsync.ExecuteHttpCall");
 #endif
-
+            
             await _getUrl()
                 .AppendPathSegments("Transaction", "Append")
                 .WithTableNameAsQueryParam(_tableName)
@@ -89,6 +88,16 @@ namespace MyNoSqlServer.DataWriter.Builders
                 .PostStringAsync(json);
 
             return this;
+        }
+
+        private string SerializeTransaction()
+        {
+#if NET5_0
+            using var act = _source.StartActivity("PostAsync.Serialize");
+#endif
+
+            var json = _transactionSerializer.Serialize();
+            return json;
         }
 
 
