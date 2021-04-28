@@ -8,8 +8,11 @@ using MyNoSqlServer.Abstractions;
 namespace MyNoSqlServer.DataWriter.Builders
 {
     public class TransactionsBuilder<T> : ITransactionsBuilder<T> where T : IMyNoSqlDbEntity, new()
-
     {
+#if NET5_0
+        private static readonly System.Diagnostics.ActivitySource _source = new("MyNoSql.TransactionsBuilder");
+#endif
+
         private readonly Func<string> _getUrl;
         private readonly string _tableName;
 
@@ -69,7 +72,15 @@ namespace MyNoSqlServer.DataWriter.Builders
             if (_transactionSerializer.Count == 0)
                 return this;
 
+#if NET5_0
+            using var act = _source.StartActivity("PostAsync.Serialize");
+#endif
+
             var json = _transactionSerializer.Serialize();
+
+#if NET5_0
+            using var actPost = _source.StartActivity("PostAsync.ExecuteHttpCall");
+#endif
 
             await _getUrl()
                 .AppendPathSegments("Transaction", "Append")
@@ -83,7 +94,15 @@ namespace MyNoSqlServer.DataWriter.Builders
 
         public async ValueTask CommitAsync()
         {
+#if NET5_0
+            using var act = _source.StartActivity("CommitAsync");
+#endif
+
             await PostAsync();
+
+#if NET5_0
+            using var actCommit = _source.StartActivity("CommitAsync.ExecuteHttpCall");
+#endif
 
             await _getUrl()
                 .AppendPathSegments("Transaction", "Commit")
