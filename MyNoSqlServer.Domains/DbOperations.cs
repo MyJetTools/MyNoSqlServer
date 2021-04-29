@@ -8,7 +8,6 @@ using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Persistence;
-using MyNoSqlServer.Domains.Transactions;
 
 namespace MyNoSqlServer.Domains
 {
@@ -74,20 +73,25 @@ namespace MyNoSqlServer.Domains
         }
 
 
-        public async ValueTask ApplyTransactionsAsync(DbTable table, IEnumerable<IDbTransaction> transactions)
+        public async ValueTask ApplyTransactionsAsync(IReadOnlyDictionary<string, DbTable> tables, IEnumerable<IDbTransactionAction> transactions)
         {
             foreach (var transaction in transactions)
             {
+                DbTable table;
                 switch (transaction)
                 {
-                    case ICleanTableTransaction:
-                        table.Clean();
-                        await _persistenceHandler.SynchronizeTableAsync(table, DataSynchronizationPeriod.Sec5); 
-                        _dataSynchronizer.PublishInitTable(table);
-                        break;
-                    case ICleanPartitionsTransaction cleanPartitionsTransaction:
+                    case ICleanTableTransactionAction cleanTableTransaction:
+                            table = tables[cleanTableTransaction.TableName];
+                            table.Clean();
+                            await _persistenceHandler.SynchronizeTableAsync(table, DataSynchronizationPeriod.Sec5); 
+                            _dataSynchronizer.PublishInitTable(table);
+                            break;
+                    case IDeletePartitionsTransactionAction cleanPartitionsTransaction:
                     {
-                        var cleaned = table.CleanPartitions(cleanPartitionsTransaction.Partitions);
+                        
+                        table = tables[cleanPartitionsTransaction.TableName];
+                        
+                        var cleaned = table.CleanPartitions(cleanPartitionsTransaction.PartitionKeys);
 
                         foreach (var dbPartition in cleaned)
                         {
@@ -97,17 +101,19 @@ namespace MyNoSqlServer.Domains
 
                         break;
                     }
-                    case IDeleteRowsTransaction deleteRows:
+                    case IDeleteRowsTransactionAction deleteRows:
+                        table = tables[deleteRows.TableName];
                         table.DeleteRows(deleteRows.PartitionKey, deleteRows.RowKeys);
                         await _persistenceHandler.SynchronizePartitionAsync(table, deleteRows.PartitionKey,  DataSynchronizationPeriod.Sec5);
                         break;
 
-                    case IInsertOrReplaceEntitiesTransaction insertOrUpdate:
+                    case IInsertOrReplaceEntitiesTransactionAction insertOrUpdate:
                     {
+                        table = tables[insertOrUpdate.TableName];
                         var updateRows = new Dictionary<string, List<DbRow>>();
                         foreach (var entity in insertOrUpdate.Entities)
                         {
-                            var (dbPartition, dbRow) = table.InsertOrReplace(entity, DateTime.UtcNow);
+                            var (dbPartition, dbRow) = table.InsertOrReplace(entity.ParseDynamicEntity(), DateTime.UtcNow);
                             
                             if (!updateRows.ContainsKey(dbPartition.PartitionKey))
                                 updateRows.Add(dbPartition.PartitionKey, new List<DbRow>());

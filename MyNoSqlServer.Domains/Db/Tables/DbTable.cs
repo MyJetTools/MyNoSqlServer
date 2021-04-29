@@ -183,34 +183,27 @@ namespace MyNoSqlServer.Domains.Db.Tables
         }
 
 
-        public IReadOnlyList<DbRow> GetAllRecords(int? limit)
+        public IReadOnlyList<DbRow> GetAllRecords(int? limit, int? skip)
         {
-            var result = new List<DbRow>();
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                if (limit == null)
-                {
-                    foreach (var partition in _partitions.Values)
-                        result.AddRange(partition.GetAllRows());
-                }
-                else
-                {
-                    foreach (var partition in _partitions.Values)
-                        foreach (var dbRow in partition.GetAllRows())
-                        {
-                            result.Add(dbRow);
-                            if (result.Count >= limit.Value)
-                                return result;
-                        }
-                }
+
+                var records = _partitions.Values.SelectMany(partition => partition.GetAllRows());
+
+                if (skip != null)
+                    records = records.Skip(skip.Value);
+
+                if (limit != null)
+                    records = records.Take(limit.Value);
+
+                return records.ToList();
+
             }
             finally
             {
                 _readerWriterLockSlim.ExitReadLock();
             }
-
-            return result;
         }
 
         public IReadOnlyList<DbRow> GetRecords(string partitionKey, int? limit, int? skip)
@@ -233,6 +226,39 @@ namespace MyNoSqlServer.Domains.Db.Tables
             {
                 _readerWriterLockSlim.ExitReadLock();
             }
+        }
+        
+        public IReadOnlyList<DbRow> GetRecordsByRowKey(string rowKey, int? limit, int? skip)
+        {
+            List<DbRow> result = null;
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+
+                var recordsByRowKey = _partitions.Values.Select(dbPartition => dbPartition.TryGetRow(rowKey))
+                    .Where(dbRow => dbRow != null);
+
+                if (skip != null)
+                    recordsByRowKey = recordsByRowKey.Skip(skip.Value);
+
+                foreach (var dbRow in recordsByRowKey)
+                {
+                    result ??= new List<DbRow>();
+                    result.Add(dbRow);
+                    
+                    if (limit != null)
+                    {
+                        if (result.Count >= limit)
+                            return result;
+                    }
+                }
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+
+            return (IReadOnlyList<DbRow>)result ?? Array.Empty<DbRow>();
         }
 
         public DbPartition DeleteRows(string partitionKey, IEnumerable<string> rowKeys)
@@ -640,7 +666,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
                 var partition = _partitions[entity.PartitionKey];
 
-                var record = partition.GetRow(entity.RowKey);
+                var record = partition.TryGetRow(entity.RowKey);
 
                 if (record == null)
                     return (OperationResult.RecordNotFound, null, null);
@@ -669,7 +695,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             {
                 return !_partitions.ContainsKey(partitionKey)
                     ? null
-                    : _partitions[partitionKey].GetRow(rowKey);
+                    : _partitions[partitionKey].TryGetRow(rowKey);
             }
             finally
             {
@@ -700,7 +726,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
                 var partition = _partitions[entity.PartitionKey];
 
-                var record = partition.GetRow(entity.RowKey);
+                var record = partition.TryGetRow(entity.RowKey);
 
                 if (record == null)
                     return (OperationResult.RecordNotFound, null, null);

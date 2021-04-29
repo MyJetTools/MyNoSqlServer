@@ -24,7 +24,7 @@ namespace MyNoSqlServer.DataWriter.Builders
             var transactionModel = new CleanPartitionsRequestModel
             {
                 Type = "CleanPartitions",
-                Partitions = partitions,
+                PartitionKeys = partitions,
             };
 
             _transactionData.Add(transactionModel);
@@ -86,7 +86,7 @@ namespace MyNoSqlServer.DataWriter.Builders
     internal class CleanPartitionsRequestModel
     {
         public string Type { get; set; }
-        public string[] Partitions { get; set; }
+        public string[] PartitionKeys { get; set; }
     }
     
     internal class DeleteRowsRequestModel

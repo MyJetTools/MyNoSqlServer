@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net5.0;netstandard2.1</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+        <PackageReference Include="protobuf-net" Version="3.0.101" />
+        <PackageReference Include="System.ServiceModel.Primitives" Version="4.8.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
+    </ItemGroup>
+</Project>

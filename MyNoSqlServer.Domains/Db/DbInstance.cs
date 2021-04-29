@@ -123,7 +123,19 @@ namespace MyNoSqlServer.Domains.Db
         public DbTable TryGetTable(string tableName)
         {
             var tables = _tables;
-            return tables.ContainsKey(tableName) ? tables[tableName] : null;
+            
+            return tables.TryGetValue(tableName, out var result)  ? result : null;
+
+        }
+
+        public DbTable GetTable(string tableName)
+        {
+            var tables = _tables;
+
+            if (tables.TryGetValue(tableName, out var result))
+                return result;
+
+            throw new Exception($"Table with {tableName} is not found");
 
         }
 

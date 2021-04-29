@@ -118,7 +118,7 @@ namespace MyNoSqlServer.Api.Hubs
             foreach (var clientProxy in clientsToSend)
             {
                 if (packetToBroadcast == null)
-                    packetToBroadcast = dbTable.GetAllRecords(null).ToHubUpdateContract();
+                    packetToBroadcast = dbTable.GetAllRecords(null, null).ToHubUpdateContract();
 
                 clientProxy.SendAsync(dbTable.Name, "i", packetToBroadcast);
             }
@@ -153,7 +153,7 @@ namespace MyNoSqlServer.Api.Hubs
 
             Connections.Update(Context.ConnectionId, itm => { itm.Subscribe(tableName); });
 
-            var rows = table.GetAllRecords(null);
+            var rows = table.GetAllRecords(null, null);
 
             var dataToSend = rows.ToHubUpdateContract();
 
@@ -172,7 +172,7 @@ namespace MyNoSqlServer.Api.Hubs
             if (partition == null)
                 return Clients.Caller.SendRowNotFoundAsync(corrId);
 
-            var row = partition.GetRow(rowKey);
+            var row = partition.TryGetRow(rowKey);
             
             if (row == null)
                 return Clients.Caller.SendRowNotFoundAsync(corrId);
@@ -205,7 +205,7 @@ namespace MyNoSqlServer.Api.Hubs
                 return Clients.Caller.SendTableNotFoundAsync(corrId);
 
 
-            var rows = dbTable.GetAllRecords(limit.ContractToLimit());
+            var rows = dbTable.GetAllRecords(limit.ContractToLimit(), skip.ContractToSkip());
 
             return Clients.Caller.SendRowsAsync(corrId, rows.ToJsonArray().AsArray());
         }

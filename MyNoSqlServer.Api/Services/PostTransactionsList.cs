@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.Transactions;
 
 namespace MyNoSqlServer.Api.Services
 {
@@ -11,8 +10,7 @@ namespace MyNoSqlServer.Api.Services
 
     public class UpdateTransactionsSequence
     {
-        private readonly Dictionary<string, List<IDbTransaction>> _transactions =
-            new ();
+        private readonly List<IDbTransactionAction> _transactions = new ();
 
         private readonly object _lockObject = new();
 
@@ -24,40 +22,38 @@ namespace MyNoSqlServer.Api.Services
         public string Id { get; }
 
 
-        public (string tableName, IReadOnlyList<IDbTransaction>) GetNextTransactionsToExecute()
+        public IReadOnlyList<IDbTransactionAction> GetTransactionsToExecute()
         {
             lock (_lockObject)
             {
-                var nextTable = _transactions.Keys.FirstOrDefault();
-
-                if (nextTable == null)
-                    return (null, null);
-
-                var result = _transactions[nextTable];
-
-                _transactions.Remove(nextTable);
-
-                return (nextTable, result);
+                return _transactions;
             }
 
         }
-        
-        public void PostTransactions(string tableName, IEnumerable<IDbTransaction> transactions)
+
+        public void PostTransactions(IEnumerable<DbTable> tables, IEnumerable<IDbTransactionAction> transactions)
         {
             lock (_lockObject)
             {
-                if (!_transactions.ContainsKey(tableName))
-                    _transactions.Add(tableName, new List<IDbTransaction>());
+                _transactions.AddRange(transactions);
 
-                var byTable = _transactions[tableName];
-                
-                byTable.AddRange(transactions);
+                foreach (var dbTable in tables)
+                {
+                    if (!_tables.ContainsKey(dbTable.Name))
+                        _tables.Add(dbTable.Name, dbTable);
+                }
+        
             }
             
             LastAccessTime = DateTimeOffset.UtcNow;
         }
 
         public DateTimeOffset LastAccessTime { get; private set; } = DateTimeOffset.UtcNow;
+
+        private readonly Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
+        
+
+        public IReadOnlyDictionary<string, DbTable> Tables => _tables;
 
     }
     
@@ -112,7 +108,7 @@ namespace MyNoSqlServer.Api.Services
         }
 
 
-        public static TimeSpan _gcTranactionTimeSpan = TimeSpan.FromMinutes(10);
+        public static TimeSpan GcTransactionTimeSpan = TimeSpan.FromMinutes(10);
 
         public IReadOnlyList<UpdateTransactionsSequence> GetTransactionsToGc()
         {
@@ -127,7 +123,7 @@ namespace MyNoSqlServer.Api.Services
                 foreach (var transaction in _transactions.Values)
                 {
 
-                    if (now - transaction.LastAccessTime > _gcTranactionTimeSpan)
+                    if (now - transaction.LastAccessTime > GcTransactionTimeSpan)
                     {
                         result ??= new List<UpdateTransactionsSequence>();
                         result.Add(transaction);

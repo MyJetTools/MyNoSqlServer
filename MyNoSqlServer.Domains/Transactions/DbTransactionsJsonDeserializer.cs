@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Json;
 
@@ -9,7 +10,7 @@ namespace MyNoSqlServer.Domains.Transactions
 {
     public static class DbTransactionsJsonDeserializer
     {
-        public static IEnumerable<IDbTransaction> GetTransactions(IMyMemory memory)
+        public static IEnumerable<IDbTransactionAction> GetTransactions(IMyMemory memory)
         {
             foreach (var transactionItem in memory.SplitJsonArrayToObjects())
             {
@@ -20,21 +21,21 @@ namespace MyNoSqlServer.Domains.Transactions
                 if (baseTransaction == null)
                     throw new Exception("Can not deserialize transaction");
 
-                if (baseTransaction.Type == CleanTableTransaction.Id)
-                    yield return JsonSerializer.Deserialize<CleanTableTransaction>(json);
+                if (baseTransaction.Type == CleanTableTransactionJsonModel.Id)
+                    yield return JsonSerializer.Deserialize<CleanTableTransactionJsonModel>(json);
 
-                if (baseTransaction.Type == CleanPartitionsTransaction.Id)
-                    yield return JsonSerializer.Deserialize<CleanPartitionsTransaction>(json);
+                if (baseTransaction.Type == DeletePartitionsTransactionActionJsonModel.Id)
+                    yield return JsonSerializer.Deserialize<DeletePartitionsTransactionActionJsonModel>(json);
 
-                if (baseTransaction.Type == DeleteRowsTransaction.Id)
-                    yield return JsonSerializer.Deserialize<DeleteRowsTransaction>(json);
+                if (baseTransaction.Type == DeleteRowsTransactionJsonModel.Id)
+                    yield return JsonSerializer.Deserialize<DeleteRowsTransactionJsonModel>(json);
 
-                if (baseTransaction.Type == InsertOrReplaceEntitiesTransaction.Id)
+                if (baseTransaction.Type == InsertOrReplaceEntitiesTransactionJsonModel.Id)
                 {
-                    var result = new InsertOrReplaceEntitiesTransaction
+                    var result = new InsertOrReplaceEntitiesTransactionJsonModel
                     {
                         Type = baseTransaction.Type,
-                        Entities = new List<DynamicEntity>()
+                        Entities = new List<byte[]>()
                     };
 
                     var firstLines = transactionItem.ParseFirstLine();
@@ -43,7 +44,7 @@ namespace MyNoSqlServer.Domains.Transactions
                     
                     foreach (var entity in mem.SplitJsonArrayToObjects())
                     {
-                        result.Entities.Add(entity.ParseDynamicEntity());
+                        result.Entities.Add(entity.AsArray());
                     }
 
                     yield return result;

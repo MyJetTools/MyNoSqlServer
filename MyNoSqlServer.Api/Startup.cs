@@ -1,14 +1,17 @@
-﻿using Autofac;
+﻿using System;
+using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MyNoSqlServer.Api.Grpc;
 using MyNoSqlServer.Api.Hubs;
 using MyNoSqlServer.Api.Middlewares;
 using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
 using Prometheus;
+using ProtoBuf.Grpc.Server;
 
 
 namespace MyNoSqlServer.Api
@@ -31,6 +34,8 @@ namespace MyNoSqlServer.Api
         {
 
             _services = services;
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+            services.AddCodeFirstGrpc();
 
             services.AddApplicationInsightsTelemetry(Configuration);
 
@@ -89,9 +94,11 @@ namespace MyNoSqlServer.Api
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapGrpcService<MyNoSqlGrpcService>();
                 endpoints.MapControllers();
                 endpoints.MapHub<ChangesHub>("/changes");
                 endpoints.MapMetrics();
+                
             });
 
             var sp = _services.BuildServiceProvider();

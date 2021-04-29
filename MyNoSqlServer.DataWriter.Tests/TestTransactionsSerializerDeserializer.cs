@@ -5,6 +5,7 @@ using System.Text;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.DataWriter.Builders;
+using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Transactions;
 using NUnit.Framework;
 
@@ -64,16 +65,16 @@ namespace MyNoSqlServer.DataWriter.Tests
             
             Assert.AreEqual(4,  transactions.Length);
             
-            Assert.IsTrue(transactions[0] is ICleanTableTransaction);
+            Assert.IsTrue(transactions[0] is ICleanTableTransactionAction);
 
-            var clearPartitionsTransaction = (ICleanPartitionsTransaction) transactions[1];
-            Assert.AreEqual(2,  clearPartitionsTransaction.Partitions.Length);
-            Assert.AreEqual("DeletePartition1",  clearPartitionsTransaction.Partitions[0]);
-            Assert.AreEqual("DeletePartition2",  clearPartitionsTransaction.Partitions[1]);
+            var clearPartitionsTransaction = (IDeletePartitionsTransactionAction) transactions[1];
+            Assert.AreEqual(2,  clearPartitionsTransaction.PartitionKeys.Length);
+            Assert.AreEqual("DeletePartition1",  clearPartitionsTransaction.PartitionKeys[0]);
+            Assert.AreEqual("DeletePartition2",  clearPartitionsTransaction.PartitionKeys[1]);
             
             
             
-            var deleteRowsTransaction = (IDeleteRowsTransaction) transactions[2];
+            var deleteRowsTransaction = (IDeleteRowsTransactionAction) transactions[2];
             Assert.AreEqual("DeletePartitionKey",  deleteRowsTransaction.PartitionKey);
             Assert.AreEqual(2,  deleteRowsTransaction.RowKeys.Length);
             Assert.AreEqual("DeleteRow1",  deleteRowsTransaction.RowKeys[0]);
@@ -81,16 +82,17 @@ namespace MyNoSqlServer.DataWriter.Tests
             
             
             
-            var entitiesTransaction = (IInsertOrReplaceEntitiesTransaction) transactions[3];
+            var entitiesTransaction = (IInsertOrReplaceEntitiesTransactionAction) transactions[3];
             Assert.AreEqual(2,  entitiesTransaction.Entities.Count);
-            Assert.AreEqual("PK1",  entitiesTransaction.Entities[0].PartitionKey);
-            Assert.AreEqual("RK1",  entitiesTransaction.Entities[0].RowKey);
-            Assert.IsTrue(entitiesTransaction.Entities[0].Raw.ContainsKey("MyField"));
+            var entity = entitiesTransaction.Entities[0].ParseDynamicEntity();
+            Assert.AreEqual("PK1",  entity.PartitionKey);
+            Assert.AreEqual("RK1",  entity.RowKey);
+            Assert.IsTrue(entity.Raw.ContainsKey("MyField"));
 
-            
-            Assert.AreEqual("PK2",  entitiesTransaction.Entities[1].PartitionKey);
-            Assert.AreEqual("RK2",  entitiesTransaction.Entities[1].RowKey);
-            Assert.IsTrue(entitiesTransaction.Entities[1].Raw.ContainsKey("MyField"));
+            entity = entitiesTransaction.Entities[1].ParseDynamicEntity();
+            Assert.AreEqual("PK2",  entity.PartitionKey);
+            Assert.AreEqual("RK2",  entity.RowKey);
+            Assert.IsTrue(entity.Raw.ContainsKey("MyField"));
         }
     }
 }

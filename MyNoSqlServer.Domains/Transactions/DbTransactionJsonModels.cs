@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using MyNoSqlServer.Domains.Json;
+using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.Domains.Transactions
 {
@@ -9,29 +9,32 @@ namespace MyNoSqlServer.Domains.Transactions
     }
 
 
-    public class CleanTableTransaction : BaseTransaction, ICleanTableTransaction
+    public class CleanTableTransactionJsonModel : BaseTransaction, ICleanTableTransactionAction
     {
         public static string Id => "CleanTable";
+        public string TableName { get; set; }
     }
 
-    public class CleanPartitionsTransaction : BaseTransaction, ICleanPartitionsTransaction
+    public class DeletePartitionsTransactionActionJsonModel : BaseTransaction, IDeletePartitionsTransactionAction
     {
         public static string Id => "CleanPartitions";
-        public string[] Partitions { get; set; }
+        public string TableName { get; set; }
+        public string[] PartitionKeys { get; set; }
     }
     
-    public class DeleteRowsTransaction : BaseTransaction, IDeleteRowsTransaction
+    public class DeleteRowsTransactionJsonModel : BaseTransaction, IDeleteRowsTransactionAction
     {
         public static string Id => "DeletePartitions";
+        public string TableName { get; set; }
         public string PartitionKey { get; set; }
         public string[] RowKeys { get; set; }
     }    
     
-    public class InsertOrReplaceEntitiesTransaction : BaseTransaction, IInsertOrReplaceEntitiesTransaction
+    public class InsertOrReplaceEntitiesTransactionJsonModel : BaseTransaction, IInsertOrReplaceEntitiesTransactionAction
     {
         public static string Id => "InsertOrUpdate";
+        public string TableName { get; set; }
 
-
-        public List<DynamicEntity> Entities { get; set; }
+        public List<byte[]> Entities { get; set; }
     }   
 }

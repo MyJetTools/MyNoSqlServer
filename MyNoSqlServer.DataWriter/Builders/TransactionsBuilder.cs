@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
@@ -14,12 +13,10 @@ namespace MyNoSqlServer.DataWriter.Builders
         private static readonly System.Diagnostics.ActivitySource _source = new("MyNoSql.TransactionsBuilder");
 #endif
 
-        private static HttpClient _httpClient = new();
-
         private readonly Func<string> _getUrl;
         private readonly string _tableName;
 
-        private bool _commited = false;
+        private bool _committed = false;
         private string Id { get; }
 
         private readonly TransactionDataSerializer<T> _transactionSerializer = new TransactionDataSerializer<T>();
@@ -118,13 +115,13 @@ namespace MyNoSqlServer.DataWriter.Builders
                 .WithTransactionIdAsQueryParam(Id)
                 .PostAsync();
 
-            _commited = true;
+            _committed = true;
         }
 
 #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
         public ValueTask DisposeAsync()
         {
-            if (_commited)
+            if (_committed)
                 return new ValueTask();
             
             var task = _getUrl()
@@ -138,7 +135,7 @@ namespace MyNoSqlServer.DataWriter.Builders
 #else
         public void Dispose()
         {
-            if (_commited)
+            if (_committed)
                 return;
             
             _getUrl()

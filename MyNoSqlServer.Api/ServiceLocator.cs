@@ -93,10 +93,7 @@ namespace MyNoSqlServer.Api
 
         private static readonly TaskTimer TimerOneMinute = new TaskTimer(TimeSpan.FromMinutes(1));
 
-        public static readonly MultiPartGetSnapshots MultiPartGetSnapshots = new();
-
         public static readonly PostTransactionsList PostTransactionsList = new();
-        
         public static MyNoSqlLogger Logger { get; private set; }
 
         public static void Init(ServiceProvider sr)
@@ -126,12 +123,6 @@ namespace MyNoSqlServer.Api
             TimerOneMinute.Register("GC transactions", () =>
             {
                 PostTransactionsList.GcTransactions();
-                return new ValueTask();
-            });
-
-            TimerOneMinute.Register("GC Multipart Reads", () =>
-            {
-                MultiPartGetSnapshots.Gc();
                 return new ValueTask();
             });
 

@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
+using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Transactions;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -30,16 +33,13 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("/Transaction/Append")]
-        public async ValueTask<IActionResult> Append([Required] string transactionId, [Required] string tableName)
+        public async ValueTask<IActionResult> Append([Required] string transactionId)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
                 return shutDown;
 
-            var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-
-            if (table == null)
-                return this.GetResult(OperationResult.TableNotFound);
+         
 
             var transaction = ServiceLocator.PostTransactionsList.TryGet(transactionId);
 
@@ -49,9 +49,24 @@ namespace MyNoSqlServer.Api.Controllers
 
             var body = await Request.BodyAsIMemoryAsync();
 
-            var transactions = DbTransactionsJsonDeserializer.GetTransactions(body);
+            var transactions = DbTransactionsJsonDeserializer.GetTransactions(body).ToList();
+            
+            var tables = new Dictionary<string, DbTable>();
 
-            transaction.PostTransactions(tableName, transactions);
+            foreach (var dbTransactionCommand in transactions)
+            {
+                if (tables.ContainsKey(dbTransactionCommand.TableName))
+                    continue;
+
+                var table = ServiceLocator.DbInstance.TryGetTable(dbTransactionCommand.TableName);
+
+                if (table == null)
+                    return this.GetResult(OperationResult.TableNotFound);
+                
+                tables.Add(table.Name, table);
+            }
+
+            transaction.PostTransactions(tables.Values, transactions);
 
             return this.ResponseOk();
         }
@@ -65,21 +80,8 @@ namespace MyNoSqlServer.Api.Controllers
                 return shutDown;
 
             var transaction = ServiceLocator.PostTransactionsList.TryDelete(transactionId);
-
-            var (tableName, transactions) = transaction.GetNextTransactionsToExecute();
-
-            while (tableName != null)
-            {
-
-                Console.WriteLine("TableName: "+tableName);
-                
-                var table = ServiceLocator.DbInstance.TryGetTable(tableName);
-
-                if (table != null)
-                    await ServiceLocator.DbOperations.ApplyTransactionsAsync(table, transactions);
-
-                (tableName, transactions) = transaction.GetNextTransactionsToExecute();
-            }
+            
+            await ServiceLocator.DbOperations.ApplyTransactionsAsync(transaction.Tables, transaction.GetTransactionsToExecute());
 
             return this.ResponseOk();
         }

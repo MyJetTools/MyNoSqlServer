@@ -64,7 +64,7 @@ namespace MyNoSqlServer.Api
             var packetToBroadcast = new InitTableContract
             {
                 TableName = dbTable.Name,
-                Data = dbTable.GetAllRecords(null).ToHubUpdateContract()
+                Data = dbTable.GetAllRecords(null, null).ToHubUpdateContract()
             };
 
             foreach (var connection in connections)
@@ -175,7 +175,7 @@ namespace MyNoSqlServer.Api
             
             TableSubscribers.Subscribe(subscribeContract.TableName, this);
             
-            var rows = table.GetAllRecords(null);
+            var rows = table.GetAllRecords(null, null);
             
             Console.WriteLine($"Socket {Id} is subscribed to the table {subscribeContract.TableName}. Initialized records: {rows.Count}");
 

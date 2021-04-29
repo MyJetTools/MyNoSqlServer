@@ -48,7 +48,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         }
 
 
-        public DbRow GetRow(string rowKey)
+        public DbRow TryGetRow(string rowKey)
         {
             LastAccessTime = DateTime.UtcNow;
             return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;

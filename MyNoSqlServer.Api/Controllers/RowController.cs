@@ -39,7 +39,7 @@ namespace MyNoSqlServer.Api.Controllers
             // PartitionKey == null and RowKey == null
             if (rowKey == null)
             {
-                var entities = table.GetAllRecords(limit);
+                var entities = table.GetAllRecords(skip, limit);
                 return this.ToDbRowsResult(entities);
             }
 
