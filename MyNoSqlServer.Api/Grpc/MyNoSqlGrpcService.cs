@@ -70,6 +70,8 @@ namespace MyNoSqlServer.Api.Grpc
 
         public ValueTask<TransactionGrpcResponse> PostTransactionActionsAsync(TransactionPayloadGrpcRequest request)
         {
+        
+            ServiceLocator.Logger.WriteInfo("PostTransactionActionsAsync", Newtonsoft.Json.JsonConvert.SerializeObject(request));
 
             try
             {
