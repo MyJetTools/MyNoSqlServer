@@ -99,7 +99,11 @@ namespace MyNoSqlServer.Api.Grpc
                     transactionSeq.PostTransactions(tables.Values, transactions);
                 }
 
-
+                if (request.Commit)
+                {
+                    ServiceLocator.DbOperations.ApplyTransactionsAsync(transactionSeq.Tables,
+                        transactionSeq.GetTransactionsToExecute());
+                }
 
                 var result = new TransactionGrpcResponse
                 {
