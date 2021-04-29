@@ -24,6 +24,6 @@
       <ItemGroup>
         <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
       </ItemGroup>
-    </Target>
+    </Target> 
 
 </Project>

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Grpc.Net.Client;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Grpc;
+using ProtoBuf.Grpc.Client;
 
 namespace MyNoSqlServer.GrpcDataWriter
 {
@@ -118,6 +120,15 @@ namespace MyNoSqlServer.GrpcDataWriter
         {
             return new MyNoSqlTransaction(_myNoSqlTransportGrpcService, GetTableName);
         }
-        
+
+        public static MyNoSqlGrpcDataWriter CreteGrpc(string grpcUrl)
+        {
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+            var channel = GrpcChannel.ForAddress(grpcUrl).CreateGrpcService<IMyNoSqlTransportGrpcService>();
+
+            return new MyNoSqlGrpcDataWriter(channel);
+        }
+
     }
 }

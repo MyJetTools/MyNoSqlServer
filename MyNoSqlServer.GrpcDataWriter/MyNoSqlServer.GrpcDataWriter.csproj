@@ -5,12 +5,29 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
-      <ProjectReference Include="..\MyNoSqlServer.Grpc\MyNoSqlServer.Grpc.csproj" />
+      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
+      <ProjectReference PrivateAssets="All" Include="..\MyNoSqlServer.Grpc\MyNoSqlServer.Grpc.csproj" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+      <PackageReference Include="protobuf-net" Version="3.0.101" />
+      <PackageReference Include="System.ServiceModel.Primitives" Version="4.8.1" />
+      <PackageReference Include="Grpc.Net.Client" Version="2.37.0" />
+      <PackageReference Include="protobuf-net.Grpc" Version="1.0.152" />
     </ItemGroup>
+  
+    <PropertyGroup>
+      <TargetsForTfmSpecificBuildOutput>
+        $(TargetsForTfmSpecificBuildOutput);PackReferencedProjectOutputs
+      </TargetsForTfmSpecificBuildOutput>
+    </PropertyGroup>
+
+    <Target Name="PackReferencedProjectOutputs" DependsOnTargets="BuildOnlySettings;ResolveReferences">
+      <ItemGroup>
+        <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+      </ItemGroup>
+    </Target> 
+
 
 </Project>
