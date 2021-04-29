@@ -26,8 +26,14 @@ jobs:
     - name: Create the package - Writer
       run: dotnet pack --configuration Release MyNoSqlServer.DataWriter/MyNoSqlServer.DataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/client-}
 
+    - name: Create the package - GrpcWriter
+      run: dotnet pack --configuration Release MyNoSqlServer.GrpcDataWriter/MyNoSqlServer.GrpcDataWriter.csproj /p:Version=${GITHUB_REF#refs/tags/client-}
+
     - name: Publish the package to GPR - Reader
       run: dotnet nuget push MyNoSqlServer.DataReader/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
 
     - name: Publish the package to GPR - Writer
       run: dotnet nuget push MyNoSqlServer.DataWriter/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
+
+    - name: Publish the package to GPR - GrpcWriter
+      run: dotnet nuget push MyNoSqlServer.GrpcDataWriter/bin/Release/*.nupkg -s "https://api.nuget.org/v3/index.json" -k ${{ secrets.NUGET_TOCKEN }}
