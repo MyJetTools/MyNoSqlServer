@@ -75,14 +75,19 @@ namespace MyNoSqlServer.GrpcDataWriter
             };
             InsertTransactionAction(payloadModel);
         }
+
+        public void InsertOrReplaceEntity<T>(T entity) where T:IMyNoSqlDbEntity, new()
+        {
+            InsertOrReplaceEntities(new[] {entity});
+        }
         
-        public void InsertOrReplaceEntities(IEnumerable<IMyNoSqlDbEntity> entities)
+        public void InsertOrReplaceEntities<T>(IEnumerable<T> entities) where T:IMyNoSqlDbEntity, new()
         {
             InsertOrReplaceEntitiesTransactionActionGrpcModel payloadModel = null;
             
             foreach (var entity in entities)
             {
-                var tableName = _getTableName(entities.GetType());
+                var tableName = _getTableName(entity.GetType());
                 
                 payloadModel ??= new InsertOrReplaceEntitiesTransactionActionGrpcModel
                 {

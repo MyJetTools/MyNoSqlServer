@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Grpc;
 
 namespace MyNoSqlServer.Api.Grpc
@@ -68,17 +70,48 @@ namespace MyNoSqlServer.Api.Grpc
 
         public ValueTask<TransactionGrpcResponse> PostTransactionActionsAsync(TransactionPayloadGrpcRequest request)
         {
-            var transaction = request.TransactionId == null
-                ? ServiceLocator.PostTransactionsList.StartTransaction()
-                : ServiceLocator.PostTransactionsList.TryGet(request.TransactionId);
 
-
-            var result = new TransactionGrpcResponse
+            try
             {
-                Id = transaction?.Id
-            };
+                var transactionSeq = request.TransactionId == null
+                    ? ServiceLocator.PostTransactionsList.StartTransaction()
+                    : ServiceLocator.PostTransactionsList.TryGet(request.TransactionId);
 
-            return new ValueTask<TransactionGrpcResponse>(result);
+                if (request.Actions != null)
+                {
+                    var transactions = request.ReadGrpcTransactions().ToList();
+
+                    var tables = new Dictionary<string, DbTable>();
+
+
+                    foreach (var transaction in transactions)
+                    { 
+                        if (tables.ContainsKey(transaction.TableName))
+                            continue;
+
+                        var table = ServiceLocator.DbInstance.GetTable(transaction.TableName);
+                        
+                        tables.Add(transaction.TableName, table);
+                    }
+            
+                    transactionSeq.PostTransactions(tables.Values, transactions);
+                }
+
+
+
+                var result = new TransactionGrpcResponse
+                {
+                    Id = transactionSeq?.Id
+                };
+
+                return new ValueTask<TransactionGrpcResponse>(result);
+            }
+            catch (Exception e)
+            {
+                ServiceLocator.Logger.WriteError("GRPC.PostTransactionActionsAsync", e);
+                throw;
+            }
+
         }
 
         public ValueTask CancelTransactionAsync(CancelTransactionGrpcRequest request)
