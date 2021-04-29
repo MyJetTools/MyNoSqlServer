@@ -14,7 +14,7 @@ namespace MyNoSqlServer.Api.Grpc
             
             return new ()
             {
-                ContentType = ContentType.Json,
+                ContentType = GrpcContentType.Json,
                 Content = dbRow.Data
             };
         }

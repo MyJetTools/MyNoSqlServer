@@ -84,7 +84,6 @@ namespace MyNoSqlServer.Api.Grpc
         public ValueTask CancelTransactionAsync(CancelTransactionGrpcRequest request)
         {
             ServiceLocator.PostTransactionsList.TryDelete(request.Id);
-
             return new ValueTask();
         }
     }

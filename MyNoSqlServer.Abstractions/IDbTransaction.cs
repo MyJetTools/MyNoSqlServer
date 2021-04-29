@@ -24,10 +24,16 @@ namespace MyNoSqlServer.Abstractions
         string PartitionKey { get; }
         string[] RowKeys { get;  }
     }
+
+
+    public enum DbEntityType
+    {
+        Json, Protobuf
+    }
     
     public interface IInsertOrReplaceEntitiesTransactionAction: IDbTransactionAction
     {
-        List<byte[]> Entities { get;  }
+        IEnumerable<(DbEntityType Type, byte[] Payload)> Entities { get;  }
     }
 
 

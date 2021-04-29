@@ -83,13 +83,14 @@ namespace MyNoSqlServer.DataWriter.Tests
             
             
             var entitiesTransaction = (IInsertOrReplaceEntitiesTransactionAction) transactions[3];
-            Assert.AreEqual(2,  entitiesTransaction.Entities.Count);
-            var entity = entitiesTransaction.Entities[0].ParseDynamicEntity();
+            var resultEntities = entitiesTransaction.Entities.ToList();
+            Assert.AreEqual(2,  entities.Count);
+            var entity = resultEntities[0].Payload.ParseDynamicEntity();
             Assert.AreEqual("PK1",  entity.PartitionKey);
             Assert.AreEqual("RK1",  entity.RowKey);
             Assert.IsTrue(entity.Raw.ContainsKey("MyField"));
 
-            entity = entitiesTransaction.Entities[1].ParseDynamicEntity();
+            entity = resultEntities[1].Payload.ParseDynamicEntity();
             Assert.AreEqual("PK2",  entity.PartitionKey);
             Assert.AreEqual("RK2",  entity.RowKey);
             Assert.IsTrue(entity.Raw.ContainsKey("MyField"));

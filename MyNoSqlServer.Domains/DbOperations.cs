@@ -113,7 +113,7 @@ namespace MyNoSqlServer.Domains
                         var updateRows = new Dictionary<string, List<DbRow>>();
                         foreach (var entity in insertOrUpdate.Entities)
                         {
-                            var (dbPartition, dbRow) = table.InsertOrReplace(entity.ParseDynamicEntity(), DateTime.UtcNow);
+                            var (dbPartition, dbRow) = table.InsertOrReplace(entity.Payload.ParseDynamicEntity(), DateTime.UtcNow);
                             
                             if (!updateRows.ContainsKey(dbPartition.PartitionKey))
                                 updateRows.Add(dbPartition.PartitionKey, new List<DbRow>());

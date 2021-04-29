@@ -8,7 +8,7 @@ namespace MyNoSqlServer.Grpc
         Ok, TableNotFound, DbRowNotFound
     }
 
-    public enum ContentType
+    public enum GrpcContentType
     {
         Json, Protobuf
     }
@@ -50,7 +50,7 @@ namespace MyNoSqlServer.Grpc
     public class TableEntityTransportGrpcContract
     {
         [DataMember(Order = 1)]
-        public ContentType ContentType { get; set; }
+        public GrpcContentType ContentType { get; set; }
         
         [DataMember(Order = 2)]
         public byte[] Content { get; set; }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.Domains.Transactions
@@ -36,5 +37,10 @@ namespace MyNoSqlServer.Domains.Transactions
         public string TableName { get; set; }
 
         public List<byte[]> Entities { get; set; }
+
+        IEnumerable<(DbEntityType Type, byte[] Payload)> IInsertOrReplaceEntitiesTransactionAction.Entities =>
+            Entities.Select(
+                itm =>
+                    (DbEntityType.Json, itm));
     }   
 }

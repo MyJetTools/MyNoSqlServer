@@ -23,8 +23,7 @@ namespace MyNoSqlServer.GrpcDataWriter
             return this;
         }
 
-
-        public string GetTableName(Type type)
+        private string GetTableName(Type type)
         {
             if (_typesToTableNames.TryGetValue(type, out var result))
                 return result;
@@ -32,8 +31,35 @@ namespace MyNoSqlServer.GrpcDataWriter
             throw new Exception("There is not tableName registered for the TableEntity with Type: " + type);
         }
         
+        private void CheckResponse(MyNoSqlResponse table, string tableName)
+        {
+            switch (table)
+            {
+                case MyNoSqlResponse.TableNotFound:
+                    throw new Exception($"Table {tableName} is not found");
+            }
+        }
+        
+        public async IAsyncEnumerable<T> GetRowsAsync<T>(int? limit = null, int? skip = null)
+            where T : IMyNoSqlDbEntity, new()
+        {
 
-        public async IAsyncEnumerable<T> GetRowsAsync<T>(string partitionKey, string rowKey, int? limit = null, int? skip = null)
+            var dataResult = _myNoSqlTransportGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
+            {
+                TableName = GetTableName(typeof(T)),
+                PartitionKey = null,
+                RowKey = null,
+                Limit = limit,
+                Skip = skip
+            });
+
+            await foreach (var tableEntityContract in dataResult)
+            {
+                yield return tableEntityContract.DeserializeEntity<T>();
+            }
+        }
+        
+        public async IAsyncEnumerable<T> GetRowsAsync<T>(string partitionKey, int? limit = null, int? skip = null)
             where T : IMyNoSqlDbEntity, new()
         {
 
@@ -41,6 +67,25 @@ namespace MyNoSqlServer.GrpcDataWriter
             {
                 TableName = GetTableName(typeof(T)),
                 PartitionKey = partitionKey,
+                RowKey = null,
+                Limit = limit,
+                Skip = skip
+            });
+
+            await foreach (var tableEntityContract in dataResult)
+            {
+                yield return tableEntityContract.DeserializeEntity<T>();
+            }
+        }
+        
+        public async IAsyncEnumerable<T> GetRowsByRowKeyAsync<T>(string rowKey, int? limit = null, int? skip = null)
+            where T : IMyNoSqlDbEntity, new()
+        {
+
+            var dataResult = _myNoSqlTransportGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
+            {
+                TableName = GetTableName(typeof(T)),
+                PartitionKey = null,
                 RowKey = rowKey,
                 Limit = limit,
                 Skip = skip
@@ -51,17 +96,6 @@ namespace MyNoSqlServer.GrpcDataWriter
                 yield return tableEntityContract.DeserializeEntity<T>();
             }
         }
-
-        private void CheckResponse(MyNoSqlResponse table, string tableName)
-        {
-            switch (table)
-            {
-                case MyNoSqlResponse.TableNotFound:
-                    throw new Exception($"Table {tableName} is not found");
-            }
-            
-        }
-
 
         public async ValueTask<T> GetRowAsync<T>(string partitionKey, string rowKey) where T : IMyNoSqlDbEntity, new()
         {
@@ -77,6 +111,12 @@ namespace MyNoSqlServer.GrpcDataWriter
 
             return result.Entity.DeserializeEntity<T>();
 
+        }
+
+
+        public MyNoSqlTransaction BeginTransaction()
+        {
+            return new MyNoSqlTransaction(_myNoSqlTransportGrpcService, GetTableName);
         }
         
     }
