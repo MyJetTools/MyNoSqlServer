@@ -116,7 +116,7 @@ namespace MyNoSqlServer.Api.Grpc
 
                 if (request.Commit)
                 {
-                    ServiceLocator.DbOperations.ApplyTransactionsAsync(transactionSeq.Tables,
+                    ServiceLocator.DbOperations.ApplyTransactions(transactionSeq.Tables,
                         transactionSeq.GetTransactionsToExecute());
                 }
 

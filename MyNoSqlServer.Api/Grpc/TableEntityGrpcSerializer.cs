@@ -1,4 +1,3 @@
-using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Grpc;
 
@@ -13,7 +12,7 @@ namespace MyNoSqlServer.Api.Grpc
             if (dbRow == null)
                 return null;
             
-            return new ()
+            return new TableEntityTransportGrpcContract
             {
                 ContentType = GrpcContentType.Json,
                 Content = dbRow.Data

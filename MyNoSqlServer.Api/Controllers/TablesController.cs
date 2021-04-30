@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Api.Models;
@@ -56,7 +55,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpDelete("Tables/Clean")]
-        public async ValueTask<IActionResult> Clean([Required][FromQuery] string tableName, [FromQuery] string syncPeriod)
+        public IActionResult Clean([Required][FromQuery] string tableName, [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -73,7 +72,7 @@ namespace MyNoSqlServer.Api.Controllers
             table.Clear();
 
             ServiceLocator.DataSynchronizer.PublishInitTable(table);
-            await ServiceLocator.PersistenceHandler.SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
+            ServiceLocator.PersistenceHandler.SynchronizeTable(table, syncPeriod.ParseSynchronizationPeriodContract());
 
             return Ok();
 

@@ -57,7 +57,7 @@ namespace MyNoSqlServer.Api.Controllers
             
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = await ServiceLocator.DbOperations.InsertAsync(table, body, syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
+            var result = ServiceLocator.DbOperations.Insert(table, body, syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
             
             return this.GetResult(result);
             
@@ -74,7 +74,7 @@ namespace MyNoSqlServer.Api.Controllers
             
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = await ServiceLocator.DbOperations.ReplaceAsync(table, body, 
+            var result = ServiceLocator.DbOperations.Replace(table, body, 
                 syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
 
             return this.GetResult(result);
@@ -92,7 +92,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = await ServiceLocator.DbOperations.MergeAsync(table, body,
+            var result = ServiceLocator.DbOperations.Merge(table, body,
                 syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
 
             return this.GetResult(result);
@@ -111,14 +111,14 @@ namespace MyNoSqlServer.Api.Controllers
             
             var body = await Request.BodyAsIMemoryAsync();
             
-            var result = await ServiceLocator.DbOperations.InsertOrReplaceAsync(table, 
+            var result = ServiceLocator.DbOperations.InsertOrReplace(table, 
                 body, syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
             
             return this.GetResult(result);
         }
 
         [HttpDelete("Row")]
-        public async ValueTask<IActionResult> Delete([Required][FromQuery] string tableName, 
+        public IActionResult Delete([Required][FromQuery] string tableName, 
             [Required][FromQuery] string partitionKey, [Required][FromQuery] string rowKey, 
             [FromQuery]string syncPeriod)
         {
@@ -133,7 +133,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(rowKey))
                 return this.GetResult(OperationResult.RowKeyIsNull);
 
-            var result = await ServiceLocator.DbOperations.DeleteAsync(table, partitionKey, rowKey,
+            var result = ServiceLocator.DbOperations.DeleteRow(table, partitionKey, rowKey,
                 syncPeriod.ParseSynchronizationPeriodContract());
 
             return this.GetResult(result);
@@ -141,7 +141,7 @@ namespace MyNoSqlServer.Api.Controllers
 
 
         [HttpDelete("CleanAndKeepLastRecords")]
-        public async ValueTask<IActionResult> CleanAndKeepLastRecords([Required] [FromQuery] string tableName,
+        public IActionResult CleanAndKeepLastRecords([Required] [FromQuery] string tableName,
             [Required] [FromQuery] string partitionKey, [Required] [FromQuery] int amount,
             [FromQuery] string syncPeriod)
         {
@@ -151,7 +151,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
 
-            var result = await ServiceLocator.DbOperations.CleanAndKeepLastRecordsAsync(table, partitionKey, amount,
+            var result = ServiceLocator.DbOperations.CleanAndKeepLastRecords(table, partitionKey, amount,
                 syncPeriod.ParseSynchronizationPeriodContract());
             
             return this.GetResult(result);

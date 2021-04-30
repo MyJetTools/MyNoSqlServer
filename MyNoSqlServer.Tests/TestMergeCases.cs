@@ -29,7 +29,7 @@ namespace MyNoSqlServer.Tests
         }
         
         [Test]
-        public async Task TestOkMerge()
+        public void TestOkMerge()
         {
             var ioc = TestUtils.GetTestIoc();
 
@@ -49,7 +49,7 @@ namespace MyNoSqlServer.Tests
 
             var memory1 = rawClass1.ToMemory();
 
-            await dbOperations.InsertAsync(table, 
+            dbOperations.Insert(table, 
                 memory1, 
                 DataSynchronizationPeriod.Sec1, 
                 DateTime.UtcNow);
@@ -62,8 +62,8 @@ namespace MyNoSqlServer.Tests
             
             var memory2 = insertedEntity.ToMemory();
 
-            var opResult = await dbOperations
-                .MergeAsync(table,
+            var opResult = dbOperations
+                .Merge(table,
                     memory2,
                     DataSynchronizationPeriod.Immediately, 
                     DateTime.UtcNow);
@@ -97,7 +97,7 @@ namespace MyNoSqlServer.Tests
 
             var memory1 = rawClass1.ToMemory();
 
-            await dbOperations.InsertAsync(table, memory1, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
+            dbOperations.Insert(table, memory1, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
 
             var insertedEntity1 = table.GetEntity("test", "test").AsResult<MergeEntity2>();
 
@@ -109,7 +109,7 @@ namespace MyNoSqlServer.Tests
 
             var mergeDateTime1 = DateTime.UtcNow.AddSeconds(1);
 
-            var opResult1 = await dbOperations.MergeAsync(table, insertedEntity1.ToMemory(), 
+            var opResult1 = dbOperations.Merge(table, insertedEntity1.ToMemory(), 
                 DataSynchronizationPeriod.Immediately, mergeDateTime1);
 
             var entity = table.GetEntity(rawClass1.PartitionKey, rawClass1.RowKey);
@@ -117,7 +117,7 @@ namespace MyNoSqlServer.Tests
              Assert.AreEqual(mergeDateTime1.ToTimeStampString(), entity.TimeStamp);
             
             var mergeDateTime2 = DateTime.UtcNow.AddSeconds(1);
-            var opResult2 = await dbOperations.MergeAsync(table, insertedEntity2.ToMemory(), 
+            var opResult2 = dbOperations.Merge(table, insertedEntity2.ToMemory(), 
                 DataSynchronizationPeriod.Immediately, mergeDateTime2);
 
             Assert.AreEqual(OperationResult.Ok, opResult1);

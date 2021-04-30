@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -72,7 +71,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("/Transaction/Commit")]
-        public async Task<IActionResult> Commit([Required] string transactionId)
+        public IActionResult Commit([Required] string transactionId)
         {
 
             var shutDown = this.CheckOnShuttingDown();
@@ -81,7 +80,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var transaction = ServiceLocator.PostTransactionsList.TryDelete(transactionId);
             
-            await ServiceLocator.DbOperations.ApplyTransactionsAsync(transaction.Tables, transaction.GetTransactionsToExecute());
+            ServiceLocator.DbOperations.ApplyTransactions(transaction.Tables, transaction.GetTransactionsToExecute());
 
             return this.ResponseOk();
         }

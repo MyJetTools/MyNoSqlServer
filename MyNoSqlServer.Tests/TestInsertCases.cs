@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains;
@@ -18,7 +17,7 @@ namespace MyNoSqlServer.Tests
         }
 
         [Test]
-        public async Task TestInsert()
+        public void TestInsert()
         {
 
             var insertEntity = new InsertEntity
@@ -38,7 +37,7 @@ namespace MyNoSqlServer.Tests
 
             var now = DateTime.UtcNow;
 
-            var result = await dbOperations.InsertAsync(table, insertEntity.ToMemory(), DataSynchronizationPeriod.Asap, now);
+            var result = dbOperations.Insert(table, insertEntity.ToMemory(), DataSynchronizationPeriod.Asap, now);
             
             Assert.AreEqual(OperationResult.Ok, result);
 

@@ -257,8 +257,10 @@ namespace MyNoSqlServer.Domains.Db.Tables
             return (IReadOnlyList<DbRow>)result ?? Array.Empty<DbRow>();
         }
 
-        public DbPartition DeleteRows(string partitionKey, IEnumerable<string> rowKeys)
+        public IReadOnlyList<DbRow> DeleteRows(string partitionKey, IEnumerable<string> rowKeys)
         {
+            List<DbRow> result = null;
+            
             _readerWriterLockSlim.EnterWriteLock();
             try
             {
@@ -267,9 +269,16 @@ namespace MyNoSqlServer.Domains.Db.Tables
                     return null;
 
                 foreach (var rowKey in rowKeys)
-                    partition.DeleteRow(rowKey);
+                {
+                    var dbRow = partition.DeleteRow(rowKey);
+                    if (dbRow != null)
+                    {
+                        result ??= new List<DbRow>();
+                        result.Add(dbRow);
+                    }
+                }
 
-                return partition;
+                return result;
             }
             finally
             {

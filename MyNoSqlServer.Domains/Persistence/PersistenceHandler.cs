@@ -16,31 +16,37 @@ namespace MyNoSqlServer.Domains.Persistence
             _snapshotSaverEngine = snapshotSaverEngine;
         }
 
-        public ValueTask SynchronizeTableAsync(DbTable dbTable, DataSynchronizationPeriod period)
+        public void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period)
         {
 
             if (!dbTable.Persist)
-                return new ValueTask();
+                return;
             
             _snapshotSaverScheduler.SynchronizeTable(dbTable, period);
-            
-            return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotSaverEngine.SynchronizeImmediatelyAsync(dbTable) 
-                : new ValueTask();
+
+            if (period == DataSynchronizationPeriod.Immediately)
+                Task.Run(async () =>
+                {
+                    await _snapshotSaverEngine.SynchronizeImmediatelyAsync(dbTable);
+                });
+
         }
 
-        public ValueTask SynchronizePartitionAsync(DbTable dbTable, string partitionKey,
+        public void SynchronizePartition(DbTable dbTable, string partitionKey,
             DataSynchronizationPeriod period)
         {
             
             if (!dbTable.Persist)
-                return new ValueTask();
+                return;
             
             _snapshotSaverScheduler.SynchronizePartition(dbTable, partitionKey, period);
 
-            return period == DataSynchronizationPeriod.Immediately 
-                ? _snapshotSaverEngine.SynchronizeImmediatelyAsync(dbTable) 
-                : new ValueTask();
+            if (period == DataSynchronizationPeriod.Immediately)
+                Task.Run(async () =>
+                {
+                    await _snapshotSaverEngine.SynchronizeImmediatelyAsync(dbTable);
+                });
+
         }
 
 

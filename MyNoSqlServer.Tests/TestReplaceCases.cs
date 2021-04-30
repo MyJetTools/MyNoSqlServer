@@ -2,7 +2,6 @@ using System;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db;
 using NUnit.Framework;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Json;
@@ -24,7 +23,7 @@ namespace MyNoSqlServer.Tests
     {
 
         [Test]
-        public async Task TestOkReplace()
+        public void TestOkReplace()
         {
             var ioc = TestUtils.GetTestIoc();
 
@@ -43,7 +42,7 @@ namespace MyNoSqlServer.Tests
 
             var dt = DateTime.UtcNow;
 
-            await dbOperations.InsertAsync(table, rawClass.ToMemory(), DataSynchronizationPeriod.Sec1, dt);
+            dbOperations.Insert(table, rawClass.ToMemory(), DataSynchronizationPeriod.Sec1, dt);
             
             rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
 
@@ -51,7 +50,7 @@ namespace MyNoSqlServer.Tests
             
             dt = DateTime.UtcNow.AddSeconds(1);
             
-            var opResult = await dbOperations.ReplaceAsync(table, rawClass.ToMemory(), DataSynchronizationPeriod.Immediately, dt);
+            var opResult = dbOperations.Replace(table, rawClass.ToMemory(), DataSynchronizationPeriod.Immediately, dt);
             
             Assert.AreEqual(OperationResult.Ok, opResult);
 
@@ -62,7 +61,7 @@ namespace MyNoSqlServer.Tests
         }
         
         [Test]
-        public async Task TestConflictReplace()
+        public void TestConflictReplace()
         {
             var ioc = TestUtils.GetTestIoc();
 
@@ -82,7 +81,7 @@ namespace MyNoSqlServer.Tests
 
             var memory = rawClass.ToMemory();
 
-            await dbOperations.InsertAsync(table, memory, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
+            dbOperations.Insert(table, memory, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
             
             rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
 
@@ -91,7 +90,7 @@ namespace MyNoSqlServer.Tests
             
             memory = rawClass.ToMemory();
 
-            var opResult = await dbOperations.ReplaceAsync(table, memory, DataSynchronizationPeriod.Immediately, DateTime.UtcNow);
+            var opResult = dbOperations.Replace(table, memory, DataSynchronizationPeriod.Immediately, DateTime.UtcNow);
             
             Assert.AreEqual(OperationResult.RecordChangedConcurrently, opResult);
 

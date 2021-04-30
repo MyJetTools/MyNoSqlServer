@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.DataSynchronization;
@@ -23,7 +22,7 @@ namespace MyNoSqlServer.Domains
         }
 
 
-        public async ValueTask<OperationResult> InsertAsync(DbTable table, IMyMemory myMemory,
+        public OperationResult Insert(DbTable table, IMyMemory myMemory,
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             
@@ -46,13 +45,13 @@ namespace MyNoSqlServer.Domains
             
             _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
 
-            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
+            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
             return OperationResult.Ok;
         }
         
 
 
-        public async ValueTask<OperationResult> InsertOrReplaceAsync(DbTable table, IMyMemory myMemory, 
+        public OperationResult InsertOrReplace(DbTable table, IMyMemory myMemory, 
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             var entity = myMemory.ParseDynamicEntity();
@@ -67,13 +66,13 @@ namespace MyNoSqlServer.Domains
             
             _dataSynchronizer.SynchronizeUpdate(table, new[]{dbRow});
 
-            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
+            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
 
             return OperationResult.Ok;
         }
 
 
-        public async ValueTask ApplyTransactionsAsync(IReadOnlyDictionary<string, DbTable> tables, IEnumerable<IDbTransactionAction> transactions)
+        public void ApplyTransactions(IReadOnlyDictionary<string, DbTable> tables, IEnumerable<IDbTransactionAction> transactions)
         {
             foreach (var transaction in transactions)
             {
@@ -83,7 +82,7 @@ namespace MyNoSqlServer.Domains
                     case ICleanTableTransactionAction cleanTableTransaction:
                             table = tables[cleanTableTransaction.TableName];
                             table.Clear();
-                            await _persistenceHandler.SynchronizeTableAsync(table, DataSynchronizationPeriod.Sec5); 
+                            _persistenceHandler.SynchronizeTable(table, DataSynchronizationPeriod.Sec5); 
                             _dataSynchronizer.PublishInitTable(table);
                             break;
                     case IDeletePartitionsTransactionAction cleanPartitionsTransaction:
@@ -95,7 +94,7 @@ namespace MyNoSqlServer.Domains
 
                         foreach (var dbPartition in cleaned)
                         {
-                            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey,  DataSynchronizationPeriod.Sec5);
+                            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey,  DataSynchronizationPeriod.Sec5);
                             _dataSynchronizer.PublishInitPartition(table, dbPartition);
                         }
 
@@ -103,8 +102,12 @@ namespace MyNoSqlServer.Domains
                     }
                     case IDeleteRowsTransactionAction deleteRows:
                         table = tables[deleteRows.TableName];
-                        table.DeleteRows(deleteRows.PartitionKey, deleteRows.RowKeys);
-                        await _persistenceHandler.SynchronizePartitionAsync(table, deleteRows.PartitionKey,  DataSynchronizationPeriod.Sec5);
+                        var dbRows = table.DeleteRows(deleteRows.PartitionKey, deleteRows.RowKeys);
+                        if (dbRows != null)
+                        {
+                            _persistenceHandler.SynchronizePartition(table, deleteRows.PartitionKey,  DataSynchronizationPeriod.Sec5);
+                            _dataSynchronizer.SynchronizeDelete(table, dbRows);
+                        }
                         break;
 
                     case IInsertOrReplaceEntitiesTransactionAction insertOrUpdate:
@@ -124,7 +127,7 @@ namespace MyNoSqlServer.Domains
                         foreach (var (partitionKey, rowsToUpdate) in updateRows)
                         {
                             _dataSynchronizer.SynchronizeUpdate(table, rowsToUpdate);
-                            await _persistenceHandler.SynchronizePartitionAsync(table, partitionKey,  DataSynchronizationPeriod.Sec5);
+                            _persistenceHandler.SynchronizePartition(table, partitionKey,  DataSynchronizationPeriod.Sec5);
                         }
                         break;
                     }
@@ -133,7 +136,7 @@ namespace MyNoSqlServer.Domains
 
         }
         
-        public async ValueTask<OperationResult> ReplaceAsync(DbTable table, IMyMemory myMemory, 
+        public OperationResult Replace(DbTable table, IMyMemory myMemory, 
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             
@@ -147,12 +150,12 @@ namespace MyNoSqlServer.Domains
             
             _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
 
-            await _persistenceHandler.SynchronizePartitionAsync(table, partition.PartitionKey, synchronizationPeriod);
+            _persistenceHandler.SynchronizePartition(table, partition.PartitionKey, synchronizationPeriod);
 
             return OperationResult.Ok;
         }
 
-        public async ValueTask<OperationResult> MergeAsync(DbTable table, IMyMemory myMemory,
+        public OperationResult Merge(DbTable table, IMyMemory myMemory,
             DataSynchronizationPeriod synchronizationPeriod, DateTime now)
         {
             var entity = myMemory.ParseDynamicEntity();
@@ -164,12 +167,12 @@ namespace MyNoSqlServer.Domains
             
             _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
 
-            await _persistenceHandler.SynchronizePartitionAsync(table, partition.PartitionKey, synchronizationPeriod);
+            _persistenceHandler.SynchronizePartition(table, partition.PartitionKey, synchronizationPeriod);
             
             return OperationResult.Ok;
         }
 
-        public async ValueTask<OperationResult> DeleteAsync(DbTable table, string partitionKey, string rowKey, 
+        public OperationResult DeleteRow(DbTable table, string partitionKey, string rowKey, 
             DataSynchronizationPeriod synchronizationPeriod)
         {
             var (dbPartition, dbRow) = table.DeleteRow(partitionKey, rowKey);
@@ -179,12 +182,12 @@ namespace MyNoSqlServer.Domains
          
             _dataSynchronizer.SynchronizeDelete(table, new[]{dbRow});
             
-            await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
+            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
             return OperationResult.Ok;
         }
 
 
-        public async ValueTask<OperationResult> CleanAndKeepLastRecordsAsync(DbTable table, string partitionKey, int amount, 
+        public OperationResult CleanAndKeepLastRecords(DbTable table, string partitionKey, int amount, 
             DataSynchronizationPeriod synchronizationPeriod)
         {
             var (dbPartition, dbRows) = table.CleanAndKeepLastRecords(partitionKey, amount);
@@ -193,7 +196,7 @@ namespace MyNoSqlServer.Domains
             {
                 _dataSynchronizer.SynchronizeDelete(table, dbRows);
                 
-                await _persistenceHandler.SynchronizePartitionAsync(table, dbPartition.PartitionKey, synchronizationPeriod);
+                _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
             }
             
             return OperationResult.Ok;
