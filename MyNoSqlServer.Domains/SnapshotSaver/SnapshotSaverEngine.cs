@@ -56,8 +56,8 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
             switch (syncTask)
             {
                             
-                case SyncSetTableSavable syncSetTableSavable:
-                    await _snapshotStorage.SetTableSavableAsync(syncSetTableSavable.DbTable, syncSetTableSavable.Savable);
+                case SyncSetTableAttributes syncSetTableAttributes:
+                    await _snapshotStorage.SetTableAttributesAsync(syncSetTableAttributes.DbTable);
                     break;
                             
                 case SyncTable syncTable:

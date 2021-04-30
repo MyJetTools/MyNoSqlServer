@@ -42,6 +42,6 @@ namespace MyNoSqlServer.Domains.Persistence
         ValueTask SaveTableSnapshotAsync(DbTable dbTable);
         ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey);
         IAsyncEnumerable<ITableLoader> LoadTablesAsync();
-        ValueTask SetTableSavableAsync(DbTable dbTable, bool savable);
+        ValueTask SetTableAttributesAsync(DbTable dbTable);
     }
 }

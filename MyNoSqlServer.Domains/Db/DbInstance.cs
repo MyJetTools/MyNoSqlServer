@@ -9,9 +9,9 @@ namespace MyNoSqlServer.Domains.Db
     public class DbInstance
     {
         private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
-        private readonly object _lockObject = new object();
+        private readonly object _lockObject = new ();
         
-        private Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
+        private Dictionary<string, DbTable> _tables = new ();
         private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
 
         public DbInstance(ISnapshotSaverScheduler snapshotSaverScheduler)
@@ -59,7 +59,7 @@ namespace MyNoSqlServer.Domains.Db
             finally
             {
                 if (syncCreateTable != null)
-                    _snapshotSaverScheduler.SynchronizeSetTablePersist(syncCreateTable, persistTable);
+                    _snapshotSaverScheduler.SynchronizeTableAttributes(syncCreateTable);
             }
   
         }
@@ -74,7 +74,7 @@ namespace MyNoSqlServer.Domains.Db
                 if (foundTable.Persist != persistTable)
                 {
                     foundTable.UpdatePersist(persistTable);
-                    _snapshotSaverScheduler.SynchronizeSetTablePersist(foundTable, persistTable);
+                    _snapshotSaverScheduler.SynchronizeTableAttributes(foundTable);
                 }
 
                 return foundTable;
@@ -82,6 +82,18 @@ namespace MyNoSqlServer.Domains.Db
 
             var createdTable = TryToCreateNewTable(tableName, persistTable);
             return createdTable.table;
+        }
+
+
+        public void SetMaxPartitionsAmount(string tableName, int maxPartitionsAmount)
+        {
+            var table = GetTable(tableName);
+            
+            if (table.MaxPartitionsAmount == maxPartitionsAmount)
+                return;;
+            
+            table.SetMaxPartitionsAmount(maxPartitionsAmount);
+            _snapshotSaverScheduler.SynchronizeTableAttributes(table);
         }
 
         public DbTable RestoreTable(string tableName, bool persist)
@@ -104,7 +116,7 @@ namespace MyNoSqlServer.Domains.Db
                 if (foundTable.Persist != persistTable)
                 {
                     foundTable.UpdatePersist(persistTable);
-                    _snapshotSaverScheduler.SynchronizeSetTablePersist(foundTable, persistTable);
+                    _snapshotSaverScheduler.SynchronizeTableAttributes(foundTable);
                 }
 
                 return false;
@@ -139,6 +151,13 @@ namespace MyNoSqlServer.Domains.Db
 
         }
 
+        public void Gc()
+        {
+            foreach (var table in _tablesAsArray)
+            {
+                table.Gc();
+            }
+        }
 
     }
 }

@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MyNoSqlServer.Api.Grpc
+namespace MyNoSqlServer.Common
 {
-
     public class AsyncEnumerator<T> : IAsyncEnumerator<T>
     {
 

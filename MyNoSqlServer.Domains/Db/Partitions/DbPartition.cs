@@ -15,22 +15,22 @@ namespace MyNoSqlServer.Domains.Db.Partitions
     /// </summary>
     public class DbPartition
     {
-        public string PartitionKey { get; private set; }
+        public string PartitionKey { get; private init; }
         
-        private readonly SortedList<string, DbRow> _rows = new SortedList<string, DbRow>();
+        private readonly SortedList<string, DbRow> _rows = new ();
 
-        private IReadOnlyList<DbRow> _rowsAsList = null;
+        private IReadOnlyList<DbRow> _rowsAsList;
         
-        public DateTime LastAccessTime { get; private set; }
+        internal DateTimeOffset LastTimeAccess { get; set; }
 
-        public bool Insert(DbRow row, DateTime now)
+        public bool Insert(DbRow row)
         {
             if (_rows.ContainsKey(row.RowKey))
                 return false;
             
             _rows.Add(row.RowKey, row);
             _rowsAsList = null;
-            LastAccessTime = now;
+            
             
             return true;
         }
@@ -43,14 +43,11 @@ namespace MyNoSqlServer.Domains.Db.Partitions
                 _rows.Add(row.RowKey, row);
             
             _rowsAsList = null;
-            
-            LastAccessTime = DateTime.UtcNow;
         }
 
 
         public DbRow TryGetRow(string rowKey)
         {
-            LastAccessTime = DateTime.UtcNow;
             return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;
         }
 
@@ -66,7 +63,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         
         public IReadOnlyList<DbRow> GetRowsWithLimit(int? limit, int? skip)
         {
-            LastAccessTime = DateTime.UtcNow;
             IEnumerable<DbRow> result = _rows.Values;
 
 
@@ -83,15 +79,15 @@ namespace MyNoSqlServer.Domains.Db.Partitions
 
         public static DbPartition Create(string partitionKey)
         {
-            return new DbPartition
+            return new ()
             {
-                PartitionKey = partitionKey
+                PartitionKey = partitionKey,
+                LastTimeAccess = DateTimeOffset.UtcNow
             };
         }
 
         public DbRow DeleteRow(string rowKey)
         {
-            LastAccessTime = DateTime.UtcNow;
             if (!_rows.Remove(rowKey, out var result))
                 return null;
 
@@ -130,7 +126,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         
         public IEnumerable<DbRow> GetHighestRowAndBelow(string rowKey, int maxAmount)
         {
-            LastAccessTime = DateTime.UtcNow;
             return _rows.GetHighestAndBelow(rowKey, maxAmount);
         }
 
@@ -149,7 +144,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         public IReadOnlyList<DbRow> CleanAndKeepLastRecords(int amount)
         {
             
-            LastAccessTime = DateTime.UtcNow;
             if (amount<0)
                 throw new Exception("Amount must be greater than zero");
             
@@ -173,7 +167,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
 
         public IReadOnlyList<DbRow> GetRows(string[] rowKeys)
         {
-            LastAccessTime = DateTime.UtcNow;
             return (from rowKey in rowKeys 
                 where _rows.ContainsKey(rowKey) 
                 select _rows[rowKey]).ToList();

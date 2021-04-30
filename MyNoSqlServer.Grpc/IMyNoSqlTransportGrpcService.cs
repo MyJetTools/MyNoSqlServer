@@ -7,6 +7,13 @@ namespace MyNoSqlServer.Grpc
     [ServiceContract(Name = "MyNoSqlServerGrpc")]
     public interface IMyNoSqlTransportGrpcService
     {
+
+        [OperationContract(Action = "CreateTableIfNotExists")]
+        ValueTask CreateTableIfNotExistsAsync(CreateTableIfNotExistsGrpcRequest request);
+
+        [OperationContract(Action = "SetTableAttributes")]
+        ValueTask SetTableAttributesAsync(SetTableAttributesGrpcRequest request);
+        
         [OperationContract(Action = "GetRows")]
         IAsyncEnumerable<TableEntityTransportGrpcContract> GetRowsAsync(GetEntitiesGrpcRequest request);
         
@@ -18,5 +25,6 @@ namespace MyNoSqlServer.Grpc
         
         [OperationContract(Action = "CancelTransactions")]
         ValueTask CancelTransactionAsync(CancelTransactionGrpcRequest request);
+
     }
 }

@@ -18,7 +18,8 @@ namespace MyNoSqlServer.Api.Controllers
             return Json(list.Select(itm => new
             {
                 itm.Name,
-                itm.Persist
+                itm.Persist,
+                MaxPartitionsAmount =  itm.MaxPartitionsAmount == 0 ? "Unlimited" : itm.MaxPartitionsAmount.ToString()
             }));
         }
 
@@ -69,7 +70,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
 
-            table.Clean();
+            table.Clear();
 
             ServiceLocator.DataSynchronizer.PublishInitTable(table);
             await ServiceLocator.PersistenceHandler.SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
@@ -96,7 +97,7 @@ namespace MyNoSqlServer.Api.Controllers
             var persistAsBool = persist != "0";
 
             table.UpdatePersist(persistAsBool);
-            ServiceLocator.SnapshotSaverScheduler.SynchronizeSetTablePersist(table, persistAsBool);
+            ServiceLocator.SnapshotSaverScheduler.SynchronizeTableAttributes(table);
 
             return Ok();
         }
@@ -105,12 +106,13 @@ namespace MyNoSqlServer.Api.Controllers
         [HttpGet("Tables/PartitionsCount")]
         public IActionResult PartitionsCount([Required][FromQuery] string tableName)
         {
+            if (string.IsNullOrEmpty(tableName))
+                return this.GetResult(OperationResult.TableNameIsEmpty);
 
             var (getTableResult, table) = this.GetTable(tableName);
 
-
-            if (string.IsNullOrEmpty(tableName))
-                return this.GetResult(OperationResult.TableNameIsEmpty);
+            if (getTableResult != null)
+                return getTableResult;
 
             var result = table.GetPartitionsCount();
 

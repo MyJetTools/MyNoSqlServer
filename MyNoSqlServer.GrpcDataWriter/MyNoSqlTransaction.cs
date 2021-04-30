@@ -8,7 +8,7 @@ namespace MyNoSqlServer.GrpcDataWriter
 {
     public class MyNoSqlTransaction
     {
-        private static readonly System.Diagnostics.ActivitySource _source = new("MyNoSql.TransactionsBuilder");
+        private static readonly System.Diagnostics.ActivitySource Source = new("MyNoSql.TransactionsBuilder");
 
         private readonly IMyNoSqlTransportGrpcService _grpcService;
         private readonly Func<Type, string> _getTableName;
@@ -134,7 +134,7 @@ namespace MyNoSqlServer.GrpcDataWriter
 
         public async ValueTask CommitAsync()
         {
-            using var activity = _source.StartActivity("Commit.GrpcCall");
+            using var activity = Source.StartActivity("Commit.GrpcCall");
 
             await _grpcService.PostTransactionActionsAsync(new TransactionPayloadGrpcRequest
             {

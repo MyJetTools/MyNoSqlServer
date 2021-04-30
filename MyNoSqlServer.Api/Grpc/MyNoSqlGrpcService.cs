@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Grpc;
 
@@ -9,6 +10,20 @@ namespace MyNoSqlServer.Api.Grpc
 {
     public class MyNoSqlGrpcService : IMyNoSqlTransportGrpcService
     {
+        public ValueTask CreateTableIfNotExistsAsync(CreateTableIfNotExistsGrpcRequest request)
+        {
+            ServiceLocator.DbInstance.CreateTableIfNotExists(request.TableName, request.PersistTable);
+            return new ValueTask();
+        }
+
+        public ValueTask SetTableAttributesAsync(SetTableAttributesGrpcRequest request)
+        {
+            if (request.MaxPartitionsAmount != null)
+                ServiceLocator.DbInstance.SetMaxPartitionsAmount(request.TableName, request.MaxPartitionsAmount.Value);
+
+            return new ValueTask();
+        }
+
         public IAsyncEnumerable<TableEntityTransportGrpcContract> GetRowsAsync(GetEntitiesGrpcRequest request)
         {
             var table = ServiceLocator.DbInstance.GetTable(request.TableName);

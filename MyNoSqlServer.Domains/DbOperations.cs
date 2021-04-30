@@ -82,7 +82,7 @@ namespace MyNoSqlServer.Domains
                 {
                     case ICleanTableTransactionAction cleanTableTransaction:
                             table = tables[cleanTableTransaction.TableName];
-                            table.Clean();
+                            table.Clear();
                             await _persistenceHandler.SynchronizeTableAsync(table, DataSynchronizationPeriod.Sec5); 
                             _dataSynchronizer.PublishInitTable(table);
                             break;
@@ -91,7 +91,7 @@ namespace MyNoSqlServer.Domains
                         
                         table = tables[cleanPartitionsTransaction.TableName];
                         
-                        var cleaned = table.CleanPartitions(cleanPartitionsTransaction.PartitionKeys);
+                        var cleaned = table.DeletePartitions(cleanPartitionsTransaction.PartitionKeys);
 
                         foreach (var dbPartition in cleaned)
                         {

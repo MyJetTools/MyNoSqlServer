@@ -32,7 +32,8 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
     public interface ISnapshotSaverScheduler
     {
 
-        void SynchronizeSetTablePersist(DbTable dbTable, bool savable);
+        void SynchronizeTableAttributes(DbTable dbTable);
+        
         
         void SynchronizePartition(DbTable dbTable, string partitionKey, DataSynchronizationPeriod period);
         

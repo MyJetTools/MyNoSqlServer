@@ -7,22 +7,18 @@ using MyNoSqlServer.Domains.Db.Tables;
 namespace MyNoSqlServer.Domains.SnapshotSaver
 {
 
-    public class SyncSetTableSavable : ISetTableSavable
+    public class SyncSetTableAttributes : ISetTableSavable
     {
         public DbTable DbTable { get; private set; }
         public DateTime SyncDateTime { get; set; }
         public long Id { get;  set; }
         
-
-        public bool Savable { get; private set; }
-        
-        public static SyncSetTableSavable Create(DbTable dbTable, bool savable, DataSynchronizationPeriod period)
+        public static SyncSetTableAttributes Create(DbTable dbTable,  DataSynchronizationPeriod period)
         {
-            return new SyncSetTableSavable
+            return new SyncSetTableAttributes
             {
                 DbTable = dbTable,
                 SyncDateTime = DateTime.UtcNow.GetNextPeriod(period),
-                Savable = savable
             };
         }
     }
@@ -99,9 +95,9 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
 
 
-        public void SynchronizeSetTablePersist(DbTable dbTable, bool savable)
+        public void SynchronizeTableAttributes(DbTable dbTable)
         {
-            EnqueueTask(dbTable, SyncSetTableSavable.Create(dbTable, savable, DataSynchronizationPeriod.Immediately));
+            EnqueueTask(dbTable, SyncSetTableAttributes.Create(dbTable, DataSynchronizationPeriod.Immediately));
         }
         
         public void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period)

@@ -7,7 +7,7 @@ namespace MyNoSqlServer.GrpcDataWriter
 {
     public static class MyNoSqlGrpcDataWriterFactory
     {
-        public static MyNoSqlGrpcDataWriter Crete(string grpcUrl)
+        public static MyNoSqlGrpcDataWriter Create(string grpcUrl)
         {
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 

@@ -63,18 +63,16 @@ namespace MyNoSqlServer.Tests
             return new ValueTask();
         }
 
-        public async IAsyncEnumerable<ITableLoader> LoadTablesAsync()
+        public IAsyncEnumerable<ITableLoader> LoadTablesAsync()
         {
-            foreach (var itm in Array.Empty<ITableLoader>())
-            {
-                yield return itm;
-            }
+            return Array.Empty<ITableLoader>().ToAsyncEnumerable();
         }
 
-        public ValueTask SetTableSavableAsync(DbTable dbTable, bool savable)
+        public ValueTask SetTableAttributesAsync(DbTable dbTable)
         {
             return new ValueTask();
         }
+
     }
 
 

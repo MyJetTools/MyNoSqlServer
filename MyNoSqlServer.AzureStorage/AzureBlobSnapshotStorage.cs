@@ -88,10 +88,10 @@ namespace MyNoSqlServer.AzureStorage
             }
         }
 
-        public async ValueTask SetTableSavableAsync(DbTable dbTable, bool savable)
+        public async ValueTask SetTableAttributesAsync(DbTable dbTable)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
-            await TableMetadataSaver.SaveTableMetadataAsync(container, savable);
+            await TableMetadataSaver.SaveTableMetadataAsync(container, dbTable.Persist, dbTable.MaxPartitionsAmount);
         }
 
         public async IAsyncEnumerable<string> GetPersistedTablesAsync()

@@ -10,25 +10,57 @@ namespace MyNoSqlServer.GrpcDataWriter
     {
         private readonly IMyNoSqlTransportGrpcService _myNoSqlTransportGrpcService;
 
+
         public MyNoSqlGrpcDataWriter(IMyNoSqlTransportGrpcService myNoSqlTransportGrpcService)
         {
             _myNoSqlTransportGrpcService = myNoSqlTransportGrpcService;
         }
 
         private readonly Dictionary<Type, string> _typesToTableNames = new ();
+        
 
-        public MyNoSqlGrpcDataWriter RegisterSupportedEntity<T>(string tableName) where T : IMyNoSqlDbEntity, new()
+        public MyNoSqlGrpcDataWriter RegisterSupportedEntity<T>(string tableName, bool createTableIfNotExists = true) where T : IMyNoSqlDbEntity, new()
         {
             _typesToTableNames.Add(typeof(T), tableName);
+
+            if (createTableIfNotExists)
+                CreateTableIfNotExistsAsync(tableName).AsTask().Wait();
             return this;
+        }
+
+        public ValueTask SetTableMaxPartitionsAmountAsync(string tableName, int maxPartitionsAmount)
+        {
+            return _myNoSqlTransportGrpcService.SetTableAttributesAsync(new SetTableAttributesGrpcRequest
+            {
+                TableName = tableName,
+                MaxPartitionsAmount = maxPartitionsAmount
+            });
+        }
+        
+        public ValueTask SetTableMaxPartitionsAmountAsUnlimitedAsync(string tableName)
+        {
+            return _myNoSqlTransportGrpcService.SetTableAttributesAsync(new SetTableAttributesGrpcRequest
+            {
+                TableName = tableName,
+                MaxPartitionsAmount = 0
+            });
+        }
+
+        private ValueTask CreateTableIfNotExistsAsync(string tableName)
+        {
+            return _myNoSqlTransportGrpcService.CreateTableIfNotExistsAsync(new CreateTableIfNotExistsGrpcRequest
+            {
+                TableName = tableName
+            });
+
         }
 
         private string GetTableName(Type type)
         {
-            if (_typesToTableNames.TryGetValue(type, out var result))
-                return result;
+            if (!_typesToTableNames.TryGetValue(type, out var tableName))
+                throw new Exception("There is not tableName registered for the TableEntity with Type: " + type);
 
-            throw new Exception("There is not tableName registered for the TableEntity with Type: " + type);
+            return tableName;
         }
         
         private void CheckResponse(MyNoSqlResponse table, string tableName)
@@ -110,7 +142,6 @@ namespace MyNoSqlServer.GrpcDataWriter
             CheckResponse(result.Response, tableName);
 
             return result.Entity.DeserializeEntity<T>();
-
         }
 
 

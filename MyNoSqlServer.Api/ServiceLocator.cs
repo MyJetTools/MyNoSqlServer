@@ -125,6 +125,12 @@ namespace MyNoSqlServer.Api
                 PostTransactionsList.GcTransactions();
                 return new ValueTask();
             });
+            
+            TimerOneMinute.Register("GC TableRecords", () =>
+            {
+                DbInstance.Gc();
+                return new ValueTask();
+            });
 
             TimerSaver.Register("Persist", ()=> _snapshotSaverEngine.IterateAsync(GlobalVariables.IsShuttingDown));
             TimerSaver.RegisterExceptionHandler((msg, e) =>
