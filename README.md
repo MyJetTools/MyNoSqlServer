@@ -70,11 +70,11 @@ using ProtoBuf.Grpc.Client;
 
 namespace MyNoSqlServerTestGrpcClient
 {
-class Program
-{
-static void Main(string[] args)
-{
-TestGrpcContracts().Wait();
+  class Program
+  {
+        static void Main(string[] args)
+        {
+            TestGrpcContracts().Wait();
 
             Console.WriteLine("Done");
         }
@@ -122,15 +122,10 @@ TestGrpcContracts().Wait();
             Console.WriteLine($"Got {i} records in {sw.Elapsed}");
         }
     }
-    
-    
-
 
     public class TestEntity : MyNoSqlDbEntity
     {
-        
         public string Value { get; set; }
-        
     }
 }
 
