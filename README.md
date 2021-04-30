@@ -56,9 +56,9 @@ MyNoSqlServerClient - has a nuget https://www.nuget.org/packages/MyNoSqlClient
 
 The Library which facilitates the ability to make updates though GRPC Transport
 
-Example of creating GRPC Writer:
+### Example of creating GRPC Writer:
 
-`           
+```csharp        
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -134,7 +134,7 @@ TestGrpcContracts().Wait();
     }
 }
 
-`
+```
 
 
 # RELEASE NOTES
