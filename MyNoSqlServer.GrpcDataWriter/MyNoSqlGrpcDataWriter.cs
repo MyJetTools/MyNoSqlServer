@@ -63,7 +63,7 @@ namespace MyNoSqlServer.GrpcDataWriter
             return tableName;
         }
         
-        private void CheckResponse(MyNoSqlResponse table, string tableName)
+        private static void CheckResponse(MyNoSqlResponse table, string tableName)
         {
             switch (table)
             {
@@ -140,6 +140,9 @@ namespace MyNoSqlServer.GrpcDataWriter
             });
             
             CheckResponse(result.Response, tableName);
+
+            if (result.Response == MyNoSqlResponse.DbRowNotFound)
+                return default;
 
             return result.Entity.DeserializeEntity<T>();
         }

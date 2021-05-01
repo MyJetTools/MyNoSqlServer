@@ -7,13 +7,15 @@ namespace MyNoSqlServer.GrpcDataWriter
 {
     public static class MyNoSqlGrpcDataWriterFactory
     {
-        public static MyNoSqlGrpcDataWriter Create(string grpcUrl)
+        public static MyNoSqlGrpcDataWriter CreateNoSsl(string grpcUrl, Action<GrpcChannel> adjustChannel = null)
         {
-            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+            GrpcClientFactory.AllowUnencryptedHttp2 = true;
 
-            var channel = GrpcChannel.ForAddress(grpcUrl).CreateGrpcService<IMyNoSqlTransportGrpcService>();
+            var channel = GrpcChannel.ForAddress(grpcUrl);
 
-            return new MyNoSqlGrpcDataWriter(channel);
+            adjustChannel?.Invoke(channel);
+
+            return new MyNoSqlGrpcDataWriter(channel.CreateGrpcService<IMyNoSqlTransportGrpcService>());
         }
     }
 }

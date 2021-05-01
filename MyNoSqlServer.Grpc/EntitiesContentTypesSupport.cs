@@ -8,6 +8,10 @@ namespace MyNoSqlServer.Grpc
     {
         public static T DeserializeEntity<T>(this TableEntityTransportGrpcContract contract)  where T : IMyNoSqlDbEntity, new()
         {
+
+            if (contract.Content == null)
+                return default;
+            
             if (contract.ContentType == GrpcContentType.Json)
             {
                 var jsonEntity = Encoding.UTF8.GetString(contract.Content);
