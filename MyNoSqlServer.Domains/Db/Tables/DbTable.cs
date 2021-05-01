@@ -259,6 +259,12 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         public IReadOnlyList<DbRow> DeleteRows(string partitionKey, IEnumerable<string> rowKeys)
         {
+            if (partitionKey == null)
+                throw new Exception("PartitionKey == null");
+                        
+            if (rowKeys == null)
+                throw new Exception("RowKey == null");
+            
             List<DbRow> result = null;
             
             _readerWriterLockSlim.EnterWriteLock();
@@ -572,7 +578,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         public IReadOnlyList<DbPartition> KeepMaxPartitions(in int amount)
         {
-            var partitionsToGc = this.GetPartitionsToGc(amount);
+            var partitionsToGc = GetPartitionsToGc(amount);
 
             if (partitionsToGc.Count == 0)
                 return partitionsToGc;
@@ -798,9 +804,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                
                 return _partitions.GetPartitionsToGc(maxAmount);
-
             }
             finally
             {
@@ -814,7 +818,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
             var partitionsToGc = GetPartitionsToGc(MaxPartitionsAmount);
             
-            if (partitionsToGc == null)
+            if (partitionsToGc.Count == 0)
                 return;
             
             _readerWriterLockSlim.EnterWriteLock();

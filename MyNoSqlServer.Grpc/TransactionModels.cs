@@ -197,8 +197,9 @@ namespace MyNoSqlServer.Grpc
                         break;
 
                     case TransactionType.DeleteRows:
-                        yield return ProtoBuf.Serializer.Deserialize<DeleteRowsTransactionActionGrpcModel>(
+                        var deleteRowsAction = ProtoBuf.Serializer.Deserialize<DeleteRowsTransactionActionGrpcModel>(
                             grpcModel.Payload.AsSpan());
+                        yield return deleteRowsAction;
                         break;
 
                     case TransactionType.InsertOrReplacePartitions:

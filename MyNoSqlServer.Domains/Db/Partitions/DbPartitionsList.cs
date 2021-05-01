@@ -79,10 +79,10 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         {
 
             if (maxPartitionsAmount <= 0)
-                return null;
+                return Array.Empty<DbPartition>();
 
             if (_partitions.Count <= maxPartitionsAmount)
-                return null;
+                return Array.Empty<DbPartition>();
 
             return _partitions.Values.OrderBy(partition => partition.LastTimeAccess)
                 .Take(_partitions.Count - maxPartitionsAmount).ToList();
