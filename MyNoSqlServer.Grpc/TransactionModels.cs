@@ -59,11 +59,14 @@ namespace MyNoSqlServer.Grpc
     [DataContract]
     public class DeleteRowsTransactionActionGrpcModel : IDeleteRowsTransactionAction
     {
-        [DataMember(Order = 1)] public string TableName { get; set; }
+        [DataMember(Order = 1)] 
+        public string TableName { get; set; }
 
-        [DataMember(Order = 2)] public string PartitionKey { get; set; }
+        [DataMember(Order = 2)] 
+        public string PartitionKey { get; set; }
 
-        [DataMember(Order = 3)] public string[] RowKeys { get; set; }
+        [DataMember(Order = 3)] 
+        public string[] RowKeys { get; set; }
 
         public static DeleteRowsTransactionActionGrpcModel Create(IDeleteRowsTransactionAction src)
         {

@@ -58,6 +58,18 @@ namespace MyNoSqlServer.GrpcDataWriter
         
         public void DeletePartitions(string tableName, string[] partitionKeys)
         {
+            if (partitionKeys == null)
+            {
+                Console.WriteLine("Transaction.DeletePartitions  - partitionKeys are null");
+                return;
+            }
+            
+            if (partitionKeys.Length == 0)
+            {
+                Console.WriteLine("Transaction.DeletePartitions  - partitionKeys size is null");
+                return;
+            }
+            
             var payloadModel = new DeletePartitionsTransactionActionGrpcModel
             {
                 TableName = tableName,
@@ -69,6 +81,25 @@ namespace MyNoSqlServer.GrpcDataWriter
         
         public void DeleteRows(string tableName, string partitionKey, params string[] rowKeys)
         {
+            if (partitionKey == null)
+            {
+                Console.WriteLine("Transaction.DeleteRows  - partitionKey is null");
+                return;
+            }
+            
+            if (rowKeys == null)
+            {
+                Console.WriteLine("Transaction.DeleteRows  - rowKeys are null");
+                return;
+            }
+            
+            if (rowKeys.Length == 0)
+            {
+                Console.WriteLine("Transaction.DeleteRows  - rowKey.Length = 0");
+                return;
+            }
+            
+            
             var payloadModel = new DeleteRowsTransactionActionGrpcModel
             {
                 TableName = tableName,
