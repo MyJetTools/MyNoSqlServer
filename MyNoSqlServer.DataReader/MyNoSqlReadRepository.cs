@@ -270,6 +270,23 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
+        public IReadOnlyList<T> Get(string partitionKey, IEnumerable<string> rowKeys)
+        {
+            _lock.EnterReadLock();
+            try
+            {
+                if (!_cache.ContainsKey(partitionKey))
+                    return Array.Empty<T>();
+
+                return _cache[partitionKey].GetRows().Where(itm => rowKeys.Contains(itm.RowKey)).ToList();
+
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+        }
+
         public IReadOnlyList<T> Get(Func<T, bool> condition = null)
         {
 
