@@ -8,12 +8,12 @@ namespace MyNoSqlServer.GrpcDataWriter
 {
     public class MyNoSqlGrpcDataWriter
     {
-        private readonly IMyNoSqlTransportGrpcService _myNoSqlTransportGrpcService;
+        private readonly IMyNoSqlWriterGrpcService _myNoSqlWriterGrpcService;
 
 
-        public MyNoSqlGrpcDataWriter(IMyNoSqlTransportGrpcService myNoSqlTransportGrpcService)
+        public MyNoSqlGrpcDataWriter(IMyNoSqlWriterGrpcService myNoSqlWriterGrpcService)
         {
-            _myNoSqlTransportGrpcService = myNoSqlTransportGrpcService;
+            _myNoSqlWriterGrpcService = myNoSqlWriterGrpcService;
         }
 
         private readonly Dictionary<Type, string> _typesToTableNames = new ();
@@ -30,7 +30,7 @@ namespace MyNoSqlServer.GrpcDataWriter
 
         public ValueTask SetTableMaxPartitionsAmountAsync(string tableName, int maxPartitionsAmount)
         {
-            return _myNoSqlTransportGrpcService.SetTableAttributesAsync(new SetTableAttributesGrpcRequest
+            return _myNoSqlWriterGrpcService.SetTableAttributesAsync(new SetTableAttributesGrpcRequest
             {
                 TableName = tableName,
                 MaxPartitionsAmount = maxPartitionsAmount
@@ -39,7 +39,7 @@ namespace MyNoSqlServer.GrpcDataWriter
         
         public ValueTask SetTableMaxPartitionsAmountAsUnlimitedAsync(string tableName)
         {
-            return _myNoSqlTransportGrpcService.SetTableAttributesAsync(new SetTableAttributesGrpcRequest
+            return _myNoSqlWriterGrpcService.SetTableAttributesAsync(new SetTableAttributesGrpcRequest
             {
                 TableName = tableName,
                 MaxPartitionsAmount = 0
@@ -48,7 +48,7 @@ namespace MyNoSqlServer.GrpcDataWriter
 
         private ValueTask CreateTableIfNotExistsAsync(string tableName)
         {
-            return _myNoSqlTransportGrpcService.CreateTableIfNotExistsAsync(new CreateTableIfNotExistsGrpcRequest
+            return _myNoSqlWriterGrpcService.CreateTableIfNotExistsAsync(new CreateTableIfNotExistsGrpcRequest
             {
                 TableName = tableName
             });
@@ -76,7 +76,7 @@ namespace MyNoSqlServer.GrpcDataWriter
             where T : IMyNoSqlDbEntity, new()
         {
 
-            var dataResult = _myNoSqlTransportGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
+            var dataResult = _myNoSqlWriterGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
             {
                 TableName = GetTableName(typeof(T)),
                 PartitionKey = null,
@@ -95,7 +95,7 @@ namespace MyNoSqlServer.GrpcDataWriter
             where T : IMyNoSqlDbEntity, new()
         {
 
-            var dataResult = _myNoSqlTransportGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
+            var dataResult = _myNoSqlWriterGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
             {
                 TableName = GetTableName(typeof(T)),
                 PartitionKey = partitionKey,
@@ -114,7 +114,7 @@ namespace MyNoSqlServer.GrpcDataWriter
             where T : IMyNoSqlDbEntity, new()
         {
 
-            var dataResult = _myNoSqlTransportGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
+            var dataResult = _myNoSqlWriterGrpcService.GetRowsAsync(new GetEntitiesGrpcRequest
             {
                 TableName = GetTableName(typeof(T)),
                 PartitionKey = null,
@@ -132,7 +132,7 @@ namespace MyNoSqlServer.GrpcDataWriter
         public async ValueTask<T> GetRowAsync<T>(string partitionKey, string rowKey) where T : IMyNoSqlDbEntity, new()
         {
             var tableName = GetTableName(typeof(T));
-            var result = await _myNoSqlTransportGrpcService.GetRowAsync(new GetEntityGrpcRequest
+            var result = await _myNoSqlWriterGrpcService.GetRowAsync(new GetEntityGrpcRequest
             {
                 TableName = tableName,
                 PartitionKey = partitionKey,
@@ -150,7 +150,7 @@ namespace MyNoSqlServer.GrpcDataWriter
 
         public MyNoSqlTransaction BeginTransaction()
         {
-            return new MyNoSqlTransaction(_myNoSqlTransportGrpcService, GetTableName);
+            return new MyNoSqlTransaction(_myNoSqlWriterGrpcService, GetTableName);
         }
     }
 }

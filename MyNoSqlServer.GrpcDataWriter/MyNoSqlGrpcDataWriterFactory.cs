@@ -15,7 +15,7 @@ namespace MyNoSqlServer.GrpcDataWriter
 
             adjustChannel?.Invoke(channel);
 
-            return new MyNoSqlGrpcDataWriter(channel.CreateGrpcService<IMyNoSqlTransportGrpcService>());
+            return new MyNoSqlGrpcDataWriter(channel.CreateGrpcService<IMyNoSqlWriterGrpcService>());
         }
     }
 }

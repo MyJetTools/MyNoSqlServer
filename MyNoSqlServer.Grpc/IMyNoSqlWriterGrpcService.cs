@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 
 namespace MyNoSqlServer.Grpc
 {
-    [ServiceContract(Name = "MyNoSqlServerGrpc")]
-    public interface IMyNoSqlTransportGrpcService
+    [ServiceContract(Name = "mynosqlserver.Writer")]
+    public interface IMyNoSqlWriterGrpcService
     {
 
         [OperationContract(Action = "CreateTableIfNotExists")]

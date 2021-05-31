@@ -10,7 +10,7 @@ namespace MyNoSqlServer.GrpcDataWriter
     {
         private static readonly System.Diagnostics.ActivitySource Source = new("MyNoSql.TransactionsBuilder");
 
-        private readonly IMyNoSqlTransportGrpcService _grpcService;
+        private readonly IMyNoSqlWriterGrpcService _grpcService;
         private readonly Func<Type, string> _getTableName;
 
         private string _transactionId;
@@ -19,7 +19,7 @@ namespace MyNoSqlServer.GrpcDataWriter
         //ToDo - we are going to use this parameter to calculate payload and separate operations
         private int _payloadSize = 0;
 
-        public MyNoSqlTransaction(IMyNoSqlTransportGrpcService grpcService, Func<Type, string> getTableName)
+        public MyNoSqlTransaction(IMyNoSqlWriterGrpcService grpcService, Func<Type, string> getTableName)
         {
             _grpcService = grpcService;
             _getTableName = getTableName;
