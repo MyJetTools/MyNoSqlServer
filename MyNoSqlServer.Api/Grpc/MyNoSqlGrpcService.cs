@@ -8,7 +8,7 @@ using MyNoSqlServer.Grpc;
 
 namespace MyNoSqlServer.Api.Grpc
 {
-    public class MyNoSqlGrpcService : IMyNoSqlWriterGrpcService
+    public class MyNoSqlGrpcService : IMyNoSqlWriterGrpcService, IMyNoSqlWriterGrpcServiceLegacy
     {
         public ValueTask CreateTableIfNotExistsAsync(CreateTableIfNotExistsGrpcRequest request)
         {
