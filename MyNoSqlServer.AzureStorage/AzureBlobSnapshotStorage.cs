@@ -46,14 +46,23 @@ namespace MyNoSqlServer.AzureStorage
             await container.CleanContainerAsync();
             Console.WriteLine($"{DateTime.UtcNow:s} Container cleaned: {dbTable.Name}");
 
-            var partitions = dbTable.GetAllPartitions();
-
-            foreach (var dbPartition in partitions)
+            var partitions = dbTable.GetReadAccess(readAccess =>
             {
-                var data = dbPartition.GetAllRows().ToJsonArray().AsArray();
-                await container.SavePartitionAsync(dbPartition.PartitionKey, data);
+                var partitionSnapshots = new Dictionary<string, byte[]>();
+
+                foreach (var dbPartition in readAccess.GetAllPartitions())
+                {
+                    partitionSnapshots.Add(dbPartition.PartitionKey, dbPartition.GetAllRows().ToJsonArray().AsArray());
+                }
+
+                return partitionSnapshots;
+            });
+
+            foreach (var (partitionKey, snapshot) in partitions)
+            {
+                await container.SavePartitionAsync(partitionKey, snapshot);
             
-                Console.WriteLine($"{DateTime.UtcNow:s} Saved snapshot: {dbTable.Name}/{dbPartition.PartitionKey}");
+                Console.WriteLine($"{DateTime.UtcNow:s} Saved snapshot: {dbTable.Name}/{partitionKey}");
             }
         }
 

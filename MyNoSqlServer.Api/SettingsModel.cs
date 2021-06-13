@@ -2,12 +2,22 @@ using System;
 using System.IO;
 using Microsoft.Extensions.Configuration;
 using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains;
+using MyNoSqlServer.NodePersistence;
+using MyYamlParser;
 
 namespace MyNoSqlServer.Api
 {
-    public class SettingsModel
+    public class SettingsModel : IMyNoSqlNodePersistenceSettings, ISettingsLocation
     {
-        public string BackupAzureConnectString { get; set; }
+        [YamlProperty]
+        public string PersistencePath { get; set; }
+        [YamlProperty]
+        public bool CompressData { get; set; }
+        [YamlProperty]
+        public int MaxPayloadSize { get; set; }
+        [YamlProperty]
+        public string Location { get; set; }
     }
 
     public static class SettingsLoader
@@ -16,35 +26,68 @@ namespace MyNoSqlServer.Api
         {
             try
             {
-                var configBuilder = new ConfigurationBuilder();
+
+
+                byte[] settingsContent = null;
+                
+                
+                const string fileName = ".mynosqlserver";
+                
 
                 var homeFolder = Environment.GetEnvironmentVariable("HOME");
-                if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, ".mynosqlserver")))
+                if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, fileName)))
                 {
-                    FileStream fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
-                    configBuilder.AddJsonStream(fileStream);
+                    var path = Path.Combine(homeFolder, fileName);
+                    settingsContent = File.ReadAllBytes(path);
+                }
+                else
+                {
+                    Console.WriteLine("Settings File not found as Linux or MacOs Path. Skipping");
                 }
 
-                homeFolder = Environment.GetEnvironmentVariable("HOMEDRIVE") + Environment.GetEnvironmentVariable("HOMEPATH");
-                if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, ".mynosqlserver")))
+                if (settingsContent == null)
                 {
-                    FileStream fileStream = new FileStream(Path.Combine(homeFolder, ".mynosqlserver"), FileMode.Open);
-                    configBuilder.AddJsonStream(fileStream);
+                    homeFolder = Environment.GetEnvironmentVariable("HOMEDRIVE") + Environment.GetEnvironmentVariable("HOMEPATH");
+                    if (!string.IsNullOrEmpty(homeFolder) && File.Exists(Path.Combine(homeFolder, fileName)))
+                    {
+                        settingsContent = File.ReadAllBytes(Path.Combine(homeFolder, fileName));
+                    }
+                    else
+                    {
+                        Console.WriteLine("Settings File not found as Windows Path. Skipping");
+                    }
                 }
+    
 
-                configBuilder.AddEnvironmentVariables();
+                if (settingsContent == null)
+                {
+                    throw new Exception("Settings file not found at HOME/" + fileName + " path");
+                }
+                
 
-                var config = configBuilder.Build();
+                var settingsModel = MyYamlDeserializer.Deserialize<SettingsModel>(settingsContent);
 
-                var data = config.Get<SettingsModel>();
+  
 
-                if (string.IsNullOrEmpty(data.BackupAzureConnectString))
+                if (string.IsNullOrEmpty(settingsModel.PersistencePath))
                 {
                     Console.WriteLine("No connection string found. Backups are disabled");
                     Console.WriteLine("In case to enable, please specify 'BackupAzureConnectString' in env variable or in json file: ~/.mynosqlserver");
+                    throw new Exception("PersistencePath should not be Empty");
                 }
 
-                return data;
+                if (!settingsModel.PersistencePath.StartsWith("http") && !settingsModel.PersistencePath.StartsWith("DefaultEndpointsProtocol"))
+                {
+                    throw new Exception(
+                        "PersistencePath Parameter should start either from http/https for GRPC Dependency or from DefaultEndpointsProtocol");
+                }
+
+                if (settingsModel.MaxPayloadSize < 1024 * 1024)
+                {
+                    throw new Exception($"MaxPayloadSize settings must be greater then {1024 * 1024}");
+                }
+
+                return settingsModel;
             }
             catch (Exception e)
             {

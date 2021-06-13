@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.WindowsAzure.Storage.Blob;
 using MyNoSqlServer.Common;
-using MyNoSqlServer.Domains.DataSynchronization;
 using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.AzureStorage

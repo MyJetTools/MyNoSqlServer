@@ -11,20 +11,4 @@ namespace MyNoSqlServer.Common
         ReadOnlySpan<byte> Span { get; }
     }
 
-
-    public static class MemoryUtils
-    {
-        public static IMyMemory AsMyMemory(this byte[] src)
-        {
-            return ChunkedStream.Create(src);
-        }
-        
-        public static IMyMemory AsMyMemory(this ReadOnlyMemory<byte> src)
-        {
-            return ChunkedStream.Create(src);
-        }
-        
-
-        
-    }
 }

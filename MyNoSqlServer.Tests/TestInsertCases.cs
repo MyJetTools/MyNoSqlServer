@@ -33,11 +33,11 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetRequiredService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbInstance.CreateTableIfNotExists("mytable", false, TestUtils.GetTestEventAttributes());
 
             var now = DateTime.UtcNow;
 
-            var result = dbOperations.Insert(table, insertEntity.ToMemory(), DataSynchronizationPeriod.Asap, now);
+            var result = dbOperations.Insert(table, insertEntity.ToMemory(), now, TestUtils.GetTestEventAttributes());
             
             Assert.AreEqual(OperationResult.Ok, result);
 

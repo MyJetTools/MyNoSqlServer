@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -57,7 +56,7 @@ namespace MyNoSqlServer.Api.Controllers
             
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = ServiceLocator.DbOperations.Insert(table, body, syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
+            var result = ServiceLocator.DbOperations.Insert(table, body, DateTime.UtcNow, HttpContext.GetRequestAttributes(syncPeriod));
             
             return this.GetResult(result);
             
@@ -75,7 +74,7 @@ namespace MyNoSqlServer.Api.Controllers
             var body = await Request.BodyAsIMemoryAsync();
 
             var result = ServiceLocator.DbOperations.Replace(table, body, 
-                syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
+                DateTime.UtcNow, HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.GetResult(result);
 
@@ -93,7 +92,7 @@ namespace MyNoSqlServer.Api.Controllers
             var body = await Request.BodyAsIMemoryAsync();
 
             var result = ServiceLocator.DbOperations.Merge(table, body,
-                syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
+                DateTime.UtcNow, HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.GetResult(result);
 
@@ -112,7 +111,7 @@ namespace MyNoSqlServer.Api.Controllers
             var body = await Request.BodyAsIMemoryAsync();
             
             var result = ServiceLocator.DbOperations.InsertOrReplace(table, 
-                body, syncPeriod.ParseSynchronizationPeriodContract(), DateTime.UtcNow);
+                body, DateTime.UtcNow, HttpContext.GetRequestAttributes(syncPeriod));
             
             return this.GetResult(result);
         }
@@ -134,7 +133,7 @@ namespace MyNoSqlServer.Api.Controllers
                 return this.GetResult(OperationResult.RowKeyIsNull);
 
             var result = ServiceLocator.DbOperations.DeleteRow(table, partitionKey, rowKey,
-                syncPeriod.ParseSynchronizationPeriodContract());
+                HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.GetResult(result);
         }
@@ -150,9 +149,11 @@ namespace MyNoSqlServer.Api.Controllers
             
             if (getTableResult != null)
                 return getTableResult;
+            
+
 
             var result = ServiceLocator.DbOperations.CleanAndKeepLastRecords(table, partitionKey, amount,
-                syncPeriod.ParseSynchronizationPeriodContract());
+                 HttpContext.GetRequestAttributes(syncPeriod));
             
             return this.GetResult(result);
             

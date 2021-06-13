@@ -10,7 +10,6 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         DateTime SyncDateTime { get; set; }
         
         long Id { get; set; }
-
     }
 
 

@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -23,7 +22,8 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("Tables/CreateIfNotExists")]
-        public IActionResult CreateIfNotExists([Required][FromQuery] string tableName, [FromQuery] string persist)
+        public IActionResult CreateIfNotExists([Required][FromQuery] string tableName, [FromQuery] string persist,
+            [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -32,12 +32,13 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            ServiceLocator.DbInstance.CreateTableIfNotExists(tableName, persist != "0");
+            ServiceLocator.DbInstance.CreateTableIfNotExists(tableName, persist != "0", HttpContext.GetRequestAttributes(syncPeriod));
             return this.ResponseOk();
         }
 
         [HttpPost("Tables/Create")]
-        public IActionResult Create([Required][FromQuery] string tableName, [FromQuery] string persist)
+        public IActionResult Create([Required][FromQuery] string tableName, [FromQuery] string persist,
+            [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -48,7 +49,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             tableName = tableName.ToLower();
 
-            if (ServiceLocator.DbInstance.CreateTable(tableName, persist != "0"))
+            if (ServiceLocator.DbInstance.CreateTable(tableName, persist != "0", HttpContext.GetRequestAttributes(syncPeriod)))
                 return this.ResponseOk();
 
             return this.GetResult(OperationResult.CanNotCreateObject);
@@ -69,17 +70,14 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
 
-            table.Clear();
-
-            ServiceLocator.DataSynchronizer.PublishInitTable(table);
-            ServiceLocator.PersistenceHandler.SynchronizeTable(table, syncPeriod.ParseSynchronizationPeriodContract());
+            table.Clear(HttpContext.GetRequestAttributes(syncPeriod));
 
             return Ok();
 
         }
         [HttpPost("Tables/UpdatePersist")]
         public IActionResult UpdatePersist([Required][FromQuery] string tableName,
-            [FromQuery] string persist)
+            [FromQuery] string persist, [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -95,8 +93,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var persistAsBool = persist != "0";
 
-            table.UpdatePersist(persistAsBool);
-            ServiceLocator.SnapshotSaverScheduler.SynchronizeTableAttributes(table);
+            table.UpdatePersist(persistAsBool,HttpContext.GetRequestAttributes(syncPeriod));
 
             return Ok();
         }

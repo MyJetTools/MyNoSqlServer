@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MyNoSqlServer.Api.DataReadersTcpServer;
 
 namespace MyNoSqlServer.Api.Models
 {
@@ -15,12 +16,12 @@ namespace MyNoSqlServer.Api.Models
         
         public string Id { get; set; }
 
-        public static UiModel Create(IReaderConnection connection)
+        public static UiModel Create(DataReaderTcpService connection)
         {
             return new UiModel
             {
                 Id = connection.Id.ToString(),
-                Name = connection.Name,
+                Name = connection.ContextName,
                 Ip = connection.Ip,
                 Tables = connection.Tables,
                 ConnectedTime = connection.ConnectedTime.ToString("s"),

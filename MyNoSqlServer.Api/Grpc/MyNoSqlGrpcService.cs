@@ -2,24 +2,39 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.Grpc;
 
 namespace MyNoSqlServer.Api.Grpc
 {
     public class MyNoSqlGrpcService : IMyNoSqlWriterGrpcService, IMyNoSqlWriterGrpcServiceLegacy
     {
+        
+        
+        private static TransactionEventAttributes GetGrpcRequestAttributes()
+        {
+            return new TransactionEventAttributes
+            {
+                Location = Startup.Settings.Location,
+                SynchronizationPeriod = DataSynchronizationPeriod.Sec1
+            };
+        }
+        
         public ValueTask CreateTableIfNotExistsAsync(CreateTableIfNotExistsGrpcRequest request)
         {
-            ServiceLocator.DbInstance.CreateTableIfNotExists(request.TableName, request.PersistTable);
+            ServiceLocator.DbInstance.CreateTableIfNotExists(request.TableName, request.PersistTable, 
+                GetGrpcRequestAttributes());
             return new ValueTask();
         }
 
         public ValueTask SetTableAttributesAsync(SetTableAttributesGrpcRequest request)
         {
             if (request.MaxPartitionsAmount != null)
-                ServiceLocator.DbInstance.SetMaxPartitionsAmount(request.TableName, request.MaxPartitionsAmount.Value);
+                ServiceLocator.DbInstance.SetMaxPartitionsAmount(request.TableName, request.MaxPartitionsAmount.Value,
+                    GetGrpcRequestAttributes());
 
             return new ValueTask();
         }
@@ -117,7 +132,7 @@ namespace MyNoSqlServer.Api.Grpc
                 if (request.Commit)
                 {
                     ServiceLocator.DbOperations.ApplyTransactions(transactionSeq.Tables,
-                        transactionSeq.GetTransactionsToExecute());
+                        transactionSeq.GetTransactionsToExecute(), GetGrpcRequestAttributes());
                 }
 
                 var result = new TransactionGrpcResponse

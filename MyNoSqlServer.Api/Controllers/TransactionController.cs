@@ -71,7 +71,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
         [HttpPost("/Transaction/Commit")]
-        public IActionResult Commit([Required] string transactionId)
+        public IActionResult Commit([Required] string transactionId, [FromQuery] string syncPeriod)
         {
 
             var shutDown = this.CheckOnShuttingDown();
@@ -80,7 +80,8 @@ namespace MyNoSqlServer.Api.Controllers
 
             var transaction = ServiceLocator.PostTransactionsList.TryDelete(transactionId);
             
-            ServiceLocator.DbOperations.ApplyTransactions(transaction.Tables, transaction.GetTransactionsToExecute());
+            ServiceLocator.DbOperations.ApplyTransactions(transaction.Tables, transaction.GetTransactionsToExecute(), 
+                HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.ResponseOk();
         }

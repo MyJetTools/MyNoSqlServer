@@ -11,7 +11,7 @@ namespace MyNoSqlServer.Api.Controllers
     {
         [HttpPost("CleanAndKeepMaxPartitions")]
         public IActionResult CleanAndKeepMaxPartitions([FromQuery] [Required] string tableName,
-            [FromQuery] [Required] int maxAmount)
+            [FromQuery] [Required] int maxAmount, [FromQuery] string syncPeriod)
         {
             
             var (getTableResult, table) = this.GetTable(tableName);
@@ -19,13 +19,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
 
-            var result = table.KeepMaxPartitions(maxAmount);
-
-            foreach (var dbPartition in result)
-            {
-                ServiceLocator.DataSynchronizer.PublishInitPartition(table, dbPartition);
-                ServiceLocator.PersistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, DataSynchronizationPeriod.Sec5);
-            }
+            table.KeepMaxPartitions(maxAmount, HttpContext.GetRequestAttributes(syncPeriod));
 
             return Ok("Ok");
         }
@@ -37,21 +31,12 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery][Required]string partitionKey, [FromQuery][Required]int maxAmount,
             [FromQuery] string syncPeriod)
         {
-
             var (getTableResult, table) = this.GetTable(tableName, partitionKey);
             
             if (getTableResult != null)
                 return getTableResult;
 
-            var (dbPartition, dbRows) = table.CleanAndKeepLastRecords(partitionKey, maxAmount);
-
-            if (dbPartition != null)
-            {
-                ServiceLocator.DataSynchronizer.SynchronizeDelete(table, dbRows);
-
-                ServiceLocator.PersistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, 
-                    syncPeriod.ParseDataSynchronizationPeriod(DataSynchronizationPeriod.Sec5));
-            }
+            table.CleanAndKeepLastRecords(partitionKey, maxAmount, HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.ResponseOk();
         }

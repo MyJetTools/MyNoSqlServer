@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MyNoSqlServer.Abstractions\MyNoSqlServer.Abstractions.csproj" />
+      <ProjectReference Include="..\MyNoSqlServer.Common\MyNoSqlServer.Common.csproj" />
+      <ProjectReference Include="..\MyNoSqlServer.Domains\MyNoSqlServer.Domains.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="MyNoSqlServer.DataCompression" Version="1.0.3" />
+      <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc05" />
+      <PackageReference Include="protobuf-net" Version="3.0.101" />
+    </ItemGroup>
+
+</Project>

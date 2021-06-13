@@ -11,6 +11,7 @@ namespace MyNoSqlServer.Grpc
 
         [DataMember(Order = 2)]
         public bool PersistTable { get; set; }
+
     }
 
     [DataContract]

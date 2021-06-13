@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
-using MyNoSqlServer.Api.Hubs;
+using MyNoSqlServer.Api.DataReadersTcpServer;
 using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
@@ -34,22 +33,8 @@ namespace MyNoSqlServer.Api.Controllers
         public IActionResult Status()
         {
             var connections = ServiceLocator.TcpServer.GetConnections();
-
-            var signalRConnections = ChangesHub.Connections.Get();
             
-            var result = new List<UiModel>();
-
-            var dt = DateTime.UtcNow;
-
-
-            result.AddRange(connections.Cast<ChangesTcpService>().Select(UiModel.Create));
-            
-            
-            result.AddRange(signalRConnections.Select(UiModel.Create));
-            
-            
-            
-            return Json(result.OrderBy(iym => iym.Id));
+            return Json(connections.Select(itm => UiModel.Create(itm as DataReaderTcpService)).OrderBy(iym => iym.Id));
         }
         
     }

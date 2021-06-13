@@ -5,6 +5,7 @@ using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
+using MyNoSqlServer.Domains.TransactionEvents;
 using NUnit.Framework;
 
 namespace MyNoSqlServer.Tests
@@ -21,7 +22,9 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false);
+            
+            
+            var dbTable = DbTable.CreateByRequest("myTable", false, new SyncEventsDispatcher());
 
             var recordToInsert = new TestRecord
             {
@@ -34,7 +37,8 @@ namespace MyNoSqlServer.Tests
 
             var fields = recordIsByteArray.AsMyMemory().ParseDynamicEntity();
 
-            dbTable.Insert(fields, DateTime.UtcNow);
+            dbTable.Insert(fields, DateTime.UtcNow,
+                TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec5));
 
             var query = "PartitionKey eq 'MyPartition' and RowKey eq 'MyRow'";
 
@@ -49,7 +53,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false);
+            var dbTable = DbTable.CreateByRequest("myTable", false, new SyncEventsDispatcher());
 
             for (var i = 0; i < 100; i++)
             {
@@ -65,7 +69,8 @@ namespace MyNoSqlServer.Tests
 
                 var entity = recordIsByteArray.ParseDynamicEntity();
             
-                dbTable.Insert(entity, DateTime.UtcNow);
+                dbTable.Insert(entity, DateTime.UtcNow,
+                    TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec1));
             }
 
             var query = "PartitionKey eq 'MyPartition' and RowKey ge '001' and RowKey le '003'";
@@ -83,7 +88,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeAboveQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false);
+            var dbTable = DbTable.CreateByRequest("myTable", false, new SyncEventsDispatcher());
 
             for (var i = 0; i <= 100; i++)
             {
@@ -99,7 +104,8 @@ namespace MyNoSqlServer.Tests
 
                 var entity = recordIsByteArray.ParseDynamicEntity();
             
-                dbTable.Insert(entity, DateTime.UtcNow);
+                dbTable.Insert(entity, DateTime.UtcNow,
+                    TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec5));
             }
 
             var query = "PartitionKey eq 'MyPartition' and RowKey ge '199'";

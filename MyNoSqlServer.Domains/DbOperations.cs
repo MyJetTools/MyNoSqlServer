@@ -2,28 +2,43 @@ using System;
 using System.Collections.Generic;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
-using MyNoSqlServer.Domains.DataSynchronization;
-using MyNoSqlServer.Domains.Db.Rows;
+using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
-using MyNoSqlServer.Domains.Persistence;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains
 {
     public class DbOperations
     {
-        private readonly IReplicaSynchronizationService _dataSynchronizer;
-        private readonly PersistenceHandler _persistenceHandler;
+        private readonly DbInstance _dbInstance;
 
-        public DbOperations(IReplicaSynchronizationService dataSynchronizer, PersistenceHandler persistenceHandler)
+        public DbOperations(DbInstance dbInstance)
         {
-            _dataSynchronizer = dataSynchronizer;
-            _persistenceHandler = persistenceHandler;
+            _dbInstance = dbInstance;
         }
 
 
+        public void SetTableAttributes(string tableName, bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
+        {
+            var dbTable = _dbInstance.TryGetTable(tableName);
+            
+            if (dbTable == null)
+                return;
+            
+            dbTable.SetAttributes(persist, maxPartitionsAmount, attributes);
+
+        }
+
+
+        public void ReplaceTable(string tableName, bool persist, IMyMemory content, TransactionEventAttributes attributes)
+        {
+              var dbTable = _dbInstance.TryGetTable(tableName) ?? _dbInstance.CreateTableIfNotExists(tableName, persist, attributes);
+              dbTable.InitFromSnapshot(content);
+        }
+
         public OperationResult Insert(DbTable table, IMyMemory myMemory,
-            DataSynchronizationPeriod synchronizationPeriod, DateTime now)
+            DateTime now, TransactionEventAttributes attributes)
         {
             
             var entity = myMemory.ParseDynamicEntity();
@@ -38,21 +53,14 @@ namespace MyNoSqlServer.Domains
             if (table.HasRecord(entity))
                 return OperationResult.RecordExists;
             
-            var (result, dbPartition, dbRow) = table.Insert(entity, now);
+            return table.Insert(entity, now, attributes);
             
-            if (result != OperationResult.Ok)
-                return result;
-            
-            _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
-
-            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
-            return OperationResult.Ok;
         }
         
 
 
         public OperationResult InsertOrReplace(DbTable table, IMyMemory myMemory, 
-            DataSynchronizationPeriod synchronizationPeriod, DateTime now)
+            DateTime now, TransactionEventAttributes attributes)
         {
             var entity = myMemory.ParseDynamicEntity();
 
@@ -62,17 +70,14 @@ namespace MyNoSqlServer.Domains
             if (string.IsNullOrEmpty(entity.RowKey))
                 return OperationResult.RowKeyIsNull;
             
-            var (dbPartition, dbRow) = table.InsertOrReplace(entity, now);
-            
-            _dataSynchronizer.SynchronizeUpdate(table, new[]{dbRow});
-
-            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
+            table.InsertOrReplace(entity, now, attributes);
 
             return OperationResult.Ok;
         }
 
 
-        public void ApplyTransactions(IReadOnlyDictionary<string, DbTable> tables, IEnumerable<IDbTransactionAction> transactions)
+        public void ApplyTransactions(IReadOnlyDictionary<string, DbTable> tables, IEnumerable<IDbTransactionAction> transactions, 
+            TransactionEventAttributes attributes)
         {
             foreach (var transaction in transactions)
             {
@@ -81,54 +86,24 @@ namespace MyNoSqlServer.Domains
                 {
                     case ICleanTableTransactionAction cleanTableTransaction:
                             table = tables[cleanTableTransaction.TableName];
-                            table.Clear();
-                            _persistenceHandler.SynchronizeTable(table, DataSynchronizationPeriod.Sec5); 
-                            _dataSynchronizer.PublishInitTable(table);
+                            table.Clear(attributes);
                             break;
                     case IDeletePartitionsTransactionAction cleanPartitionsTransaction:
                     {
-                        
                         table = tables[cleanPartitionsTransaction.TableName];
-                        
-                        var cleaned = table.DeletePartitions(cleanPartitionsTransaction.PartitionKeys);
-
-                        foreach (var dbPartition in cleaned)
-                        {
-                            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey,  DataSynchronizationPeriod.Sec5);
-                            _dataSynchronizer.PublishInitPartition(table, dbPartition);
-                        }
-
+                        table.DeletePartitions(cleanPartitionsTransaction.PartitionKeys, attributes);
                         break;
                     }
                     case IDeleteRowsTransactionAction deleteRows:
                         table = tables[deleteRows.TableName];
-                        var dbRows = table.DeleteRows(deleteRows.PartitionKey, deleteRows.RowKeys);
-                        if (dbRows != null)
-                        {
-                            _persistenceHandler.SynchronizePartition(table, deleteRows.PartitionKey,  DataSynchronizationPeriod.Sec5);
-                            _dataSynchronizer.SynchronizeDelete(table, dbRows);
-                        }
+                        table.DeleteRows(deleteRows.PartitionKey, deleteRows.RowKeys, attributes);
                         break;
 
                     case IInsertOrReplaceEntitiesTransactionAction insertOrUpdate:
                     {
                         table = tables[insertOrUpdate.TableName];
-                        var updateRows = new Dictionary<string, List<DbRow>>();
                         foreach (var entity in insertOrUpdate.Entities)
-                        {
-                            var (dbPartition, dbRow) = table.InsertOrReplace(entity.Payload.ParseDynamicEntity(), DateTime.UtcNow);
-                            
-                            if (!updateRows.ContainsKey(dbPartition.PartitionKey))
-                                updateRows.Add(dbPartition.PartitionKey, new List<DbRow>());
-                            
-                            updateRows[dbPartition.PartitionKey].Add(dbRow);
-                        }
-
-                        foreach (var (partitionKey, rowsToUpdate) in updateRows)
-                        {
-                            _dataSynchronizer.SynchronizeUpdate(table, rowsToUpdate);
-                            _persistenceHandler.SynchronizePartition(table, partitionKey,  DataSynchronizationPeriod.Sec5);
-                        }
+                            table.InsertOrReplace(entity.Payload.ParseDynamicEntity(), DateTime.UtcNow, attributes);
                         break;
                     }
                 }
@@ -137,70 +112,49 @@ namespace MyNoSqlServer.Domains
         }
         
         public OperationResult Replace(DbTable table, IMyMemory myMemory, 
-            DataSynchronizationPeriod synchronizationPeriod, DateTime now)
+            DateTime now, TransactionEventAttributes attributes)
         {
             
             var entity = myMemory.ParseDynamicEntity();
 
-
-            var (result, partition, dbRow) = table.Replace(entity, now);
+            var result = table.Replace(entity, now, attributes);
             
             if (result != OperationResult.Ok)
                 return result;
             
-            _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
-
-            _persistenceHandler.SynchronizePartition(table, partition.PartitionKey, synchronizationPeriod);
 
             return OperationResult.Ok;
         }
 
         public OperationResult Merge(DbTable table, IMyMemory myMemory,
-            DataSynchronizationPeriod synchronizationPeriod, DateTime now)
+            DateTime now, TransactionEventAttributes attributes)
         {
             var entity = myMemory.ParseDynamicEntity();
-
-            var (result, partition, dbRow) = table.Merge(entity, now);
-            
-            if (result != OperationResult.Ok)
-                return result;
-            
-            _dataSynchronizer.SynchronizeUpdate(table, new[] {dbRow});
-
-            _persistenceHandler.SynchronizePartition(table, partition.PartitionKey, synchronizationPeriod);
-            
-            return OperationResult.Ok;
+            return table.Merge(entity, now, attributes);
         }
 
         public OperationResult DeleteRow(DbTable table, string partitionKey, string rowKey, 
-            DataSynchronizationPeriod synchronizationPeriod)
+            TransactionEventAttributes attributes)
         {
-            var (dbPartition, dbRow) = table.DeleteRow(partitionKey, rowKey);
-
-            if (dbPartition == null) 
-                return OperationResult.RowNotFound;
-         
-            _dataSynchronizer.SynchronizeDelete(table, new[]{dbRow});
-            
-            _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
-            return OperationResult.Ok;
+            return table.DeleteRow(partitionKey, rowKey, attributes);
         }
 
 
         public OperationResult CleanAndKeepLastRecords(DbTable table, string partitionKey, int amount, 
-            DataSynchronizationPeriod synchronizationPeriod)
+            TransactionEventAttributes attributes)
         {
-            var (dbPartition, dbRows) = table.CleanAndKeepLastRecords(partitionKey, amount);
-
-            if (dbPartition != null)
-            {
-                _dataSynchronizer.SynchronizeDelete(table, dbRows);
-                
-                _persistenceHandler.SynchronizePartition(table, dbPartition.PartitionKey, synchronizationPeriod);
-            }
-            
+             table.CleanAndKeepLastRecords(partitionKey, amount, attributes);
             return OperationResult.Ok;
         }
-        
+
+        public void DeletePartitions(string tableName, string[] partitionKeys, TransactionEventAttributes attributes)
+        {
+            var table = _dbInstance.TryGetTable(tableName);
+            
+            if (table == null)
+                return;
+
+            table.DeletePartitions(partitionKeys, attributes);
+        }
     }
 }

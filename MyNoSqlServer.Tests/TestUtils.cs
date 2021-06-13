@@ -3,18 +3,30 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.DataSynchronization;
-using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Persistence;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Tests
 {
     public static class TestUtils
     {
+
+        public static TransactionEventAttributes GetTestEventAttributes(DataSynchronizationPeriod? syncPeriod = DataSynchronizationPeriod.Immediately)
+        {
+
+            return new TransactionEventAttributes
+            {
+                Location = "TEST",
+                SynchronizationPeriod = syncPeriod ?? DataSynchronizationPeriod.Sec1
+            };
+
+        }
+        
 
         public static ServiceProvider GetTestIoc()
         {
@@ -22,7 +34,6 @@ namespace MyNoSqlServer.Tests
             result.BindDomainsServices();
             result.AddSingleton<ISnapshotStorage>(new SnapshotStorageMock());
             
-            result.AddSingleton<IReplicaSynchronizationService>(new ReplicaSynchronizationServiceMock());
 
             return result.BuildServiceProvider();
         }
@@ -73,27 +84,6 @@ namespace MyNoSqlServer.Tests
             return new ValueTask();
         }
 
-    }
-
-
-    public class ReplicaSynchronizationServiceMock : IReplicaSynchronizationService
-    {
-        public void PublishInitTable(DbTable dbTable)
-        {
-            
-        }
-
-        public void PublishInitPartition(DbTable dbTable, DbPartition partition)
-        {
-        }
-
-        public void SynchronizeUpdate(DbTable dbTable, IReadOnlyList<DbRow> dbRow)
-        {
-        }
-
-        public void SynchronizeDelete(DbTable dbTable, IReadOnlyList<DbRow> dbRows)
-        {
-        }
     }
 
 }

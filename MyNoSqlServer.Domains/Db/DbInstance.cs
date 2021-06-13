@@ -1,27 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.SnapshotSaver;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Db
 {
     public class DbInstance
     {
-        private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
         private readonly object _lockObject = new ();
         
         private Dictionary<string, DbTable> _tables = new ();
         private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
 
-        public DbInstance(ISnapshotSaverScheduler snapshotSaverScheduler)
+        private readonly SyncEventsDispatcher _syncEventsDispatcher;
+
+        public DbInstance(SyncEventsDispatcher syncEventsDispatcher)
         {
-            _snapshotSaverScheduler = snapshotSaverScheduler;
+            _syncEventsDispatcher = syncEventsDispatcher;
         }
 
-        private (DbTable table, bool createdNow) TryToCreateNewTable(string tableName, bool persistTable)
+        private (DbTable table, bool createdNow) TryToCreateNewTable(string tableName, bool persistTable, TransactionEventAttributes attributes)
         {
             DbTable syncCreateTable = null;
+
             try
             {
                 lock (_lockObject)
@@ -31,16 +34,15 @@ namespace MyNoSqlServer.Domains.Db
                     {
                         if (result.Persist != persistTable)
                         {
-                            result.UpdatePersist(persistTable);
+                            result.UpdatePersist(persistTable, attributes);
                             syncCreateTable = result;
                         }
                         return (result, false);
                     }
-                        
 
         
                     
-                    var tableInstance = DbTable.CreateByRequest(tableName, persistTable);
+                    var tableInstance = DbTable.CreateByRequest(tableName, persistTable, _syncEventsDispatcher);
 
                     var tables = new Dictionary<string, DbTable>(_tables)
                     {
@@ -58,14 +60,15 @@ namespace MyNoSqlServer.Domains.Db
             }
             finally
             {
+              
                 if (syncCreateTable != null)
-                    _snapshotSaverScheduler.SynchronizeTableAttributes(syncCreateTable);
+                    _syncEventsDispatcher.Dispatch( SyncTableAttributes.Create(attributes, syncCreateTable));
             }
   
         }
         
 
-        public DbTable CreateTableIfNotExists(string tableName, bool persistTable)
+        public DbTable CreateTableIfNotExists(string tableName, bool persistTable, TransactionEventAttributes attributes)
         {
             var tables = _tables;
 
@@ -73,41 +76,41 @@ namespace MyNoSqlServer.Domains.Db
             {
                 if (foundTable.Persist != persistTable)
                 {
-                    foundTable.UpdatePersist(persistTable);
-                    _snapshotSaverScheduler.SynchronizeTableAttributes(foundTable);
+                    foundTable.UpdatePersist(persistTable, attributes);
+                    
                 }
 
                 return foundTable;
             }
 
-            var createdTable = TryToCreateNewTable(tableName, persistTable);
+            var createdTable = TryToCreateNewTable(tableName, persistTable, attributes);
             return createdTable.table;
         }
 
 
-        public void SetMaxPartitionsAmount(string tableName, int maxPartitionsAmount)
+        public void SetMaxPartitionsAmount(string tableName, int maxPartitionsAmount, TransactionEventAttributes attributes)
         {
             var table = GetTable(tableName);
             
             if (table.MaxPartitionsAmount == maxPartitionsAmount)
-                return;;
+                return;
             
-            table.SetMaxPartitionsAmount(maxPartitionsAmount);
-            _snapshotSaverScheduler.SynchronizeTableAttributes(table);
+            table.SetMaxPartitionsAmount(maxPartitionsAmount, attributes);
+     
         }
 
         public DbTable RestoreTable(string tableName, bool persist)
         {
             lock (_lockObject)
             {
-                var result = new DbTable(tableName, persist);
+                var result = new DbTable(tableName, persist, _syncEventsDispatcher);
                 _tables.Add(tableName, result);
                 _tablesAsArray = _tables.Values.ToList();
                 return result;
             }
         }
 
-        public bool CreateTable(string tableName, bool persistTable)
+        public bool CreateTable(string tableName, bool persistTable, TransactionEventAttributes attributes)
         {
 
             var tables = _tables;
@@ -115,14 +118,13 @@ namespace MyNoSqlServer.Domains.Db
             {
                 if (foundTable.Persist != persistTable)
                 {
-                    foundTable.UpdatePersist(persistTable);
-                    _snapshotSaverScheduler.SynchronizeTableAttributes(foundTable);
+                    foundTable.UpdatePersist(persistTable, attributes);
                 }
 
                 return false;
             }
 
-            var createdTable = TryToCreateNewTable(tableName, persistTable);
+            var createdTable = TryToCreateNewTable(tableName, persistTable, attributes);
 
             return createdTable.createdNow;
         }
@@ -159,5 +161,21 @@ namespace MyNoSqlServer.Domains.Db
             }
         }
 
+        public void ReplaceTable(DbTable table)
+        {
+            var tables = new Dictionary<string, DbTable>(_tables) ;
+
+            lock (_lockObject)
+            {
+
+                if (tables.ContainsKey(table.Name))
+                    tables[table.Name] = table;
+                else
+                    tables.Add(table.Name, table);
+
+                _tables = tables;
+
+            }
+        }
     }
 }

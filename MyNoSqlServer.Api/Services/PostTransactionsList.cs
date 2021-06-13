@@ -6,7 +6,6 @@ using MyNoSqlServer.Domains.Db.Tables;
 
 namespace MyNoSqlServer.Api.Services
 {
-    
 
     public class UpdateTransactionsSequence
     {
@@ -50,8 +49,7 @@ namespace MyNoSqlServer.Api.Services
 
         public DateTimeOffset LastAccessTime { get; private set; } = DateTimeOffset.UtcNow;
 
-        private readonly Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
-        
+        private readonly Dictionary<string, DbTable> _tables = new ();
 
         public IReadOnlyDictionary<string, DbTable> Tables => _tables;
 

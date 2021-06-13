@@ -1,13 +1,10 @@
 ﻿using System;
-using Autofac;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MyNoSqlServer.Api.Grpc;
-using MyNoSqlServer.Api.Hubs;
 using MyNoSqlServer.Api.Middlewares;
-using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
 using Prometheus;
@@ -25,7 +22,7 @@ namespace MyNoSqlServer.Api
 
         public IConfiguration Configuration { get; }
 
-        public SettingsModel _settings;
+        public static SettingsModel Settings { get; private set; }
 
         private IServiceCollection _services;
 
@@ -45,18 +42,22 @@ namespace MyNoSqlServer.Api
 
             services.AddSwaggerDocument(o => { o.Title = "MyNoSqlServer"; });
 
-            _settings = SettingsLoader.LoadSettings();
+            Settings = SettingsLoader.LoadSettings();
             
             services.BindDomainsServices();
-            services.BindAzureStorage(_settings.BackupAzureConnectString);
-            services.BindApiServices();
+
+            services.AddSingleton<ISettingsLocation>(Settings);
+ 
+            
+            services.BindDataReadersTcpServices();
+            
+            if (Settings.PersistencePath.StartsWith("http"))
+                services.BindPersistenceAsMyNoSql(Settings);
+            else
+                services.BindAzureStorage(Settings.PersistencePath);
 
         }
 
-        public void ConfigureContainer(ContainerBuilder builder)
-        {
-            builder.RegisterModule(new ServiceModule(_settings.BackupAzureConnectString));
-        }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostApplicationLifetime applicationLifetime)
@@ -95,8 +96,8 @@ namespace MyNoSqlServer.Api
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<MyNoSqlGrpcService>();
+                endpoints.MapGrpcService<PersistenceNodeGrpcService>();
                 endpoints.MapControllers();
-                endpoints.MapHub<ChangesHub>("/changes");
                 endpoints.MapMetrics();
                 
             });

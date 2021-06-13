@@ -6,11 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using DotNetCoreDecorators;
 using Microsoft.Extensions.DependencyInjection;
+using MyNoSqlServer.Api.DataReadersTcpServer;
 using MyNoSqlServer.Api.Services;
 using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.DataSynchronization;
+using MyNoSqlServer.Domains.DataReadersBroadcast;
 using MyNoSqlServer.Domains.Db;
-using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
@@ -63,19 +63,16 @@ namespace MyNoSqlServer.Api
         
         public static GlobalVariables GlobalVariables { get; private set; }
         
-        public static IReplicaSynchronizationService DataSynchronizer { get; private set; }
+        public static DataReadersTcpBroadcaster DataReadersTcpBroadcaster { get; private set; }
+        
 
         private static SnapshotSaverEngine _snapshotSaverEngine;
-        
-        public static  ISnapshotSaverScheduler SnapshotSaverScheduler { get; private set; }
-        
-        public static PersistenceHandler PersistenceHandler { get; private set; }
         public static DbOperations DbOperations { get; private set; }
         
         public static readonly MyServerTcpSocket<IMyNoSqlTcpContract> TcpServer = 
             new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
                 .RegisterSerializer(()=> new MyNoSqlTcpSerializer())
-                .SetService(()=>new ChangesTcpService())
+                .SetService(()=>new DataReaderTcpService())
                 .Logs.AddLogInfo((c, msg)=>
                 {
                     Logger.WriteInfo(c == null ? "*:5125" : $"*:5125. ConnectionId:{c.Id}", msg);
@@ -98,20 +95,21 @@ namespace MyNoSqlServer.Api
 
         public static void Init(ServiceProvider sr)
         {
+            sr.LinkDomainServices();
+            
+            
             DbInstance = sr.GetRequiredService<DbInstance>();
             
-            DataSynchronizer = new ChangesPublisherToSocket();
             _snapshotSaverEngine = sr.GetRequiredService<SnapshotSaverEngine>();
 
             GlobalVariables = sr.GetRequiredService<GlobalVariables>();
 
             DbOperations = sr.GetRequiredService<DbOperations>();
 
-            PersistenceHandler = sr.GetRequiredService<PersistenceHandler>();
-
-            SnapshotSaverScheduler = sr.GetRequiredService<ISnapshotSaverScheduler>();
-
             Logger = sr.GetRequiredService<MyNoSqlLogger>();
+
+            DataReadersTcpBroadcaster = (DataReadersTcpBroadcaster)sr.GetRequiredService<IDataReadersBroadcaster>();
+
 
         }
 

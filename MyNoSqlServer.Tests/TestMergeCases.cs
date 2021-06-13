@@ -37,7 +37,7 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetRequiredService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbInstance.CreateTableIfNotExists("mytable", false, TestUtils.GetTestEventAttributes());
 
             var rawClass1 = new MergeEntity1
             {
@@ -50,9 +50,9 @@ namespace MyNoSqlServer.Tests
             var memory1 = rawClass1.ToMemory();
 
             dbOperations.Insert(table, 
-                memory1, 
-                DataSynchronizationPeriod.Sec1, 
-                DateTime.UtcNow);
+                memory1,
+                DateTime.UtcNow, 
+                TestUtils.GetTestEventAttributes());
 
             var insertedEntity = table
                 .GetEntity("test", "test")
@@ -65,8 +65,8 @@ namespace MyNoSqlServer.Tests
             var opResult = dbOperations
                 .Merge(table,
                     memory2,
-                    DataSynchronizationPeriod.Immediately, 
-                    DateTime.UtcNow);
+                    DateTime.UtcNow, 
+                    TestUtils.GetTestEventAttributes());
             
             Assert.AreEqual(OperationResult.Ok, opResult);
 
@@ -85,7 +85,8 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetRequiredService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbInstance.CreateTableIfNotExists("mytable", false, 
+                TestUtils.GetTestEventAttributes());
 
             var rawClass1 = new MergeEntity1
             {
@@ -97,7 +98,8 @@ namespace MyNoSqlServer.Tests
 
             var memory1 = rawClass1.ToMemory();
 
-            dbOperations.Insert(table, memory1, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
+            dbOperations.Insert(table, memory1,  DateTime.UtcNow, 
+                TestUtils.GetTestEventAttributes());
 
             var insertedEntity1 = table.GetEntity("test", "test").AsResult<MergeEntity2>();
 
@@ -110,7 +112,8 @@ namespace MyNoSqlServer.Tests
             var mergeDateTime1 = DateTime.UtcNow.AddSeconds(1);
 
             var opResult1 = dbOperations.Merge(table, insertedEntity1.ToMemory(), 
-                DataSynchronizationPeriod.Immediately, mergeDateTime1);
+                mergeDateTime1, 
+                TestUtils.GetTestEventAttributes());
 
             var entity = table.GetEntity(rawClass1.PartitionKey, rawClass1.RowKey);
             
@@ -118,7 +121,8 @@ namespace MyNoSqlServer.Tests
             
             var mergeDateTime2 = DateTime.UtcNow.AddSeconds(1);
             var opResult2 = dbOperations.Merge(table, insertedEntity2.ToMemory(), 
-                DataSynchronizationPeriod.Immediately, mergeDateTime2);
+                 mergeDateTime2, 
+                 TestUtils.GetTestEventAttributes());
 
             Assert.AreEqual(OperationResult.Ok, opResult1);
             Assert.AreEqual(OperationResult.RecordChangedConcurrently, opResult2);

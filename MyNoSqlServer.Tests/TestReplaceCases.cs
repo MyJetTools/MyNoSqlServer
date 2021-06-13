@@ -31,7 +31,8 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetRequiredService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbInstance.CreateTableIfNotExists("mytable", false,
+                TestUtils.GetTestEventAttributes());
 
             var rawClass = new TestReplaceEntity
             {
@@ -42,7 +43,8 @@ namespace MyNoSqlServer.Tests
 
             var dt = DateTime.UtcNow;
 
-            dbOperations.Insert(table, rawClass.ToMemory(), DataSynchronizationPeriod.Sec1, dt);
+            dbOperations.Insert(table, rawClass.ToMemory(),  dt,
+                TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec1));
             
             rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
 
@@ -50,7 +52,8 @@ namespace MyNoSqlServer.Tests
             
             dt = DateTime.UtcNow.AddSeconds(1);
             
-            var opResult = dbOperations.Replace(table, rawClass.ToMemory(), DataSynchronizationPeriod.Immediately, dt);
+            var opResult = dbOperations.Replace(table, rawClass.ToMemory(), dt,
+                TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec5));
             
             Assert.AreEqual(OperationResult.Ok, opResult);
 
@@ -69,7 +72,8 @@ namespace MyNoSqlServer.Tests
 
             var dbInstance = ioc.GetRequiredService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbInstance.CreateTableIfNotExists("mytable", false,
+                TestUtils.GetTestEventAttributes());
 
             var rawClass = new TestReplaceEntity
             {
@@ -81,7 +85,8 @@ namespace MyNoSqlServer.Tests
 
             var memory = rawClass.ToMemory();
 
-            dbOperations.Insert(table, memory, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
+            dbOperations.Insert(table, memory,  DateTime.UtcNow,
+                TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec1));
             
             rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
 
@@ -90,7 +95,8 @@ namespace MyNoSqlServer.Tests
             
             memory = rawClass.ToMemory();
 
-            var opResult = dbOperations.Replace(table, memory, DataSynchronizationPeriod.Immediately, DateTime.UtcNow);
+            var opResult = dbOperations.Replace(table, memory, DateTime.UtcNow,
+                TestUtils.GetTestEventAttributes());
             
             Assert.AreEqual(OperationResult.RecordChangedConcurrently, opResult);
 
