@@ -29,23 +29,27 @@ namespace MyNoSqlServer.NodePersistence
             _location = location;
         }
         
-        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot)
+        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot, 
+            Dictionary<string, string> headers)
         {
-            return _grpcService.SavePartitionSnapshotAsync(dbTable, partitionSnapshot, _settings, _location);
+            return _grpcService.SavePartitionSnapshotAsync(dbTable, partitionSnapshot, _settings, _location, headers);
         }
 
-        public ValueTask SaveTableSnapshotAsync(DbTable dbTable)
+        public ValueTask SaveTableSnapshotAsync(DbTable dbTable, 
+            Dictionary<string, string> headers)
         {
-            return _grpcService.SaveTableAsync(dbTable, _settings, _location);
+            return _grpcService.SaveTableAsync(dbTable, _settings, _location, headers);
         }
 
-        public ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey)
+        public ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey, 
+            Dictionary<string, string> headers)
         {
             return _grpcService.DeleteTablePartitionsAsync(new DeleteTablePartitionGrpcRequest
             {
                 Location = _location.Location,
                 TableName = dbTable.Name,
-                PartitionKeys = new[] { partitionKey }
+                PartitionKeys = new[] { partitionKey },
+                Headers = headers.ToGrpcHeaders()
             });
         }
 
@@ -57,14 +61,16 @@ namespace MyNoSqlServer.NodePersistence
             }
         }
 
-        public ValueTask SetTableAttributesAsync(DbTable dbTable)
+        public ValueTask SetTableAttributesAsync(DbTable dbTable, 
+            Dictionary<string, string> headers)
         {
             return _grpcService.SetTableAttributesAsync(new SetTableAttributesGrpcRequest
             {
                 Location = _location.Location,
                 TableName = dbTable.Name,
                 Persist = dbTable.Persist,
-                MaxPartitionsAmount = dbTable.MaxPartitionsAmount
+                MaxPartitionsAmount = dbTable.MaxPartitionsAmount,
+                Headers = headers.ToGrpcHeaders()
             });
         }
     }

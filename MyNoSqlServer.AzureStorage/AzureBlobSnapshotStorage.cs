@@ -18,7 +18,7 @@ namespace MyNoSqlServer.AzureStorage
             _storageAccount = CloudStorageAccount.Parse(connectionString);
         }
 
-        public async ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot)
+        public async ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot, Dictionary<string, string> headers)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
 
@@ -34,7 +34,7 @@ namespace MyNoSqlServer.AzureStorage
             Console.WriteLine($"{DateTime.UtcNow:s} Saved snapshot: {partitionSnapshot}");
         }
 
-        public async ValueTask SaveTableSnapshotAsync(DbTable dbTable)
+        public async ValueTask SaveTableSnapshotAsync(DbTable dbTable, Dictionary<string, string> headers)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             if (container == null)
@@ -66,7 +66,7 @@ namespace MyNoSqlServer.AzureStorage
             }
         }
 
-        public async ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey)
+        public async ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey, Dictionary<string, string> headers)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             if (container == null)
@@ -97,7 +97,7 @@ namespace MyNoSqlServer.AzureStorage
             }
         }
 
-        public async ValueTask SetTableAttributesAsync(DbTable dbTable)
+        public async ValueTask SetTableAttributesAsync(DbTable dbTable, Dictionary<string, string> headers)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             await TableMetadataSaver.SaveTableMetadataAsync(container, dbTable.Persist, dbTable.MaxPartitionsAmount);

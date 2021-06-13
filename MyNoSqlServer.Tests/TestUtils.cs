@@ -18,13 +18,9 @@ namespace MyNoSqlServer.Tests
 
         public static TransactionEventAttributes GetTestEventAttributes(DataSynchronizationPeriod? syncPeriod = DataSynchronizationPeriod.Immediately)
         {
-
-            return new TransactionEventAttributes
-            {
-                Location = "TEST",
-                SynchronizationPeriod = syncPeriod ?? DataSynchronizationPeriod.Sec1
-            };
-
+            return new TransactionEventAttributes("TEST", 
+                DataSynchronizationPeriod.Sec1,
+                new Dictionary<string, string>());
         }
         
 
@@ -54,22 +50,22 @@ namespace MyNoSqlServer.Tests
 
     public class SnapshotStorageMock : ISnapshotStorage
     {
-        public ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot)
+        public ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot, Dictionary<string, string> headers)
         {
             return new ValueTask();
         }
 
-        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot)
+        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot, Dictionary<string, string> headers)
         {
             return new ValueTask();
         }
 
-        public ValueTask SaveTableSnapshotAsync(DbTable dbTable)
+        public ValueTask SaveTableSnapshotAsync(DbTable dbTable, Dictionary<string, string> headers)
         {
             return new ValueTask();
         }
 
-        public ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey)
+        public ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey, Dictionary<string, string> headers)
         {
             return new ValueTask();
         }
@@ -79,7 +75,7 @@ namespace MyNoSqlServer.Tests
             return Array.Empty<ITableLoader>().ToAsyncEnumerable();
         }
 
-        public ValueTask SetTableAttributesAsync(DbTable dbTable)
+        public ValueTask SetTableAttributesAsync(DbTable dbTable, Dictionary<string, string> headers)
         {
             return new ValueTask();
         }

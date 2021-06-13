@@ -12,7 +12,7 @@
 
     <ItemGroup>
       <PackageReference Include="MyNoSqlServer.DataCompression" Version="1.0.3" />
-      <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc05" />
+      <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc07" />
       <PackageReference Include="protobuf-net" Version="3.0.101" />
     </ItemGroup>
 

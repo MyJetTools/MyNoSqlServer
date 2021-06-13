@@ -11,6 +11,7 @@ using MyNoSqlServer.Api.Services;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.DataReadersBroadcast;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Nodes;
 using MyNoSqlServer.Domains.SnapshotSaver;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
@@ -65,6 +66,8 @@ namespace MyNoSqlServer.Api
         
         public static DataReadersTcpBroadcaster DataReadersTcpBroadcaster { get; private set; }
         
+        public static NodeSessionsList NodeSessionsList { get; private set; }
+        
 
         private static SnapshotSaverEngine _snapshotSaverEngine;
         public static DbOperations DbOperations { get; private set; }
@@ -86,9 +89,9 @@ namespace MyNoSqlServer.Api
                 });
 
 
-        private static readonly TaskTimer TimerSaver = new TaskTimer(TimeSpan.FromSeconds(1));
+        private static readonly TaskTimer TimerSaver = new (TimeSpan.FromSeconds(1));
 
-        private static readonly TaskTimer TimerOneMinute = new TaskTimer(TimeSpan.FromMinutes(1));
+        private static readonly TaskTimer TimerOneMinute = new (TimeSpan.FromMinutes(1));
 
         public static readonly PostTransactionsList PostTransactionsList = new();
         public static MyNoSqlLogger Logger { get; private set; }
@@ -110,6 +113,7 @@ namespace MyNoSqlServer.Api
 
             DataReadersTcpBroadcaster = (DataReadersTcpBroadcaster)sr.GetRequiredService<IDataReadersBroadcaster>();
 
+            NodeSessionsList = sr.GetRequiredService<NodeSessionsList>();
 
         }
 
@@ -134,6 +138,18 @@ namespace MyNoSqlServer.Api
             TimerSaver.RegisterExceptionHandler((msg, e) =>
             {
                 Logger.WriteError(msg, e);
+                return new ValueTask();
+            });
+
+            TimerSaver.Register("NodeSessions GC", () =>
+            {
+                NodeSessionsList.Gc();
+                return new ValueTask();
+            });
+            
+            TimerSaver.Register("NodeSessions Ping", () =>
+            {
+                NodeSessionsList.SendPing();
                 return new ValueTask();
             });
             

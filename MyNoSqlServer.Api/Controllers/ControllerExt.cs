@@ -38,15 +38,16 @@ namespace MyNoSqlServer.Api.Controllers
         }
 
 
+        private static IReadOnlyDictionary<string, string> GetHeaders(this HttpContext ctx)
+        {
+            //TODO - вкрутить Headers
+            return new Dictionary<string, string>();
+        }
+
+
         public static TransactionEventAttributes GetRequestAttributes(this HttpContext ctx, string syncPeriod)
         {
-
-            return new TransactionEventAttributes
-            {
-                Location = Startup.Settings.Location,
-                SynchronizationPeriod = ctx.GetSyncPeriod(syncPeriod)
-            };
-
+            return new TransactionEventAttributes(Startup.Settings.Location, ctx.GetSyncPeriod(syncPeriod), ctx.GetHeaders());
         }
         
         public static async ValueTask<IMyMemory> BodyAsIMemoryAsync(

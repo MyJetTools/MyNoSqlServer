@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Tables;
@@ -51,26 +52,30 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
         }
 
 
+
+        private  static readonly Dictionary<string, string> EmptyHeaders = new ();
+
+
         private async Task HandleTaskToSyncAsync(ISyncTask syncTask)
         {
             switch (syncTask)
             {
                             
                 case SyncSetTableAttributes syncSetTableAttributes:
-                    await _snapshotStorage.SetTableAttributesAsync(syncSetTableAttributes.DbTable);
+                    await _snapshotStorage.SetTableAttributesAsync(syncSetTableAttributes.DbTable, EmptyHeaders);
                     break;
                             
                 case SyncTable syncTable:
-                    await _snapshotStorage.SaveTableSnapshotAsync(syncTable.DbTable);
+                    await _snapshotStorage.SaveTableSnapshotAsync(syncTable.DbTable, EmptyHeaders);
                     break;
                             
                 case SyncPartition syncPartition:
                     var snapshot = syncPartition.DbTable.GetPartitionSnapshot(syncPartition.PartitionKey);
                                 
                     if (snapshot == null)
-                        await _snapshotStorage.DeleteTablePartitionAsync(syncPartition.DbTable, syncPartition.PartitionKey);
+                        await _snapshotStorage.DeleteTablePartitionAsync(syncPartition.DbTable, syncPartition.PartitionKey, EmptyHeaders);
                     else
-                        await _snapshotStorage.SavePartitionSnapshotAsync(syncPartition.DbTable, snapshot);
+                        await _snapshotStorage.SavePartitionSnapshotAsync(syncPartition.DbTable, snapshot, EmptyHeaders);
                     break;
                             
             }

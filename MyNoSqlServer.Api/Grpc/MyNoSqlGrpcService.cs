@@ -12,21 +12,29 @@ namespace MyNoSqlServer.Api.Grpc
 {
     public class MyNoSqlGrpcService : IMyNoSqlWriterGrpcService, IMyNoSqlWriterGrpcServiceLegacy
     {
-        
-        
-        private static TransactionEventAttributes GetGrpcRequestAttributes()
+        private static IReadOnlyDictionary<string, string> EmptyDictionary = new Dictionary<string, string>();
+
+        private static IReadOnlyDictionary<string, string> ToDomainHeaders(MyNoSqlServerGrpcHeader[] headers)
         {
-            return new TransactionEventAttributes
-            {
-                Location = Startup.Settings.Location,
-                SynchronizationPeriod = DataSynchronizationPeriod.Sec1
-            };
+            if (headers == null)
+                return EmptyDictionary;
+
+            if (headers.Length == 0)
+                return EmptyDictionary;
+
+            return headers.ToDictionary(itm => itm.Key, itm => itm.Value);
+        }
+
+
+        private static TransactionEventAttributes GetGrpcRequestAttributes(MyNoSqlServerGrpcHeader[] headers)
+        {
+            return new TransactionEventAttributes(Startup.Settings.Location, DataSynchronizationPeriod.Sec1, ToDomainHeaders(headers));
         }
         
         public ValueTask CreateTableIfNotExistsAsync(CreateTableIfNotExistsGrpcRequest request)
         {
             ServiceLocator.DbInstance.CreateTableIfNotExists(request.TableName, request.PersistTable, 
-                GetGrpcRequestAttributes());
+                GetGrpcRequestAttributes(request.Headers));
             return new ValueTask();
         }
 
@@ -34,7 +42,7 @@ namespace MyNoSqlServer.Api.Grpc
         {
             if (request.MaxPartitionsAmount != null)
                 ServiceLocator.DbInstance.SetMaxPartitionsAmount(request.TableName, request.MaxPartitionsAmount.Value,
-                    GetGrpcRequestAttributes());
+                    GetGrpcRequestAttributes(request.Headers));
 
             return new ValueTask();
         }
@@ -132,7 +140,7 @@ namespace MyNoSqlServer.Api.Grpc
                 if (request.Commit)
                 {
                     ServiceLocator.DbOperations.ApplyTransactions(transactionSeq.Tables,
-                        transactionSeq.GetTransactionsToExecute(), GetGrpcRequestAttributes());
+                        transactionSeq.GetTransactionsToExecute(), GetGrpcRequestAttributes(request.Headers));
                 }
 
                 var result = new TransactionGrpcResponse

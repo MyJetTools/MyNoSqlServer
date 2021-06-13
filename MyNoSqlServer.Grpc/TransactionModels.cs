@@ -22,11 +22,22 @@ namespace MyNoSqlServer.Grpc
         TableNotFound
     }
 
+
+    [DataContract]
+    public class MyNoSqlServerGrpcHeader
+    {
+        [DataMember(Order = 1)] 
+        public string Key { get; set; }
+        [DataMember(Order = 2)] 
+        public string Value { get; set; }
+    }
+
     [DataContract]
     public class CleanTableTransactionActionGrpcModel : ICleanTableTransactionAction
     {
 
-        [DataMember(Order = 1)] public string TableName { get; set; }
+        [DataMember(Order = 1)] 
+        public string TableName { get; set; }
 
         public static CleanTableTransactionActionGrpcModel Create(ICleanTableTransactionAction src)
         {

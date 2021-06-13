@@ -38,10 +38,10 @@ namespace MyNoSqlServer.Domains.Persistence
     
     public interface ISnapshotStorage
     {
-        ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot);
-        ValueTask SaveTableSnapshotAsync(DbTable dbTable);
-        ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey);
+        ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot, Dictionary<string, string> headers);
+        ValueTask SaveTableSnapshotAsync(DbTable dbTable, Dictionary<string, string> headers);
+        ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey, Dictionary<string, string> headers);
         IAsyncEnumerable<ITableLoader> LoadTablesAsync();
-        ValueTask SetTableAttributesAsync(DbTable dbTable);
+        ValueTask SetTableAttributesAsync(DbTable dbTable, Dictionary<string, string> headers);
     }
 }

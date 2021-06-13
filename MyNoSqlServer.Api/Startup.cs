@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MyNoSqlServer.Api.Grpc;
 using MyNoSqlServer.Api.Middlewares;
-using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
 using Prometheus;
 using ProtoBuf.Grpc.Server;
@@ -47,14 +46,13 @@ namespace MyNoSqlServer.Api
             services.BindDomainsServices();
 
             services.AddSingleton<ISettingsLocation>(Settings);
- 
             
             services.BindDataReadersTcpServices();
-            
-            if (Settings.PersistencePath.StartsWith("http"))
-                services.BindPersistenceAsMyNoSql(Settings);
+
+            if (Settings.IsNode())
+                services.BindAsNodeServices(Settings);
             else
-                services.BindAzureStorage(Settings.PersistencePath);
+                services.BindAsRootNodeServices(Settings);
 
         }
 
@@ -97,6 +95,7 @@ namespace MyNoSqlServer.Api
             {
                 endpoints.MapGrpcService<MyNoSqlGrpcService>();
                 endpoints.MapGrpcService<PersistenceNodeGrpcService>();
+                endpoints.MapGrpcService<NodeSyncGrpcService>();
                 endpoints.MapControllers();
                 endpoints.MapMetrics();
                 

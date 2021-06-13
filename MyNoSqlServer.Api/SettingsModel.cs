@@ -11,13 +11,20 @@ namespace MyNoSqlServer.Api
     public class SettingsModel : IMyNoSqlNodePersistenceSettings, ISettingsLocation
     {
         [YamlProperty]
-        public string PersistencePath { get; set; }
+        public string PersistenceDest { get; set; }
+        
         [YamlProperty]
         public bool CompressData { get; set; }
         [YamlProperty]
         public int MaxPayloadSize { get; set; }
         [YamlProperty]
         public string Location { get; set; }
+
+
+        public bool IsNode()
+        {
+            return PersistenceDest.StartsWith("http");
+        }
     }
 
     public static class SettingsLoader
@@ -69,14 +76,14 @@ namespace MyNoSqlServer.Api
 
   
 
-                if (string.IsNullOrEmpty(settingsModel.PersistencePath))
+                if (string.IsNullOrEmpty(settingsModel.PersistenceDest))
                 {
                     Console.WriteLine("No connection string found. Backups are disabled");
                     Console.WriteLine("In case to enable, please specify 'BackupAzureConnectString' in env variable or in json file: ~/.mynosqlserver");
                     throw new Exception("PersistencePath should not be Empty");
                 }
 
-                if (!settingsModel.PersistencePath.StartsWith("http") && !settingsModel.PersistencePath.StartsWith("DefaultEndpointsProtocol"))
+                if (!settingsModel.PersistenceDest.StartsWith("http") && !settingsModel.PersistenceDest.StartsWith("DefaultEndpointsProtocol"))
                 {
                     throw new Exception(
                         "PersistencePath Parameter should start either from http/https for GRPC Dependency or from DefaultEndpointsProtocol");

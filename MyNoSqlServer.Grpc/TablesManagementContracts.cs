@@ -2,6 +2,8 @@ using System.Runtime.Serialization;
 
 namespace MyNoSqlServer.Grpc
 {
+    
+    
     [DataContract]
     public class CreateTableIfNotExistsGrpcRequest
     {
@@ -11,6 +13,9 @@ namespace MyNoSqlServer.Grpc
 
         [DataMember(Order = 2)]
         public bool PersistTable { get; set; }
+        
+        [DataMember(Order = 3)]
+        public MyNoSqlServerGrpcHeader[] Headers { get; set; }
 
     }
 
@@ -22,5 +27,8 @@ namespace MyNoSqlServer.Grpc
         
         [DataMember(Order = 2)]
         public int? MaxPartitionsAmount { get; set; }
+        
+        [DataMember(Order = 3)]
+        public MyNoSqlServerGrpcHeader[] Headers { get; set; }
     }
 }

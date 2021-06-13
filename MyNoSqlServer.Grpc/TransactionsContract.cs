@@ -38,6 +38,9 @@ namespace MyNoSqlServer.Grpc
         public TransactionActionGrpcModel[] Actions { get; set; }
         [DataMember(Order = 3)]
         public bool Commit { get; set; }
+        
+        [DataMember(Order = 4)]
+        public MyNoSqlServerGrpcHeader[] Headers { get; set; }
     }
     
     

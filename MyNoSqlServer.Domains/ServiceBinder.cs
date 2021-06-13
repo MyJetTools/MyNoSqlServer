@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Domains.DataReadersBroadcast;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Nodes;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
 using MyNoSqlServer.Domains.TransactionEvents;
@@ -28,6 +29,7 @@ namespace MyNoSqlServer.Domains
 
             services.AddSingleton<SyncEventsDispatcher>();
             services.AddSingleton<PersistenceScheduler>();
+            services.AddSingleton<NodeSessionsList>();
         }
 
 
@@ -36,6 +38,7 @@ namespace MyNoSqlServer.Domains
             var dispatcher = sp.GetRequiredService<SyncEventsDispatcher>();
             dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<PersistenceScheduler>().PublishPersistenceEvent);
             dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<IDataReadersBroadcaster>().BroadcastEvent);
+            dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<NodeSessionsList>().NewEvent);
             
         }
     }
