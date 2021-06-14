@@ -28,7 +28,8 @@ namespace MyNoSqlServer.Api.Grpc
 
         private static TransactionEventAttributes GetGrpcRequestAttributes(MyNoSqlServerGrpcHeader[] headers)
         {
-            return new TransactionEventAttributes(Startup.Settings.Location, DataSynchronizationPeriod.Sec1, ToDomainHeaders(headers));
+            return new TransactionEventAttributes(Startup.Settings.Location, DataSynchronizationPeriod.Sec1, 
+                EventSource.ClientRequest, ToDomainHeaders(headers));
         }
         
         public ValueTask CreateTableIfNotExistsAsync(CreateTableIfNotExistsGrpcRequest request)

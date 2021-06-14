@@ -20,7 +20,9 @@ namespace MyNoSqlServer.Tests
         {
             return new TransactionEventAttributes("TEST", 
                 DataSynchronizationPeriod.Sec1,
-                new Dictionary<string, string>());
+                EventSource.ClientRequest,
+                new Dictionary<string, string>()
+                );
         }
         
 
@@ -81,5 +83,6 @@ namespace MyNoSqlServer.Tests
         }
 
     }
+    
 
 }

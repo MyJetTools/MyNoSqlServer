@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
@@ -31,6 +32,8 @@ namespace MyNoSqlServer.Domains.Nodes
         private static readonly TimeSpan PingTimeOut = TimeSpan.FromSeconds(3);
         
         public DateTime LastAccessed { get; private set; } 
+        
+        public bool Compress { get; private set; }
 
         public NodeSession(string location, DbInstance dbInstance)
         {
@@ -40,11 +43,13 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
 
-        private void InitNewSession(string sessionId)
+        private void InitNewSession(string sessionId, bool compress)
         {
+            
+            Compress = compress;
 
             if (_awaitingTask != null)
-                SetTaskException(new Exception("Session is expired"));
+                SetTaskException(new Exception("Now session is arrived. Old session is expired"));
 
 
             Id = sessionId;
@@ -56,14 +61,20 @@ namespace MyNoSqlServer.Domains.Nodes
 
             var tables = _dbInstance.GetTables();
 
+            
+            var attrs = new TransactionEventAttributes(Location,
+                DataSynchronizationPeriod.Immediately,
+                EventSource.Synchronization,
+                new Dictionary<string, string>());
+            
             foreach (var table in tables)
             {
-                var @event = InitTableEvent.Create(
-                    new TransactionEventAttributes(Location,
-                        DataSynchronizationPeriod.Immediately,
-                        new Dictionary<string, string>()),
-                    table);
-                _events.Enqueue(@event);
+                table.GetReadAccess(readAccess =>
+                {
+                    var initTableEvent = FirstInitTableEvent.Create(attrs, table, readAccess.GetAllRows().ToJsonArray().AsArray());
+                    _subscribedToTables.Add(table.Name, initTableEvent.Table);
+                    _events.Enqueue(initTableEvent);
+                });
             }
 
         }
@@ -81,16 +92,20 @@ namespace MyNoSqlServer.Domains.Nodes
 
             if (requestId == _currentRequestId)
             {
-                if (_eventInProcess != null)
-                    return new ValueTask<SyncGrpcResponse>(_eventInProcess);
+                if (_eventInProcess == null)
+                    throw new Exception(
+                        "Debug it. It must be not null");
+
+                return new ValueTask<SyncGrpcResponse>(_eventInProcess);
             }
-                
+
 
             if (requestId != _currentRequestId + 1)
                 throw new Exception(
-                    $"Next request Id must be greater the previous one by 1. Current request ID is {_currentRequestId}");
+                    $"Debug It. Next request Id must be greater the previous one by 1. Current request ID is {_currentRequestId}");
 
             //If processId +1 - previous one is done Ok. We reset current state
+            //ToDo - Double Check it
             _eventInProcess = null;
             _currentRequestId = requestId;
 
@@ -103,10 +118,7 @@ namespace MyNoSqlServer.Domains.Nodes
             }
 
             var nextEvent = _events.Dequeue();
-            _eventInProcess = nextEvent.ToSyncGrpcResponse();
-
-            if (nextEvent is InitTableEvent initTableEvent)
-                _subscribedToTables.Add(initTableEvent.TableName, initTableEvent.Table);
+            _eventInProcess = nextEvent.ToSyncGrpcResponse(Compress);
             
             return new ValueTask<SyncGrpcResponse>(_eventInProcess);
         }
@@ -144,15 +156,16 @@ namespace MyNoSqlServer.Domains.Nodes
                     return;
 
                 var nextEvent = _events.Dequeue();
-                _eventInProcess = nextEvent.ToSyncGrpcResponse();
+                _eventInProcess = nextEvent.ToSyncGrpcResponse(Compress);
                 SetTaskResult(_eventInProcess);
             }
         }
 
 
-        public ValueTask<SyncGrpcResponse> ProcessAsync(string sessionId, long requestId)
+        public ValueTask<SyncGrpcResponse> ProcessAsync(string sessionId, long requestId, bool compress)
         {
             LastAccessed = DateTime.UtcNow;
+  
             
             lock (_lockObject)
             {
@@ -160,7 +173,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     throw new Exception("Session is exposed");
 
                 if (Id != sessionId)
-                    InitNewSession(sessionId);
+                    InitNewSession(sessionId, compress);
 
                 return ProcessAsync(requestId);
             }

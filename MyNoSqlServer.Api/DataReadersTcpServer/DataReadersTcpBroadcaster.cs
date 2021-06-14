@@ -76,7 +76,7 @@ namespace MyNoSqlServer.Api.DataReadersTcpServer
             var packetToBroadcast = new InitTableContract
             {
                 TableName = initTableTransactionEvent.TableName,
-                Data = initTableTransactionEvent.Snapshot.ToReaderBytes()
+                Data = initTableTransactionEvent.Snapshot.AsByteArray()
             };
 
             foreach (var subscriber in subscribers)

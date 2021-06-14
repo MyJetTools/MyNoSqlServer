@@ -4,16 +4,23 @@ using System.Linq;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
+using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Db.Partitions
 {
+
+    public interface IPartitionWriteAccess
+    {
+        bool Insert(DbRow dbRow, TransactionEventAttributes attributes);
+    }
     
     /// <summary>
     /// DbPartition Uses SlimLock of Table
     /// </summary>
-    public class DbPartition
+    public class DbPartition : IPartitionWriteAccess
     {
         public string PartitionKey { get; private set; }
         
@@ -23,14 +30,15 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         
         internal DateTimeOffset LastTimeAccess { get; set; }
 
-        public bool Insert(DbRow row)
+
+        bool IPartitionWriteAccess.Insert(DbRow row, TransactionEventAttributes attributes)
         {
             if (_rows.ContainsKey(row.RowKey))
                 return false;
             
             _rows.Add(row.RowKey, row);
+            _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, _dbTable, row));
             _rowsAsList = null;
-            
             
             return true;
         }
@@ -74,16 +82,17 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             
             return result.ToList();
         }
-        
-        
 
-        public static DbPartition Create(string partitionKey)
+
+        private DbTable _dbTable;
+        private SyncEventsDispatcher _syncEventsDispatcher;
+
+        public DbPartition(DbTable dbTable, string partitionKey, SyncEventsDispatcher syncEventsDispatcher)
         {
-            return new ()
-            {
-                PartitionKey = partitionKey,
-                LastTimeAccess = DateTimeOffset.UtcNow
-            };
+            _dbTable = dbTable;
+            _syncEventsDispatcher = syncEventsDispatcher;
+            PartitionKey = partitionKey;
+            LastTimeAccess = DateTimeOffset.UtcNow;
         }
 
         public DbRow DeleteRow(string rowKey)

@@ -29,7 +29,8 @@ namespace MyNoSqlServer.Api.Grpc
         
         private static TransactionEventAttributes GetGrpcRequestAttributes(string location, SyncGrpcHeader[] headers)
         {
-            return new TransactionEventAttributes(location, DataSynchronizationPeriod.Sec1, ToDomainHeaders(headers));
+            return new TransactionEventAttributes(location, DataSynchronizationPeriod.Sec1, 
+                EventSource.Synchronization, ToDomainHeaders(headers));
         }
         
         public ValueTask PingAsync(PingGrpcRequest request)
@@ -84,13 +85,13 @@ namespace MyNoSqlServer.Api.Grpc
             return new ValueTask();
         }
 
-        public async IAsyncEnumerable<GetTableGrpcResponse> GetTablesAsync()
+        public async IAsyncEnumerable<TableAttributeGrpcModel> GetTablesAsync()
         {
             var tables = ServiceLocator.DbInstance.GetTables();
 
             foreach (var dbTable in tables)
             {
-                yield return new GetTableGrpcResponse
+                yield return new TableAttributeGrpcModel
                 {
                     TableName = dbTable.Name,
                     Persist = dbTable.Persist,

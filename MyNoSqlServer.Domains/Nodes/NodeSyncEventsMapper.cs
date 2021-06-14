@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.DataCompression;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
 
@@ -25,7 +27,7 @@ namespace MyNoSqlServer.Domains.Nodes
         }
         
 
-        public static SyncGrpcResponse ToSyncGrpcResponse(this ITransactionEvent @event)
+        public static SyncGrpcResponse ToSyncGrpcResponse(this ITransactionEvent @event, bool compress)
         {
             var result = new SyncGrpcResponse
             {
@@ -35,16 +37,64 @@ namespace MyNoSqlServer.Domains.Nodes
             
             switch(@event) 
             {
-                case InitTableEvent initTableEvent:
-                    result.InitTable = initTableEvent.Table.GetSnapshotAsArray();
+                case FirstInitTableEvent initTableEvent:
+                    result.TableAttributes = new TableAttributeGrpcModel
+                    {
+                        Persist = initTableEvent.Table.Persist,
+                        MaxPartitionsAmount = initTableEvent.Table.MaxPartitionsAmount,
+                        TableName = initTableEvent.TableName,
+                    };
+
+                    result.InitTableData = compress
+                        ? MyNoSqlServerDataCompression.ZipPayload(initTableEvent.TableData)
+                        : initTableEvent.TableData;
                     return result;
+                
+                case InitTableTransactionEvent initTableTransactionEvent:
+                    result.InitTableData = compress
+                        ? MyNoSqlServerDataCompression.ZipPayload(initTableTransactionEvent.Snapshot.AsByteArray())
+                        : initTableTransactionEvent.Snapshot.AsByteArray();
+                    return result;
+                
+               case InitPartitionsTransactionEvent initPartitionsTransactionEvent:
+                   result.InitPartitionData = compress
+                       ? MyNoSqlServerDataCompression.ZipPayload(initPartitionsTransactionEvent.Partitions.AsByteArray())
+                       : initPartitionsTransactionEvent.Partitions.AsByteArray();
+                   return result;
+               
+               case SyncTableAttributes syncTableAttributes:
+                   result.TableAttributes = new TableAttributeGrpcModel
+                   {
+                       Persist = syncTableAttributes.PersistTable,
+                       MaxPartitionsAmount = syncTableAttributes.MaxPartitionsAmount,
+                       TableName = syncTableAttributes.TableName,
+                   };
+                   return result;
+               
+               case UpdateRowsTransactionEvent updateRowsTransactionEvent:
+                   result.UpdateRowsData = compress
+                       ? MyNoSqlServerDataCompression.ZipPayload(updateRowsTransactionEvent.Rows.ToJsonArray().AsArray())
+                       : updateRowsTransactionEvent.Rows.ToJsonArray().AsArray();
+                   return result; 
+               
+                case DeleteRowsTransactionEvent deleteRowsTransactionEvent:
+                    result.DeleteRows = GetDbRowsToDelete(deleteRowsTransactionEvent);
+                    return result; 
                 
             }
 
             throw new Exception($"Unsupported transaction event {@event.GetType()}");
         }
-        
-        
+
+        private static Dictionary<string, string[]> GetDbRowsToDelete(this DeleteRowsTransactionEvent deleteRowsTransactionEvent)
+        {
+            return deleteRowsTransactionEvent.Rows.GroupBy(itm => itm.PartitionKey).ToDictionary(
+                pk => pk.Key,
+                rk => rk.Select(itm => itm.RowKey).ToArray());
+        }  
         
     }
+    
+    
+
 }

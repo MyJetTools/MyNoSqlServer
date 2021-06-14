@@ -9,7 +9,7 @@ namespace MyNoSqlServer.Api.Grpc
         {
             var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
 
-            return session.ProcessAsync(request.SessionId, request.RequestId);
+            return session.ProcessAsync(request.SessionId, request.RequestId, request.Compress);
         }
     }
 }

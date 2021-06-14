@@ -17,7 +17,7 @@ namespace MyNoSqlServer.Domains.Nodes
         
         
         public static TimeSpan SessionTimeout = TimeSpan.FromMinutes(10);
-
+        
 
         public NodeSessionsList(DbInstance dbInstance)
         {

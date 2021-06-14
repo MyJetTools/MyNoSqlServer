@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Json;
 
 namespace MyNoSqlServer.Domains.Persistence
 {
@@ -22,6 +25,19 @@ namespace MyNoSqlServer.Domains.Persistence
         public override string ToString()
         {
             return PartitionKey;
+        }
+
+
+        public IEnumerable<DbRow> GetRecords()
+        {
+            var partitionAsMyMemory = new MyMemoryAsByteArray(Snapshot);
+            
+            foreach (var dbRowMemory in partitionAsMyMemory.SplitJsonArrayToObjects())
+            {
+                var entity = dbRowMemory.ParseDynamicEntity();
+                var dbRow = DbRow.RestoreSnapshot(entity, dbRowMemory);
+                yield return dbRow;
+            }
         }
     }
 

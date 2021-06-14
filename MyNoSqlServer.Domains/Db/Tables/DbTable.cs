@@ -17,13 +17,29 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
     public interface IDbTableReadAccess
     {
-
         IReadOnlyList<DbRow> GetAllRows();
 
         IEnumerable<DbPartition> GetAllPartitions();
+
+
     }
 
-    public class DbTable : IDbTableReadAccess
+
+    public interface IDbTableWriteAccess
+    {
+        void InitTable(Dictionary<string, List<DbRow>> partitions, TransactionEventAttributes transactionEventAttributes);
+
+        void InitPartition(string partitionKey, IReadOnlyList<DbRow> rows, TransactionEventAttributes transactionEventAttributes);
+
+        IPartitionWriteAccess TryGetPartitionWriteAccess(string partitionKey);
+        IPartitionWriteAccess GetOrCreatePartition(string partitionKey);
+
+        void DispatchTransactionEvent(ITransactionEvent transactionEvent);
+
+    }
+    
+
+    public class DbTable : IDbTableReadAccess, IDbTableWriteAccess
     {
         public bool Persist { get; private set; }
         
@@ -55,6 +71,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             Name = name;
             Persist = persistThisTable;
             _syncEventsDispatcher = syncEventsDispatcher;
+            _partitions = new DbPartitionsList(this, syncEventsDispatcher);
         }
 
         public static DbTable CreateByRequest(string name, bool persistThisTable, SyncEventsDispatcher syncEventsDispatcher)
@@ -62,17 +79,6 @@ namespace MyNoSqlServer.Domains.Db.Tables
             return new DbTable(name, persistThisTable, syncEventsDispatcher);
         }
 
-        public static DbTable CreateFromSnapshot(string name, bool persistThisTable, IMyMemory content, SyncEventsDispatcher syncEventsDispatcher)
-        {
-            var dbTable = new DbTable(name, persistThisTable, syncEventsDispatcher);
-            
-            
-            dbTable.InitFromSnapshot(content);
-
-            return dbTable;
-
-        }
-        
         public void UpdatePersist(bool persist, TransactionEventAttributes attributes)
         {
             Persist = persist;
@@ -83,21 +89,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         private readonly ReaderWriterLockSlim _readerWriterLockSlim = new ();
 
-        private DbPartitionsList _partitions = new ();
-
-
-        public IReadOnlyList<string> GetAllPartitionKeys()
-        {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.GetAllPartitionKeys();
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
-        }
+        private readonly DbPartitionsList _partitions;
 
 
         IEnumerable<DbPartition> IDbTableReadAccess.GetAllPartitions()
@@ -113,104 +105,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-
-        public DbPartition GetPartition(string partitionKey)
-        {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.TryGet(partitionKey);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
-        }
-
-
-        public void InitFromSnapshot(IMyMemory snapshot)
-        {
-
-            var dbPartitions = new DbPartitionsList();
-            var partitions = snapshot.SplitJsonArrayToObjects();
-
-            foreach (var partitionMemory in partitions)
-            {
-                var dbRows = partitionMemory.SplitJsonArrayToObjects();
-
-                foreach (var dbRowAsMemory in dbRows)
-                {
-                    var entity = dbRowAsMemory.ParseDynamicEntity();
-                    var dbRow = DbRow.RestoreSnapshot(entity, dbRowAsMemory);
-
-                    var dbPartition = dbPartitions.GetOrCreate(dbRow.PartitionKey);
-                    dbPartition.InsertOrReplace(dbRow);
-                }
-
-            }
-
-            _partitions = dbPartitions;
-
-        }
-
-
-        public void InitPartitionFromSnapshot(PartitionSnapshot partitionSnapshot)
-        {
-
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-
-                var partition = DbPartition.Create(partitionSnapshot.PartitionKey);
-
-                if (_partitions.HasPartition(partitionSnapshot.PartitionKey))
-                    return;
-
-                _partitions.InitPartition(partition);
-
-
-                var partitionAsMyMemory = new MyMemoryAsByteArray(partitionSnapshot.Snapshot);
-
-
-                foreach (var dbRowMemory in partitionAsMyMemory.SplitJsonArrayToObjects())
-                {
-                    var entity = dbRowMemory.ParseDynamicEntity();
-                    var dbRow = DbRow.RestoreSnapshot(entity, dbRowMemory);
-                    partition.InsertOrReplace(dbRow);
-                }
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-        }
-
-
-
-        public OperationResult Insert(DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
-        {
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                var partition = _partitions.GetOrCreate(entity.PartitionKey);
-
-                var dbRow = DbRow.CreateNew(entity, now);
-
-                if (partition.Insert(dbRow))
-                {
-                    _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, this, dbRow));
-                    return OperationResult.Ok;
-                }
-
-                return OperationResult.RecordExists;
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-
-
-        }
+        
 
         public int GetPartitionsCount()
         {
@@ -282,16 +177,44 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
         
-        public T GetReadAccess<T>(Func<IDbTableReadAccess, T> readAccess)
+        public void GetWriteAccess(Action<IDbTableWriteAccess> readAccess)
+        {
+            _readerWriterLockSlim.EnterWriteLock();
+            try
+            {
+
+                readAccess(this);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
+            }
+        }
+        
+        public T GetReadAccess<T>(Func<IDbTableReadAccess, T> writeAccess)
         {
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                return readAccess(this);
+                return writeAccess(this);
             }
             finally
             {
                 _readerWriterLockSlim.ExitReadLock();
+            }
+        }
+        
+        public T GetWriteAccess<T>(Func<IDbTableWriteAccess, T> writeAccess)
+        {
+            _readerWriterLockSlim.EnterWriteLock();
+            try
+            {
+
+                return writeAccess(this);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
             }
         }
 
@@ -959,5 +882,83 @@ namespace MyNoSqlServer.Domains.Db.Tables
                     .GetAllPartitions()
                     .SelectMany(partition => partition.GetAllRows()).ToList();
         }
+
+        void IDbTableWriteAccess.InitTable(Dictionary<string, List<DbRow>> partitions, 
+            TransactionEventAttributes transactionEventAttributes)
+        {
+            _partitions.Clear();
+
+
+            foreach (var (partitionKey, partitionData) in partitions)
+            {
+                var dbPartition = _partitions.GetOrCreate(partitionKey);
+
+                foreach (var dbRow in partitionData)
+                {
+                    dbPartition.InsertOrReplace(dbRow);
+                }
+            }
+            
+            if (transactionEventAttributes != null)
+                _syncEventsDispatcher.Dispatch(InitTableTransactionEvent.Create(transactionEventAttributes, this, partitions));
+
+        }
+
+        void IDbTableWriteAccess.InitPartition(string partitionKey, IReadOnlyList<DbRow> rows,
+            TransactionEventAttributes transactionEventAttributes)
+        {
+            var partition = _partitions.GetOrCreate(partitionKey);
+            partition.Clean();
+
+            foreach (var dbRow in rows)
+                partition.InsertOrReplace(dbRow);
+
+
+            var partitionToSync = new Dictionary<string, IReadOnlyList<DbRow>>
+            {
+                [partitionKey] = rows
+            };
+            
+            if (transactionEventAttributes != null)
+                _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.Create(transactionEventAttributes, this, partitionToSync));
+     
+        }
+
+        
+        /*
+        void IDbTableWriteAccess.Insert(DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
+        {
+
+            var partition = _partitions.GetOrCreate(entity.PartitionKey);
+
+            var dbRow = DbRow.CreateNew(entity, now);
+
+            if (partition.Insert(dbRow))
+            {
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, this, dbRow));
+                return OperationResult.Ok;
+            }
+
+            return OperationResult.RecordExists;
+
+        }
+        */
+
+        IPartitionWriteAccess IDbTableWriteAccess.TryGetPartitionWriteAccess(string partitionKey)
+        {
+            return _partitions.TryGet(partitionKey);
+        }
+        
+        IPartitionWriteAccess IDbTableWriteAccess.GetOrCreatePartition(string partitionKey)
+        {
+            return _partitions.GetOrCreate(partitionKey);
+        }
+
+        void IDbTableWriteAccess.DispatchTransactionEvent(ITransactionEvent transactionEvent)
+        {
+            _syncEventsDispatcher.Dispatch(transactionEvent);
+        }
+        
     }
+    
 }

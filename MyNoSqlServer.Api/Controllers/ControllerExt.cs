@@ -47,7 +47,8 @@ namespace MyNoSqlServer.Api.Controllers
 
         public static TransactionEventAttributes GetRequestAttributes(this HttpContext ctx, string syncPeriod)
         {
-            return new TransactionEventAttributes(Startup.Settings.Location, ctx.GetSyncPeriod(syncPeriod), ctx.GetHeaders());
+            return new TransactionEventAttributes(Startup.Settings.Location, ctx.GetSyncPeriod(syncPeriod), 
+                EventSource.ClientRequest, ctx.GetHeaders());
         }
         
         public static async ValueTask<IMyMemory> BodyAsIMemoryAsync(

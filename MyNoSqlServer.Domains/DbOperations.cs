@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.TransactionEvents;
@@ -31,10 +32,35 @@ namespace MyNoSqlServer.Domains
         }
 
 
-        public void ReplaceTable(string tableName, bool persist, IMyMemory content, TransactionEventAttributes attributes)
+        public void ReplaceTable(string tableName, bool persist, IMyMemory content,
+            TransactionEventAttributes attributes)
         {
-              var dbTable = _dbInstance.TryGetTable(tableName) ?? _dbInstance.CreateTableIfNotExists(tableName, persist, attributes);
-              dbTable.InitFromSnapshot(content);
+
+            var partitionsAsMem = content.SplitJsonArrayToObjects();
+
+            var partitions = new Dictionary<string, List<DbRow>>();
+
+            foreach (var partitionMemory in partitionsAsMem)
+            {
+                var dbRows = partitionMemory.SplitJsonArrayToObjects();
+
+                foreach (var dbRowAsMemory in dbRows)
+                {
+                    var entity = dbRowAsMemory.ParseDynamicEntity();
+                    var dbRow = DbRow.RestoreSnapshot(entity, dbRowAsMemory);
+
+                    if (!partitions.ContainsKey(dbRow.PartitionKey))
+                        partitions.Add(dbRow.PartitionKey, new List<DbRow>());
+
+                    partitions[dbRow.PartitionKey].Add(dbRow);
+                }
+
+            }
+
+            var dbTable = _dbInstance.TryGetTable(tableName) ??
+                          _dbInstance.CreateTableIfNotExists(tableName, persist, attributes);
+
+            dbTable.GetWriteAccess(writeAccess => { writeAccess.InitTable(partitions, attributes); });
         }
 
         public OperationResult Insert(DbTable table, IMyMemory myMemory,
@@ -53,7 +79,19 @@ namespace MyNoSqlServer.Domains
             if (table.HasRecord(entity))
                 return OperationResult.RecordExists;
             
-            return table.Insert(entity, now, attributes);
+            var dbRow = DbRow.CreateNew(entity, now);
+            
+
+            return table.GetWriteAccess(writeAccess =>
+            {
+                var dbPartition = writeAccess.GetOrCreatePartition(entity.PartitionKey);
+
+                return dbPartition.Insert(dbRow, attributes) 
+                    ? OperationResult.Ok 
+                    : OperationResult.RecordExists;
+            });
+            
+  
             
         }
         

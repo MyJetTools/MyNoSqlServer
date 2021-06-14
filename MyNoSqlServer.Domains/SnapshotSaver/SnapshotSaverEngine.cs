@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Tables;
@@ -36,7 +37,11 @@ namespace MyNoSqlServer.Domains.SnapshotSaver
                     if (tableLoader.Persist)
                     {
                         await foreach (var partitionSnapshot in tableLoader.GetPartitionsAsync())
-                            table.InitPartitionFromSnapshot(partitionSnapshot); 
+                            table.GetWriteAccess(writeAccess =>
+                            {
+                                writeAccess.InitPartition(partitionSnapshot.PartitionKey,
+                                    partitionSnapshot.GetRecords().ToList(), null);
+                            });
                     }
                     
                     Console.WriteLine("Restored table: '"+tableLoader.TableName+"' in "+(DateTime.UtcNow - started));

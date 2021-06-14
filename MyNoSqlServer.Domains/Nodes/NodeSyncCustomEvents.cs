@@ -4,20 +4,23 @@ using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Nodes
 {
-    public class InitTableEvent : ITransactionEvent
+    public class FirstInitTableEvent : ITransactionEvent
     {
         public string TableName { get; private set;  }
         public DateTime Happened { get; } = DateTime.UtcNow;
         public TransactionEventAttributes Attributes { get; private set; }
         public DbTable Table { get; private set; }
-
-        public static InitTableEvent Create(TransactionEventAttributes attributes, DbTable table)
+        
+        public byte[] TableData { get; set; }
+        
+        public static FirstInitTableEvent Create(TransactionEventAttributes attributes, DbTable table, byte[] tableData)
         {
-            return new InitTableEvent
+            return new FirstInitTableEvent
             {
                 Attributes = attributes,
                 TableName = table.Name,
-                Table = table
+                Table = table,
+                TableData = tableData
             };
         }
     }

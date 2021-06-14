@@ -131,7 +131,6 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
         }
         
     }
-
     
 
     /// <summary>
