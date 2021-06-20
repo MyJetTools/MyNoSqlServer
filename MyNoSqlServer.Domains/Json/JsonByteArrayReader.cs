@@ -357,7 +357,7 @@ namespace MyNoSqlServer.Domains.Json
 
             var last = list[^1];
             
-            foreach (var b in last.Slice(0, endIndex+1).Span)
+            foreach (var b in last[..(endIndex+1)].Span)
             {
                 result[i] = b;
                 i++;

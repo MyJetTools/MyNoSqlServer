@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains;
@@ -77,7 +76,7 @@ namespace MyNoSqlServer.Tests
         }
         
         [Test]
-        public async Task TestConcurrentNotOkMerge()
+        public void TestConcurrentNotOkMerge()
         {
             var ioc = TestUtils.GetTestIoc();
 

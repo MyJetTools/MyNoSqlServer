@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using MyNoSqlServer.Abstractions;
 
 namespace MyNoSqlServer.Api.Controllers
 {

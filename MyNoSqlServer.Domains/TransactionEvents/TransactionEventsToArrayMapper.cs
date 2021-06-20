@@ -6,7 +6,7 @@ namespace MyNoSqlServer.Domains.TransactionEvents
     public static class TransactionEventsToArrayMapper
     {
 
-        public static byte[] AsByteArray(this Dictionary<string, List<DbRow>> snapshot)
+        public static byte[] AsByteArray(this IReadOnlyDictionary<string, List<DbRow>> snapshot)
         {
             var result = new List<DbRow>();
 
@@ -16,7 +16,7 @@ namespace MyNoSqlServer.Domains.TransactionEvents
                 return result.ToJsonArray().AsArray();
         }
         
-        public static byte[] AsByteArray(this Dictionary<string, IReadOnlyList<DbRow>> snapshot)
+        public static byte[] AsByteArray(this IReadOnlyDictionary<string, IReadOnlyList<DbRow>> snapshot)
         {
             var result = new List<DbRow>();
 

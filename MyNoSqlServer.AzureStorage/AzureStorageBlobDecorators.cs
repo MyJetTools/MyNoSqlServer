@@ -12,11 +12,10 @@ namespace MyNoSqlServer.AzureStorage
     public static class AzureStorageBlobDecorators
     {
         
-        
         private static MyNoSqlLogger Logger { get; set; }
         
         private static readonly BlobRequestOptions RequestOptions=
-            new BlobRequestOptions
+            new ()
             {
                 MaximumExecutionTime = TimeSpan.FromSeconds(10)
             };

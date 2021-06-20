@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -37,17 +38,42 @@ namespace MyNoSqlServer.Api.Controllers
                 : CommonModels.DefaultSyncPeriod;
         }
 
+        
+        private static IReadOnlyDictionary<string, string> ParseHeader(string parseHeader)
+        {
+            var result = new Dictionary<string, string>();
+
+            try
+            {
+                foreach (var itm in parseHeader.Split(";"))
+                {
+                    var kv = itm.Split('=');
+                    
+                    if (kv.Length>1)
+                        result.Add(kv[0], kv[1]);
+                }
+
+                return result;
+            }
+            catch (Exception)
+            {
+                return result;
+            }
+
+        }
 
         private static IReadOnlyDictionary<string, string> GetHeaders(this HttpContext ctx)
         {
-            //TODO - вкрутить Headers
+            if (ctx.Request.Headers.TryGetValue("HEADERS", out var result))
+                return ParseHeader(result);
+            
             return new Dictionary<string, string>();
         }
 
 
         public static TransactionEventAttributes GetRequestAttributes(this HttpContext ctx, string syncPeriod)
         {
-            return new TransactionEventAttributes(Startup.Settings.Location, ctx.GetSyncPeriod(syncPeriod), 
+            return new TransactionEventAttributes(new List<string>{Startup.Settings.Location} , ctx.GetSyncPeriod(syncPeriod), 
                 EventSource.ClientRequest, ctx.GetHeaders());
         }
         

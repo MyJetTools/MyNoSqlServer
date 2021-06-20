@@ -12,7 +12,7 @@ namespace MyNoSqlServer.Api.Grpc
 {
     public class MyNoSqlGrpcService : IMyNoSqlWriterGrpcService, IMyNoSqlWriterGrpcServiceLegacy
     {
-        private static IReadOnlyDictionary<string, string> EmptyDictionary = new Dictionary<string, string>();
+        private static readonly IReadOnlyDictionary<string, string> EmptyDictionary = new Dictionary<string, string>();
 
         private static IReadOnlyDictionary<string, string> ToDomainHeaders(MyNoSqlServerGrpcHeader[] headers)
         {
@@ -28,7 +28,12 @@ namespace MyNoSqlServer.Api.Grpc
 
         private static TransactionEventAttributes GetGrpcRequestAttributes(MyNoSqlServerGrpcHeader[] headers)
         {
-            return new TransactionEventAttributes(Startup.Settings.Location, DataSynchronizationPeriod.Sec1, 
+            var locations = new List<string>()
+            {
+                Startup.Settings.Location
+            };
+            
+            return new TransactionEventAttributes(locations, DataSynchronizationPeriod.Sec1, 
                 EventSource.ClientRequest, ToDomainHeaders(headers));
         }
         

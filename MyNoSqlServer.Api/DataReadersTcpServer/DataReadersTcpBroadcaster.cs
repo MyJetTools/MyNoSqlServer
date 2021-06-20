@@ -116,7 +116,9 @@ namespace MyNoSqlServer.Api.DataReadersTcpServer
             var packetToBroadcast = new UpdateRowsContract
             {
                 TableName = updateRowsTransactionEvent.TableName,
-                Data = updateRowsTransactionEvent.Rows.ToJsonArray().AsArray()
+                Data = updateRowsTransactionEvent.RowsByPartition
+                    .SelectMany(itm => itm.Value)
+                    .ToJsonArray().AsArray()
             };
 
             foreach (var connection in connections)
@@ -133,7 +135,9 @@ namespace MyNoSqlServer.Api.DataReadersTcpServer
             var packetToBroadcast = new DeleteRowsContract
             {
                 TableName = deleteRowsTransactionEvent.TableName,
-                RowsToDelete = deleteRowsTransactionEvent.Rows.Select(row => (row.PartitionKey, row.RowKey)).ToList()
+                RowsToDelete = deleteRowsTransactionEvent.Rows
+                    .SelectMany(row => row.Value.Select(itm => (row.Key, itm)))
+                    .ToList()
             };
 
             foreach (var connection in connections)

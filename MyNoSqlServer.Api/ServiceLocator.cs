@@ -12,7 +12,7 @@ using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.DataReadersBroadcast;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Nodes;
-using MyNoSqlServer.Domains.SnapshotSaver;
+using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
 
@@ -68,9 +68,12 @@ namespace MyNoSqlServer.Api
         
         public static NodeSessionsList NodeSessionsList { get; private set; }
         
+        public static DataInitializer DataInitializer { get; private set; }
+        
 
-        private static SnapshotSaverEngine _snapshotSaverEngine;
+        private static ITablePersistenceStorage _tablePersistenceStorage;
         public static DbOperations DbOperations { get; private set; }
+        public static NodesSyncOperations NodesSyncOperations { get; private set; }
         
         public static readonly MyServerTcpSocket<IMyNoSqlTcpContract> TcpServer = 
             new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
@@ -103,11 +106,12 @@ namespace MyNoSqlServer.Api
             
             DbInstance = sr.GetRequiredService<DbInstance>();
             
-            _snapshotSaverEngine = sr.GetRequiredService<SnapshotSaverEngine>();
-
             GlobalVariables = sr.GetRequiredService<GlobalVariables>();
 
             DbOperations = sr.GetRequiredService<DbOperations>();
+            NodesSyncOperations = sr.GetRequiredService<NodesSyncOperations>();
+
+            _tablePersistenceStorage = sr.GetRequiredService<ITablePersistenceStorage>();
 
             Logger = sr.GetRequiredService<MyNoSqlLogger>();
 
@@ -115,12 +119,14 @@ namespace MyNoSqlServer.Api
 
             NodeSessionsList = sr.GetRequiredService<NodeSessionsList>();
 
+            DataInitializer = sr.GetRequiredService<DataInitializer>();
+
         }
 
         public static void Start()
         {
-            
-            _snapshotSaverEngine.LoadSnapshotsAsync().Wait();
+
+            DataInitializer.LoadSnapshotsAsync().Wait();
 
             TimerOneMinute.Register("GC transactions", () =>
             {
@@ -134,7 +140,7 @@ namespace MyNoSqlServer.Api
                 return new ValueTask();
             });
 
-            TimerSaver.Register("Persist", ()=> _snapshotSaverEngine.IterateAsync(GlobalVariables.IsShuttingDown));
+            TimerSaver.Register("Persist", ()=> _tablePersistenceStorage.FlushIfNeededAsync());
             TimerSaver.RegisterExceptionHandler((msg, e) =>
             {
                 Logger.WriteError(msg, e);
@@ -166,7 +172,7 @@ namespace MyNoSqlServer.Api
             Thread.Sleep(500);
             
             Console.WriteLine("Stopping Snapshot Saver Engine gracefully");
-            _snapshotSaverEngine.StopAsync().Wait();
+            DataInitializer.StopAsync().Wait();
         }
     }
 }

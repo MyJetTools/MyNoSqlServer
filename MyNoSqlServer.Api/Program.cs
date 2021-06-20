@@ -33,7 +33,7 @@ namespace MyNoSqlServer.Api
                     
                     webBuilder
                         .UseStartup<Startup>()
-                        .ConfigureLogging((context, logging) =>
+                        .ConfigureLogging((_, logging) =>
                         {
                             if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
                                 logging.ClearProviders();

@@ -14,95 +14,196 @@ namespace MyNoSqlServer.Api.Grpc
 {
     public class PersistenceNodeGrpcService : IMyNoSqlServerNodePersistenceGrpcService
     {
-        private static IReadOnlyDictionary<string, string> EmptyDictionary = new Dictionary<string, string>();
+        private static readonly IReadOnlyDictionary<string, string> EmptyDictionary = new Dictionary<string, string>();
 
-        private static IReadOnlyDictionary<string, string> ToDomainHeaders(SyncGrpcHeader[] headers)
+        private static IReadOnlyDictionary<string, string> ToDomainHeaders(IReadOnlyList<SyncGrpcHeader> headers)
         {
             if (headers == null)
                 return EmptyDictionary;
 
-            if (headers.Length == 0)
+            if (headers.Count == 0)
                 return EmptyDictionary;
 
             return headers.ToDictionary(itm => itm.Key, itm => itm.Value);
         }
         
-        private static TransactionEventAttributes GetGrpcRequestAttributes(string location, SyncGrpcHeader[] headers)
+        private static TransactionEventAttributes GetGrpcRequestAttributes(List<string> locations, SyncGrpcHeader[] headers)
         {
-            return new TransactionEventAttributes(location, DataSynchronizationPeriod.Sec1, 
+            locations ??= new List<string>();
+            locations.Add(Startup.Settings.Location);
+
+
+            return new TransactionEventAttributes(locations, DataSynchronizationPeriod.Sec1, 
                 EventSource.Synchronization, ToDomainHeaders(headers));
         }
         
-        public ValueTask PingAsync(PingGrpcRequest request)
+        public ValueTask<PingGrpcResponse> PingAsync(PingGrpcRequest request)
         {
             NodesPool.GetOrCreateNode(request.Location);
-            return new ValueTask();
+            return new ValueTask<PingGrpcResponse>(new PingGrpcResponse
+            {
+                Location = Startup.Settings.Location
+            });
         }
 
 
 
         public async ValueTask SaveTableSnapshotAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
         {
-            var model = await payloads.MergePayloadAndDeserialize<SaveTableSnapshotGrpcModel>(false);
-            ServiceLocator.DbOperations.ReplaceTable(model.TableName, model.PersistTable, model.Content.AsMyMemory(), 
-                GetGrpcRequestAttributes(model.Location, model.Headers));
+            var model = await payloads.MergePayloadAndDeserialize<WriteTableSnapshotGrpcModel>(false);
+
+            var initTableTransactionEvent = new InitTableTransactionEvent
+            {
+                TableName = model.TableName,
+                Snapshot = model.TablePartitions.ToDictionary(
+                    itm => itm.PartitionKey,
+                    snapshot => snapshot.Snapshot.ParseDbRowList()),
+                Attributes = GetGrpcRequestAttributes(model.Locations, model.Headers)
+            };
+            
+            ServiceLocator.NodesSyncOperations.ReplaceTable(initTableTransactionEvent);
             
         }
 
         public async ValueTask SaveTableSnapshotCompressedAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
         {
-            var model = await payloads.MergePayloadAndDeserialize<SaveTableSnapshotGrpcModel>(true);
-            ServiceLocator.DbOperations.ReplaceTable(model.TableName, model.PersistTable, model.Content.AsMyMemory(), 
-                GetGrpcRequestAttributes(model.Location, model.Headers));
+            var model = await payloads.MergePayloadAndDeserialize<WriteTableSnapshotGrpcModel>(false);
+
+            var initTableTransactionEvent = new InitTableTransactionEvent
+            {
+                TableName = model.TableName,
+                Snapshot = model.TablePartitions.ToDictionary(
+                    itm => itm.PartitionKey,
+                    snapshot => snapshot.Snapshot.ParseDbRowList()),
+                Attributes = GetGrpcRequestAttributes(model.Locations, model.Headers)
+            };
+            
+            ServiceLocator.NodesSyncOperations.ReplaceTable(initTableTransactionEvent);
         }
 
         public async ValueTask SavePartitionSnapshotAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
         {
-            var model = await payloads.MergePayloadAndDeserialize<SavePartitionSnapshotGrpcModel>(false);
-            ServiceLocator.DbOperations.ReplaceTable(model.TableName, model.PersistTable, model.Content.AsMyMemory(), 
-                GetGrpcRequestAttributes(model.Location, model.Headers));
+            var model = await payloads.MergePayloadAndDeserialize<WritePartitionSnapshotGrpcModel>(false);
+
+            var initPartitionsTransactionEvent = new InitPartitionsTransactionEvent
+            {
+                TableName = model.TableName,
+                Partitions = model.PartitionsToBeInitialized.ToDictionary(
+                    itm => itm.PartitionKey,
+                    snapshot => snapshot.Snapshot.ParseDbRowList()),
+                Attributes = GetGrpcRequestAttributes(model.Locations, model.Headers)
+            };
+            
+            ServiceLocator.NodesSyncOperations.ReplacePartitions(initPartitionsTransactionEvent);
         }
 
         public async ValueTask SavePartitionCompressedSnapshotAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
         {
-            var model = await payloads.MergePayloadAndDeserialize<SavePartitionSnapshotGrpcModel>(true);
-            ServiceLocator.DbOperations.ReplaceTable(model.TableName, model.PersistTable, model.Content.AsMyMemory(), 
-                GetGrpcRequestAttributes(model.Location, model.Headers));
+            var model = await payloads.MergePayloadAndDeserialize<WritePartitionSnapshotGrpcModel>(true);
+
+            var initPartitionsTransactionEvent = new InitPartitionsTransactionEvent
+            {
+                TableName = model.TableName,
+                Partitions = model.PartitionsToBeInitialized.ToDictionary(
+                    itm => itm.PartitionKey,
+                    snapshot => snapshot.Snapshot.ParseDbRowList()),
+                Attributes = GetGrpcRequestAttributes(model.Locations, model.Headers)
+            };
+            
+            ServiceLocator.NodesSyncOperations.ReplacePartitions(initPartitionsTransactionEvent);
+        }
+
+        public async ValueTask SaveRowsSnapshotAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
+        {
+            var model = await payloads.MergePayloadAndDeserialize<WriteRowsUpdateGrpcModel>(false);
+
+            var updateRowsTransactionEvent = new UpdateRowsTransactionEvent
+            {
+                TableName = model.TableName,
+                RowsByPartition = model.Rows.ToDictionary(
+                    itm => itm.PartitionKey,
+                    snapshot => snapshot.Snapshot.ParseDbRowList()),
+                Attributes = GetGrpcRequestAttributes(model.Locations, model.Headers)
+            };
+            
+            ServiceLocator.NodesSyncOperations.UpdateRows(updateRowsTransactionEvent);
+        }
+
+        public async ValueTask SaveRowsCompressedSnapshotAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
+        {
+            var model = await payloads.MergePayloadAndDeserialize<WriteRowsUpdateGrpcModel>(true);
+
+            var updateRowsTransactionEvent = new UpdateRowsTransactionEvent
+            {
+                TableName = model.TableName,
+                RowsByPartition = model.Rows.ToDictionary(
+                    itm => itm.PartitionKey,
+                    snapshot => snapshot.Snapshot.ParseDbRowList()),
+                Attributes = GetGrpcRequestAttributes(model.Locations, model.Headers)
+            };
+            
+            ServiceLocator.NodesSyncOperations.UpdateRows(updateRowsTransactionEvent);
+        }
+
+        public async ValueTask DeleteRowsAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
+        {
+            var model = await payloads.MergePayloadAndDeserialize<DeleteRowsGrpcRequest>(true);
+
+            var deleteRowsTransactionEvent = new DeleteRowsTransactionEvent
+            {
+                TableName = model.TableName,
+                Rows = model.RowsToDelete.ToDictionary(
+                    itm => itm.PartitionKey,
+                    rowKeys => rowKeys.RowKeys.AsReadOnlyList()),
+                Attributes = GetGrpcRequestAttributes(model.Locations, model.Headers)
+            };
+            
+            ServiceLocator.NodesSyncOperations.DeleteRows(deleteRowsTransactionEvent);
         }
 
         public ValueTask DeleteTablePartitionsAsync(DeleteTablePartitionGrpcRequest request)
         {
             ServiceLocator.DbOperations.DeletePartitions(request.TableName, request.PartitionKeys, 
-                GetGrpcRequestAttributes(request.Location, request.Headers));
+                GetGrpcRequestAttributes(request.Locations, request.Headers));
             return new ValueTask();
         }
 
         public ValueTask SetTableAttributesAsync(SetTableAttributesGrpcRequest request)
         {
-            ServiceLocator.DbOperations.SetTableAttributes(request.TableName, request.Persist, request.MaxPartitionsAmount, 
-                GetGrpcRequestAttributes(request.Location, request.Headers));
+            var dbTable = ServiceLocator.DbInstance.GetTable(request.TableName);
+            ServiceLocator.DbOperations.SetTableAttributes(dbTable, request.Persist, request.MaxPartitionsAmount, 
+                GetGrpcRequestAttributes(request.Locations, request.Headers));
 
             return new ValueTask();
         }
 
-        public async IAsyncEnumerable<TableAttributeGrpcModel> GetTablesAsync()
+
+        private static IEnumerable<ReadTableAttributeGrpcModel> GetTables()
         {
             var tables = ServiceLocator.DbInstance.GetTables();
 
             foreach (var dbTable in tables)
             {
-                yield return new TableAttributeGrpcModel
+                yield return new ReadTableAttributeGrpcModel
                 {
                     TableName = dbTable.Name,
-                    Persist = dbTable.Persist,
-                    MaxPartitionsAmount = dbTable.MaxPartitionsAmount
+                    Attributes = new TableAttributesGrpcData
+                    {
+                        Persist =  dbTable.Persist,
+                        MaxPartitionsAmount = dbTable.MaxPartitionsAmount
+                    }
                 };
             }
         }
 
-        public async IAsyncEnumerable<TablePartitionGrpcModel> DownloadTableAsync(DownloadTableGrpcRequest request)
+        public IAsyncEnumerable<ReadTableAttributeGrpcModel> GetTablesAsync()
         {
-            
+            return GetTables().ToAsyncEnumerable();
+        }
+
+
+        private static IEnumerable<ReadTablePartitionGrpcModel> DownloadTable(DownloadTableGrpcRequest request)
+        {
             var tables = ServiceLocator.DbInstance.GetTable(request.TableName);
             
             
@@ -122,18 +223,21 @@ namespace MyNoSqlServer.Api.Grpc
 
             foreach (var (partitionKey, snapshot) in result)
             {
-                yield return new TablePartitionGrpcModel
+                yield return new ReadTablePartitionGrpcModel
                 {
                     PartitionKey = partitionKey,
                     Content = snapshot
                 };
             }
-            
         }
 
-        public async IAsyncEnumerable<TablePartitionGrpcModel> DownloadTableCompressedAsync(DownloadTableGrpcRequest request)
+        public IAsyncEnumerable<ReadTablePartitionGrpcModel> DownloadTableAsync(DownloadTableGrpcRequest request)
         {
-             
+            return DownloadTable(request).ToAsyncEnumerable();
+        }
+        
+        private static IEnumerable<ReadTablePartitionGrpcModel> DownloadCompressedTable(DownloadTableGrpcRequest request)
+        {
             var tables = ServiceLocator.DbInstance.GetTable(request.TableName);
             
             
@@ -153,12 +257,17 @@ namespace MyNoSqlServer.Api.Grpc
 
             foreach (var (partitionKey, snapshot) in result)
             {
-                yield return new TablePartitionGrpcModel
+                yield return new ReadTablePartitionGrpcModel
                 {
                     PartitionKey = partitionKey,
                     Content =  MyNoSqlServerDataCompression.ZipPayload(snapshot)
                 };
             }
+        }
+
+        public IAsyncEnumerable<ReadTablePartitionGrpcModel> DownloadTableCompressedAsync(DownloadTableGrpcRequest request)
+        {
+            return DownloadCompressedTable(request).ToAsyncEnumerable();
         }
     }
 }

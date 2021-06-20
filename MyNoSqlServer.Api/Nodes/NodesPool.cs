@@ -1,21 +1,20 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace MyNoSqlServer.Api.Nodes
 {
     public static class NodesPool
     {
-        private static Dictionary<string, ConnectedNode> _nodes = new ();
+        private static readonly Dictionary<string, ConnectedNode> Nodes = new ();
 
-        private static object _lockObject = new();
+        private static readonly object LockObject = new();
 
 
         public static ConnectedNode GetOrCreateNode(string location)
         {
-            lock (_lockObject)
+            lock (LockObject)
             {
-                var result = _nodes.TryGetValue(location, out var node) ?
+                var result = Nodes.TryGetValue(location, out var node) ?
                 node : new ConnectedNode(location);
                 
                 result.LastAccess = DateTime.UtcNow;

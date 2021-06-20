@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MyNoSqlServer.AzureStorage.TablesStorage;
 using MyNoSqlServer.Domains.Persistence;
 
 namespace MyNoSqlServer.AzureStorage
@@ -10,7 +11,7 @@ namespace MyNoSqlServer.AzureStorage
             if (string.IsNullOrEmpty(connectionString))
                 return;
             
-            services.AddSingleton<ISnapshotStorage>(new AzureBlobSnapshotStorage(connectionString));
+            services.AddSingleton<ITablePersistenceStorage>(new AzureTablePersistenceStorage(connectionString));
 
         }
     }

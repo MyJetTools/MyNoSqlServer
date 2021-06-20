@@ -8,6 +8,7 @@ using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.TransactionEvents;
 
@@ -18,7 +19,7 @@ namespace MyNoSqlServer.Tests
 
         public static TransactionEventAttributes GetTestEventAttributes(DataSynchronizationPeriod? syncPeriod = DataSynchronizationPeriod.Immediately)
         {
-            return new TransactionEventAttributes("TEST", 
+            return new TransactionEventAttributes(new List<string>{"TEST"}, 
                 DataSynchronizationPeriod.Sec1,
                 EventSource.ClientRequest,
                 new Dictionary<string, string>()
@@ -30,7 +31,7 @@ namespace MyNoSqlServer.Tests
         {
             var result = new ServiceCollection();
             result.BindDomainsServices();
-            result.AddSingleton<ISnapshotStorage>(new SnapshotStorageMock());
+            result.AddSingleton<ITablePersistenceStorage>(new SnapshotStorageMock());
             
 
             return result.BuildServiceProvider();
@@ -47,27 +48,53 @@ namespace MyNoSqlServer.Tests
         {
             return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(dbRow.Data));
         }
+
+        public static void InsertTestEntity(this DbTable dbTable, IMyNoSqlDbEntity insertEntity)
+        {
+            var mem = insertEntity.ToMemory();
+
+            var entity = mem.ParseDynamicEntity();
+            var dbRow = DbRow.CreateNew(entity, DateTime.UtcNow);
+
+            dbTable.GetWriteAccess(writeAccess =>
+            {
+                var partition = writeAccess.GetOrCreatePartition(dbRow.PartitionKey);
+                partition.InsertOrReplace(dbRow);
+            });
+            
+
+        }
         
     }
 
-    public class SnapshotStorageMock : ISnapshotStorage
+    public class SnapshotStorageMock : ITablePersistenceStorage
     {
-        public ValueTask SavePartitionSnapshotAsync(PartitionSnapshot partitionSnapshot, Dictionary<string, string> headers)
+        public ValueTask SaveTableAttributesAsync(DbTable dbTable, UpdateTableAttributesTransactionEvent data)
         {
             return new ValueTask();
         }
 
-        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot, Dictionary<string, string> headers)
+        public ValueTask SaveTableSnapshotAsync(DbTable dbTable, InitTableTransactionEvent data)
         {
             return new ValueTask();
         }
 
-        public ValueTask SaveTableSnapshotAsync(DbTable dbTable, Dictionary<string, string> headers)
+        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, InitPartitionsTransactionEvent data)
         {
             return new ValueTask();
         }
 
-        public ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey, Dictionary<string, string> headers)
+        public ValueTask SaveRowUpdatesAsync(DbTable dbTable, UpdateRowsTransactionEvent eventData)
+        {
+            return new ValueTask();
+        }
+
+        public ValueTask SaveRowDeletesAsync(DbTable dbTable, DeleteRowsTransactionEvent eventData)
+        {
+            return new ValueTask();
+        }
+
+        public ValueTask FlushIfNeededAsync()
         {
             return new ValueTask();
         }
@@ -77,11 +104,7 @@ namespace MyNoSqlServer.Tests
             return Array.Empty<ITableLoader>().ToAsyncEnumerable();
         }
 
-        public ValueTask SetTableAttributesAsync(DbTable dbTable, Dictionary<string, string> headers)
-        {
-            return new ValueTask();
-        }
-
+        public bool HasDataAtSaveProcess => false;
     }
     
 

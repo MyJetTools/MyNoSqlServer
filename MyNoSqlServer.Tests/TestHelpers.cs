@@ -16,7 +16,7 @@ namespace MyNoSqlServer.Tests
             {
                 var partition = writeAccess.GetOrCreatePartition(dbRow.PartitionKey);
 
-                partition.Insert(dbRow, null);
+                partition.Insert(dbRow);
             });
         }
         

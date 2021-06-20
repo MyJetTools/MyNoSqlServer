@@ -1,22 +1,22 @@
 using System;
 using System.Threading.Tasks;
-using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
 
 namespace MyNoSqlServer.Domains.Nodes
 {
     public class NodeClient
     {
-        private readonly DbInstance _dbInstance;
+        private readonly NodesSyncOperations _nodesSyncOperations;
         private readonly IMyNoSqlServerNodeSynchronizationGrpcService _grpcService;
         private readonly ISettingsLocation _settingsLocation;
 
         private readonly string _sessionId;
 
-        public NodeClient(DbInstance dbInstance,
+        public NodeClient(NodesSyncOperations nodesSyncOperations,
             IMyNoSqlServerNodeSynchronizationGrpcService grpcService, ISettingsLocation settingsLocation)
         {
-            _dbInstance = dbInstance;
+            _nodesSyncOperations = nodesSyncOperations;
             _grpcService = grpcService;
             _settingsLocation = settingsLocation;
             _sessionId = Guid.NewGuid().ToString("N");
@@ -54,21 +54,46 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
 
+        private TransactionEventAttributes CreateTransactionEventAttribute()
+        {
+            throw new NotImplementedException();
+        }
+
+
         private void HandleSyncEvent(SyncGrpcResponse syncGrpcResponse)
         {
-            
-            if (syncGrpcResponse.TableName == null)
-                return;
 
-            var table =  _dbInstance.GetTable(syncGrpcResponse.TableName);
+            var transactionEvents = syncGrpcResponse.ToTransactionEvents(CreateTransactionEventAttribute);
 
-            if (syncGrpcResponse.TableAttributes != null)
+            foreach (var transactionEvent in transactionEvents)
             {
+                switch (transactionEvent)
+                {
+                    
+                    case UpdateTableAttributesTransactionEvent updateTableAttributesTransactionEvent:
+                        _nodesSyncOperations.SetTableAttributes(updateTableAttributesTransactionEvent);
+                        break;
+                    
+                    case InitTableTransactionEvent initTableTransactionEvent:
+                        _nodesSyncOperations.ReplaceTable(initTableTransactionEvent);
+                        break;
+                    
+                    case InitPartitionsTransactionEvent initPartitionsTransactionEvent:
+                        _nodesSyncOperations.ReplacePartitions(initPartitionsTransactionEvent);
+                        break;
+
+                    case UpdateRowsTransactionEvent updateRowsTransactionEvent:
+                        _nodesSyncOperations.UpdateRows(updateRowsTransactionEvent);
+                        break;
+
+                    case DeleteRowsTransactionEvent deleteRowsTransactionEvent:
+                        _nodesSyncOperations.DeleteRows(deleteRowsTransactionEvent);
+                        break;
+                }
                 
             }
-            
-            //ToDo - сделать синхронизацию данных
-            
+
+
         }
 
 

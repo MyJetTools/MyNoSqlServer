@@ -4,6 +4,7 @@ using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Persistence
 {
@@ -52,12 +53,21 @@ namespace MyNoSqlServer.Domains.Persistence
 
     }
     
-    public interface ISnapshotStorage
+    public interface ITablePersistenceStorage
     {
-        ValueTask SavePartitionSnapshotAsync(DbTable dbTable, PartitionSnapshot partitionSnapshot, Dictionary<string, string> headers);
-        ValueTask SaveTableSnapshotAsync(DbTable dbTable, Dictionary<string, string> headers);
-        ValueTask DeleteTablePartitionAsync(DbTable dbTable, string partitionKey, Dictionary<string, string> headers);
+        ValueTask SaveTableAttributesAsync(DbTable dbTable, UpdateTableAttributesTransactionEvent data);
+        ValueTask SaveTableSnapshotAsync(DbTable dbTable, InitTableTransactionEvent data);
+        ValueTask SavePartitionSnapshotAsync(DbTable dbTable, InitPartitionsTransactionEvent data);
+        ValueTask SaveRowUpdatesAsync(DbTable dbTable, UpdateRowsTransactionEvent eventData);
+        ValueTask SaveRowDeletesAsync(DbTable dbTable, DeleteRowsTransactionEvent eventData);
+
+
+        ValueTask FlushIfNeededAsync();
+  
         IAsyncEnumerable<ITableLoader> LoadTablesAsync();
-        ValueTask SetTableAttributesAsync(DbTable dbTable, Dictionary<string, string> headers);
+        
+        
+        bool HasDataAtSaveProcess { get; }
+
     }
 }

@@ -2,28 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MyNoSqlServer.Domains.Db.Rows;
-using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
-using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Db.Partitions
 {
     public class DbPartitionsList
     {
-        private readonly DbTable _dbTable;
-        private readonly SyncEventsDispatcher _syncEventsDispatcher;
+
         private readonly SortedList<string, DbPartition> _partitions = new ();
 
         private IReadOnlyList<string> _partitionKeys;
 
-
-        public DbPartitionsList(DbTable dbTable, SyncEventsDispatcher syncEventsDispatcher)
-        {
-            _dbTable = dbTable;
-            _syncEventsDispatcher = syncEventsDispatcher;
-        }
-        
 
         public DbPartition GetOrCreate(string partitionKey)
         {
@@ -33,7 +23,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
                 return dbPartition;
             }
 
-            dbPartition = new DbPartition(_dbTable, partitionKey, _syncEventsDispatcher);
+            dbPartition = new DbPartition(partitionKey);
             
             _partitions.Add(partitionKey, dbPartition);
             Count = _partitions.Count;

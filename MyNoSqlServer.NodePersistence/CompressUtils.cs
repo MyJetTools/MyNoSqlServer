@@ -17,7 +17,7 @@ namespace MyNoSqlServer.NodePersistence
             return new ReadOnlyMemory<byte>(stream.GetBuffer(), 0, (int)stream.Length);
         }
         
-        public static async IAsyncEnumerable<PayloadWrapperGrpcModel> CompressAndSplitAsync(this object contract, int batchSize, bool compress)
+        public static  IEnumerable<PayloadWrapperGrpcModel> SplitAndPublish(this object contract, int batchSize, bool compress)
         {
             var stream = new MemoryStream();
             ProtoBuf.Serializer.Serialize(stream, contract);
@@ -33,7 +33,6 @@ namespace MyNoSqlServer.NodePersistence
                     Payload = batch
                 };
             }
-
         }
 
         public static async Task<T> MergePayloadAndDeserialize<T>(this IAsyncEnumerable<PayloadWrapperGrpcModel> payLoadAsync, bool compressed)

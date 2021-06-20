@@ -62,9 +62,24 @@ namespace MyNoSqlServer.Domains.Db
             {
               
                 if (syncCreateTable != null)
-                    _syncEventsDispatcher.Dispatch( SyncTableAttributes.Create(attributes, syncCreateTable));
+                    _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, syncCreateTable));
             }
   
+        }
+        
+        public DbTable CreateTableIfNotExists(string tableName, bool persistTable,int maxPartitionsAmount, TransactionEventAttributes attributes)
+        {
+            var tables = _tables;
+
+            if (tables.TryGetValue(tableName, out var foundTable))
+            {
+                if (foundTable.Persist != persistTable || foundTable.MaxPartitionsAmount != maxPartitionsAmount)
+                    foundTable.SetAttributes(persistTable, maxPartitionsAmount, attributes);
+                return foundTable;
+            }
+
+            var createdTable = TryToCreateNewTable(tableName, persistTable, attributes);
+            return createdTable.table;
         }
         
 

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.TransactionEvents;
 
@@ -11,9 +13,9 @@ namespace MyNoSqlServer.Domains.Nodes
         public TransactionEventAttributes Attributes { get; private set; }
         public DbTable Table { get; private set; }
         
-        public byte[] TableData { get; set; }
+        public IReadOnlyDictionary<string, IReadOnlyList<DbRow>> TableData { get; set; }
         
-        public static FirstInitTableEvent Create(TransactionEventAttributes attributes, DbTable table, byte[] tableData)
+        public static FirstInitTableEvent Create(TransactionEventAttributes attributes, DbTable table, IReadOnlyDictionary<string, IReadOnlyList<DbRow>> tableData)
         {
             return new FirstInitTableEvent
             {

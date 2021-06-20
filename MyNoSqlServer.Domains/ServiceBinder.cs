@@ -15,8 +15,6 @@ namespace MyNoSqlServer.Domains
         {
             services.AddSingleton<DbInstance>();
             
-            services.AddSingleton<SnapshotSaverEngine>();
-            
             services.AddSingleton<ISnapshotSaverScheduler, SnapshotSaverScheduler>();
             
             services.AddSingleton<PersistenceHandler>();
@@ -24,11 +22,12 @@ namespace MyNoSqlServer.Domains
             services.AddSingleton<GlobalVariables>();
             
             services.AddSingleton<DbOperations>();
+            services.AddSingleton<NodesSyncOperations>();
 
             services.AddSingleton<MyNoSqlLogger>();
 
             services.AddSingleton<SyncEventsDispatcher>();
-            services.AddSingleton<PersistenceScheduler>();
+            services.AddSingleton<PersistenceQueue>();
             services.AddSingleton<NodeSessionsList>();
         }
 
@@ -36,7 +35,7 @@ namespace MyNoSqlServer.Domains
         public static void LinkDomainServices(this IServiceProvider sp)
         {
             var dispatcher = sp.GetRequiredService<SyncEventsDispatcher>();
-            dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<PersistenceScheduler>().PublishPersistenceEvent);
+            dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<PersistenceQueue>().PublishPersistenceEvent);
             dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<IDataReadersBroadcaster>().BroadcastEvent);
             dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<NodeSessionsList>().NewEvent);
             

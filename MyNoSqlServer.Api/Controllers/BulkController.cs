@@ -12,10 +12,9 @@ namespace MyNoSqlServer.Api.Controllers
 {
     
     [ApiController]
-    [Route("Bulk/[Action]")]
     public class BulkController : Controller
     {
-        [HttpPost]
+        [HttpPost("Bulk/InsertOrReplace")]
         public async ValueTask<IActionResult> InsertOrReplace([Required][FromQuery] string tableName, 
             [FromQuery]string syncPeriod)
         {
@@ -41,27 +40,30 @@ namespace MyNoSqlServer.Api.Controllers
 
             var entitiesToInsert = body.SplitJsonArrayToObjects();
 
-            table.BulkInsertOrReplace(entitiesToInsert, HttpContext.GetRequestAttributes(syncPeriod));
+            var result =ServiceLocator.DbOperations.BulkInsertOrReplace(table, entitiesToInsert,
+                HttpContext.GetRequestAttributes(syncPeriod));
             
-            return this.ResponseOk();
+            return this.GetResult(result);
 
         }
 
         private void CleanPartitionAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, string partitionKey, 
             string syncPeriod)
         {
-            table.CleanAndBulkInsert(partitionKey, entitiesToInsert, HttpContext.GetRequestAttributes(syncPeriod));
+            ServiceLocator.DbOperations
+                .CleanPartitionAndBulkInsert(table, partitionKey, entitiesToInsert, HttpContext.GetRequestAttributes(syncPeriod));
         }
         
         
         private void CleanTableAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, 
             string syncPeriod)
         {
-            table.CleanAndBulkInsert(entitiesToInsert, HttpContext.GetRequestAttributes(syncPeriod));
+            ServiceLocator.DbOperations
+                .CleanTableAndBulkInsert(table,entitiesToInsert, HttpContext.GetRequestAttributes(syncPeriod));
         }
 
 
-        [HttpPost]
+        [HttpPost("Bulk/CleanAndBulkInsert")]
         public async ValueTask<IActionResult> CleanAndBulkInsert([Required] [FromQuery] string tableName,
             [FromQuery] string partitionKey,
             [FromQuery] string syncPeriod)
@@ -71,8 +73,6 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
             
-            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
-
             var body = await Request.BodyAsIMemoryAsync();
             
             var entitiesToInsert = body.SplitJsonArrayToObjects();
@@ -85,6 +85,7 @@ namespace MyNoSqlServer.Api.Controllers
             return this.ResponseOk();
         }
 
+        [HttpPost("Bulk/Delete")]
         public IActionResult Delete([Required] [FromQuery] string tableName, [FromQuery] string syncPeriod,
             [FromBody] [Required] Dictionary<string, List<string>> partitionsAndRows)
         {

@@ -62,7 +62,7 @@ namespace MyNoSqlServer.Domains.Nodes
             var tables = _dbInstance.GetTables();
 
             
-            var attrs = new TransactionEventAttributes(Location,
+            var attrs = new TransactionEventAttributes(null,
                 DataSynchronizationPeriod.Immediately,
                 EventSource.Synchronization,
                 new Dictionary<string, string>());
@@ -71,7 +71,7 @@ namespace MyNoSqlServer.Domains.Nodes
             {
                 table.GetReadAccess(readAccess =>
                 {
-                    var initTableEvent = FirstInitTableEvent.Create(attrs, table, readAccess.GetAllRows().ToJsonArray().AsArray());
+                    var initTableEvent = FirstInitTableEvent.Create(attrs, table, readAccess.GetAllRows());
                     _subscribedToTables.Add(table.Name, initTableEvent.Table);
                     _events.Enqueue(initTableEvent);
                 });
@@ -147,7 +147,7 @@ namespace MyNoSqlServer.Domains.Nodes
                 if (!_subscribedToTables.ContainsKey(@event.TableName))
                     return;
                 
-                if (@event.Attributes.Location == Location)
+                if (@event.Attributes.HasLocation(Location))
                     return;
                 
                 _events.Enqueue(@event);

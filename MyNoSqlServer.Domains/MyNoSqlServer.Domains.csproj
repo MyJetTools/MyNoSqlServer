@@ -8,7 +8,8 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
       <PackageReference Include="MyNoSqlServer.DataCompression" Version="1.0.3" />
-      <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc10" />
+      <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc19" />
+      <PackageReference Include="protobuf-net" Version="3.0.101" />
       <PackageReference Include="System.Text.Json" Version="5.0.2" />
       <PackageReference Include="System.Threading.Tasks.Extensions">
         <Version>4.5.4</Version>

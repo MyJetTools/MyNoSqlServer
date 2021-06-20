@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
@@ -20,15 +21,15 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
     /// </summary>
     public class InitTableTransactionEvent : ITransactionEvent
     {
-        public string TableName { get; private set; }
+        public string TableName { get; set; }
         public DateTime Happened { get; } = DateTime.UtcNow;
-        public TransactionEventAttributes Attributes { get; private set; }
+        public TransactionEventAttributes Attributes { get; set; }
 
 
-        public Dictionary<string, List<DbRow>> Snapshot { get; private set; }
+        public IReadOnlyDictionary<string, IReadOnlyList<DbRow>> Snapshot { get; set; }
 
         public static InitTableTransactionEvent Create(TransactionEventAttributes attributes,
-            DbTable dbTable, Dictionary<string, List<DbRow>> snapshot)
+            DbTable dbTable, IReadOnlyDictionary<string, IReadOnlyList<DbRow>> snapshot)
         {
             return new InitTableTransactionEvent
             {
@@ -44,7 +45,7 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
             {
                 TableName = dbTable.Name,
                 Attributes = attributes,
-                Snapshot = new Dictionary<string, List<DbRow>>()
+                Snapshot = new Dictionary<string, IReadOnlyList<DbRow>>()
             };
         }
     }
@@ -57,12 +58,12 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
     /// </summary>
     public class InitPartitionsTransactionEvent : ITransactionEvent
     {
-        public string TableName { get; private set; }
+        public string TableName { get; set; }
         public DateTime Happened { get; } = DateTime.UtcNow;
-        public TransactionEventAttributes Attributes { get; private set; }
-        public Dictionary<string, IReadOnlyList<DbRow>> Partitions { get; set; }
+        public TransactionEventAttributes Attributes { get; set; }
+        public IReadOnlyDictionary<string, IReadOnlyList<DbRow>> Partitions { get; set; }
 
-        public static InitPartitionsTransactionEvent Create(TransactionEventAttributes attributes, DbTable table, Dictionary<string, IReadOnlyList<DbRow>> partitions)
+        public static InitPartitionsTransactionEvent Create(TransactionEventAttributes attributes, DbTable table, IReadOnlyDictionary<string, IReadOnlyList<DbRow>> partitions)
         {
             return new InitPartitionsTransactionEvent
             {
@@ -72,7 +73,20 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
             };
         }
         
-        public static InitPartitionsTransactionEvent AsDeletePartition(TransactionEventAttributes attributes, DbTable table, DbPartition sDbPartition)
+        public static InitPartitionsTransactionEvent AsInitPartition(TransactionEventAttributes attributes, DbTable table, IPartitionWriteAccess partition)
+        {
+            return new InitPartitionsTransactionEvent
+            {
+                TableName = table.Name,
+                Partitions = new Dictionary<string, IReadOnlyList<DbRow>>
+                {
+                    [partition.PartitionKey] = partition.GetAllRows()
+                },
+                Attributes = attributes
+            };
+        }
+        
+        public static InitPartitionsTransactionEvent AsDeletePartition(TransactionEventAttributes attributes, DbTable table, DbPartition dbPartition)
         {
             return new InitPartitionsTransactionEvent
             {
@@ -80,7 +94,7 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
                 Attributes = attributes,
                 Partitions = new Dictionary<string, IReadOnlyList<DbRow>>
                 {
-                    [sDbPartition.PartitionKey] = Array.Empty<DbRow>()
+                    [dbPartition.PartitionKey] = Array.Empty<DbRow>()
                 }
         
             };
@@ -108,20 +122,20 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
     /// Attributes of table is changed
     /// </summary>
 
-    public class SyncTableAttributes : ITransactionEvent
+    public class UpdateTableAttributesTransactionEvent : ITransactionEvent
     {
-        public string TableName { get; private set; }
+        public string TableName { get; set; }
         
         public DateTime Happened { get; } = DateTime.UtcNow;
-        public TransactionEventAttributes Attributes { get; private set; }
+        public TransactionEventAttributes Attributes { get; set; }
 
         public bool PersistTable { get; set; }
         
         public int MaxPartitionsAmount { get; set; }
 
-        public static SyncTableAttributes Create(TransactionEventAttributes attributes, DbTable dbTable)
+        public static UpdateTableAttributesTransactionEvent Create(TransactionEventAttributes attributes, DbTable dbTable)
         {
-            return new SyncTableAttributes
+            return new UpdateTableAttributesTransactionEvent
             {
                 TableName = dbTable.Name,
                 PersistTable = dbTable.Persist,
@@ -138,10 +152,10 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
     /// </summary>
     public class UpdateRowsTransactionEvent : ITransactionEvent
     {
-        public string TableName { get; private set; }
+        public string TableName { get; set; }
         public DateTime Happened { get; } = DateTime.UtcNow;
-        public TransactionEventAttributes Attributes { get; private set; }
-        public IReadOnlyList<DbRow> Rows { get; set; }
+        public TransactionEventAttributes Attributes { get; set; }
+        public IReadOnlyDictionary<string, IReadOnlyList<DbRow>> RowsByPartition { get; set; }
 
         public static UpdateRowsTransactionEvent AsRow(TransactionEventAttributes attributes, DbTable table, DbRow row)
         {
@@ -149,17 +163,20 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
             {
                 Attributes = attributes,
                 TableName = table.Name,
-                Rows = new[] { row }
+                RowsByPartition = new Dictionary<string, IReadOnlyList<DbRow>>
+                {
+                    [row.PartitionKey] = new []{row}
+                }
             };
         }
         
-        public static UpdateRowsTransactionEvent AsRows(TransactionEventAttributes attributes, DbTable table, IReadOnlyList<DbRow> rows)
+        public static UpdateRowsTransactionEvent AsRows(TransactionEventAttributes attributes, DbTable table, IReadOnlyDictionary<string, IReadOnlyList<DbRow>> rows)
         {
             return new UpdateRowsTransactionEvent
             {
                 Attributes = attributes,
                 TableName = table.Name,
-                Rows = rows,
+                RowsByPartition = rows,
             };
         }
 
@@ -170,28 +187,45 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
     /// </summary>
     public class DeleteRowsTransactionEvent : ITransactionEvent
     {
-        public string TableName { get; private set; }
+        public string TableName { get; set; }
         public DateTime Happened { get; } = DateTime.UtcNow;
-        public TransactionEventAttributes Attributes { get; private set; }
-        public IReadOnlyList<DbRow> Rows { get; set; }
+        public TransactionEventAttributes Attributes { get; set; }
+        public IReadOnlyDictionary<string, IReadOnlyList<string>> Rows { get; set; }
         
-        public static DeleteRowsTransactionEvent AsRow(TransactionEventAttributes attributes, DbTable table, DbRow row)
+        public static DeleteRowsTransactionEvent AsRow(TransactionEventAttributes attributes, DbTable table, DbRow dbRow)
         {
             return new DeleteRowsTransactionEvent
             {
                 Attributes = attributes,
                 TableName = table.Name,
-                Rows = new[] { row }
+                Rows = new Dictionary<string, IReadOnlyList<string>>
+                {
+                    [dbRow.PartitionKey] = new []{dbRow.RowKey}
+                }
             };
         }
         
-        public static DeleteRowsTransactionEvent AsRows(TransactionEventAttributes attributes, DbTable table, IReadOnlyList<DbRow> rows)
+        public static DeleteRowsTransactionEvent AsRows(TransactionEventAttributes attributes, DbTable table, IReadOnlyList<DbRow> dbDbRows)
         {
             return new DeleteRowsTransactionEvent
             {
                 Attributes = attributes,
                 TableName = table.Name,
-                Rows = rows,
+                Rows = dbDbRows.GroupBy(itm => itm.PartitionKey).ToDictionary(
+                    itm => itm.Key, 
+                    itm=> itm.Select(dbRow => dbRow.RowKey).AsReadOnlyList()),
+            };
+        }
+        
+        public static DeleteRowsTransactionEvent AsRows(TransactionEventAttributes attributes, DbTable table, IReadOnlyDictionary<string, List<DbRow>> rows)
+        {
+            return new DeleteRowsTransactionEvent
+            {
+                Attributes = attributes,
+                TableName = table.Name,
+                Rows = rows.ToDictionary(
+                    itm => itm.Key, 
+                    itm=> itm.Value.Select(dbRow => dbRow.RowKey).AsReadOnlyList()),
             };
         }
     }

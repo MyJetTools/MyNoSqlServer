@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using MyNoSqlServer.Abstractions;
 
 namespace  MyNoSqlServer.Domains.TransactionEvents
@@ -13,23 +14,33 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
     public class TransactionEventAttributes
     {
 
-        public TransactionEventAttributes(string location, DataSynchronizationPeriod synchronizationPeriod,
+        public TransactionEventAttributes(List<string> locations, DataSynchronizationPeriod synchronizationPeriod,
             EventSource eventSource,
             IReadOnlyDictionary<string, string> headers)
         {
-            Location = location;
+            Locations = locations;
             SynchronizationPeriod = synchronizationPeriod;
             Headers = headers;
             EventSource = eventSource;
         }
         
-        public string Location { get;  }
+        public List<string> Locations { get;  }
         
         public DataSynchronizationPeriod SynchronizationPeriod { get; }
         
         public EventSource EventSource { get; }
         
         public IReadOnlyDictionary<string, string> Headers { get;  }
+
+
+        public bool HasLocation(string location)
+        {
+            if (Locations == null)
+                return false;
+
+
+            return Locations.Any(itm => itm == location);
+        }
         
     }
 }

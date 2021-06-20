@@ -1,55 +1,95 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.SnapshotSaver;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Persistence
 {
+    
     public class PersistenceHandler
     {
-        private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
-        private readonly SnapshotSaverEngine _snapshotSaverEngine;
+        private readonly PersistenceQueue _persistenceQueue;
+        private readonly DbInstance _dbInstance;
+        private readonly ITablePersistenceStorage _tablePersistenceStorage;
 
-        public PersistenceHandler(ISnapshotSaverScheduler snapshotSaverScheduler, SnapshotSaverEngine snapshotSaverEngine)
+
+        public PersistenceHandler(
+            PersistenceQueue persistenceQueue, DbInstance dbInstance, ITablePersistenceStorage tablePersistenceStorage)
         {
-            _snapshotSaverScheduler = snapshotSaverScheduler;
-            _snapshotSaverEngine = snapshotSaverEngine;
+            _persistenceQueue = persistenceQueue;
+            _dbInstance = dbInstance;
+            _tablePersistenceStorage = tablePersistenceStorage;
         }
 
-        public void SynchronizeTable(DbTable dbTable, DataSynchronizationPeriod period)
+        private async Task PersistEvents(DbTable table, IReadOnlyList<ITransactionEvent> events)
         {
 
-            if (!dbTable.Persist)
-                return;
-            
-            _snapshotSaverScheduler.SynchronizeTable(dbTable, period);
 
-            if (period == DataSynchronizationPeriod.Immediately)
-                Task.Run(async () =>
+            foreach (var @event in events)
+                switch (@event)
                 {
-                    await _snapshotSaverEngine.SynchronizeImmediatelyAsync(dbTable);
-                });
+                    case InitTableTransactionEvent initTableTransactionEvent:
+                        await _tablePersistenceStorage.SaveTableSnapshotAsync(table, initTableTransactionEvent);
+                        break;
+                    
+                    case InitPartitionsTransactionEvent initPartitionsTransaction:
+                        await _tablePersistenceStorage.SavePartitionSnapshotAsync(table, initPartitionsTransaction);
 
+                        break;
+                    
+                    case UpdateTableAttributesTransactionEvent syncTableAttributesEvent:
+                        await _tablePersistenceStorage.SaveTableAttributesAsync(table, syncTableAttributesEvent);
+                        break;
+                    
+                    case UpdateRowsTransactionEvent updateRowsTransactionEvent:
+                        await _tablePersistenceStorage.SaveRowUpdatesAsync(table, updateRowsTransactionEvent);
+                        break;
+                        
+                    case DeleteRowsTransactionEvent deleteRowsTransactionEvent:
+                        await _tablePersistenceStorage.SaveRowDeletesAsync(table, deleteRowsTransactionEvent);
+                        break;
+                }
         }
 
-        public void SynchronizePartition(DbTable dbTable, string partitionKey,
-            DataSynchronizationPeriod period)
+
+        private async Task PersistEvents(
+            IReadOnlyDictionary<string, IReadOnlyList<ITransactionEvent>> eventsToPersist)
         {
-            
-            if (!dbTable.Persist)
-                return;
-            
-            _snapshotSaverScheduler.SynchronizePartition(dbTable, partitionKey, period);
 
-            if (period == DataSynchronizationPeriod.Immediately)
-                Task.Run(async () =>
+            foreach (var (tableName, events) in eventsToPersist)
+            {
+                var table = _dbInstance.TryGetTable(tableName);
+
+                if (table == null)
                 {
-                    await _snapshotSaverEngine.SynchronizeImmediatelyAsync(dbTable);
-                });
+                    Console.WriteLine($"Table {tableName} is not found. Skipping persistence loop");
+                }
+                else
+                {
+                    await PersistEvents(table, events);    
+                }
+                
+            }
+                
 
         }
 
+        
+        //ToDo - Plug it to timer
+        public async ValueTask PersistAsync()
+        {
+            while (true)
+            {
+                var eventsToPersist = _persistenceQueue.GetEventsToPersist();
 
+                if (eventsToPersist == null)
+                    return;
+
+                await PersistEvents(eventsToPersist);
+            }
+        }
 
 
     }

@@ -250,7 +250,7 @@ namespace MyNoSqlServer.DataWriter
             return await response.GetJsonAsync<T>();
         }
 
-        private static readonly T[] EmptyResponse = new T[0];
+        private static readonly T[] EmptyResponse = Array.Empty<T>();
 
         public async ValueTask<IReadOnlyList<T>> GetMultipleRowKeysAsync(string partitionKey,
             IEnumerable<string> rowKeys)

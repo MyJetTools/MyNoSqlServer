@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using MyNoSqlServer.Domains;
+using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Persistence;
+using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
 
 namespace MyNoSqlServer.NodePersistence
@@ -13,7 +15,18 @@ namespace MyNoSqlServer.NodePersistence
     {
 
 
-        public static SyncGrpcHeader[] ToGrpcHeaders(this Dictionary<string, string> src)
+        public static  PartitionDataGrpcModel[] DataRowsToGrpcContent(this IReadOnlyDictionary<string, IReadOnlyList<DbRow>> rowsContent)
+        {
+            return rowsContent.Select(itm => new PartitionDataGrpcModel
+            {
+                PartitionKey = itm.Key,
+                Snapshot = itm.Value.ToJsonArray().AsArray()
+            }).ToArray();
+        }
+
+
+        
+        public static SyncGrpcHeader[] ToGrpcHeaders(this IReadOnlyDictionary<string, string> src)
         {
             if (src == null)
                 return Array.Empty<SyncGrpcHeader>();
@@ -29,40 +42,5 @@ namespace MyNoSqlServer.NodePersistence
             }).ToArray();
         }
 
-
-        public static ValueTask SavePartitionSnapshotAsync(this IMyNoSqlServerNodePersistenceGrpcService grpcService, DbTable table,  
-            PartitionSnapshot partitionSnapshot,  IMyNoSqlNodePersistenceSettings settings, ISettingsLocation location, Dictionary<string, string> headers)
-        {
-            var model = new SavePartitionSnapshotGrpcModel
-            {
-                Location = location.Location,
-                TableName = table.Name,
-                PartitionKey = partitionSnapshot.PartitionKey,
-                Content = partitionSnapshot.Snapshot,
-                Headers = headers.ToGrpcHeaders()
-            };
-
-            var payloads = model.CompressAndSplitAsync(settings.MaxPayloadSize, settings.CompressData);
-
-            return grpcService.SavePartitionSnapshotAsync(payloads);
-        }
-        
-        public static ValueTask SaveTableAsync(this IMyNoSqlServerNodePersistenceGrpcService grpcService, DbTable table, 
-            IMyNoSqlNodePersistenceSettings settings, ISettingsLocation location, Dictionary<string, string> headers)
-        {
-            var model = new SaveTableSnapshotGrpcModel
-            {
-                Location = location.Location,
-                TableName = table.Name,
-                Content = table.GetSnapshotAsArray(),
-                Headers = headers.ToGrpcHeaders()
-            };
-
-            var payloads = model.CompressAndSplitAsync(settings.MaxPayloadSize, settings.CompressData);
-
-            return grpcService.SavePartitionSnapshotAsync(payloads);
-        }
-
-        
     }
 }

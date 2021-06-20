@@ -4,25 +4,41 @@ using System.Linq;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
-using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
-using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Db.Partitions
 {
 
     public interface IPartitionWriteAccess
     {
-        bool Insert(DbRow dbRow, TransactionEventAttributes attributes);
+        
+        string PartitionKey { get; }
+        bool Insert(DbRow dbRow);
+        void InsertOrReplace(DbRow row);
+
+        void BulkInsertOrReplace(IReadOnlyList<DbRow> rows);
+
+        void ClearAndBulkInsertOrReplace(IReadOnlyList<DbRow> rows);
+        IReadOnlyList<DbRow> GetAllRows();
+
+        DbRow DeleteRow(string rowKey);
+    }
+
+
+    public interface IPartitionReadAccess
+    {
+        string PartitionKey { get; }
+
+        IReadOnlyList<DbRow> GetAllRows();
     }
     
     /// <summary>
     /// DbPartition Uses SlimLock of Table
     /// </summary>
-    public class DbPartition : IPartitionWriteAccess
+    public class DbPartition : IPartitionWriteAccess, IPartitionReadAccess
     {
-        public string PartitionKey { get; private set; }
+        public string PartitionKey { get; }
         
         private readonly SortedList<string, DbRow> _rows = new ();
 
@@ -31,27 +47,45 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         internal DateTimeOffset LastTimeAccess { get; set; }
 
 
-        bool IPartitionWriteAccess.Insert(DbRow row, TransactionEventAttributes attributes)
+        bool IPartitionWriteAccess.Insert(DbRow row)
         {
             if (_rows.ContainsKey(row.RowKey))
                 return false;
             
             _rows.Add(row.RowKey, row);
-            _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, _dbTable, row));
             _rowsAsList = null;
             
             return true;
         }
 
-        public void InsertOrReplace(DbRow row)
+        void IPartitionWriteAccess.InsertOrReplace(DbRow row)
         {
             if (_rows.ContainsKey(row.RowKey))
                 _rows[row.RowKey] = row;
             else
                 _rows.Add(row.RowKey, row);
             
+   
+            
             _rowsAsList = null;
         }
+        
+        void IPartitionWriteAccess.BulkInsertOrReplace(IReadOnlyList<DbRow> rows)
+        {
+
+            foreach (var row in rows)
+            {
+                if (_rows.ContainsKey(row.RowKey))
+                    _rows[row.RowKey] = row;
+                else
+                    _rows.Add(row.RowKey, row);   
+            }
+
+            
+            _rowsAsList = null;
+        }
+
+
 
 
         public DbRow TryGetRow(string rowKey)
@@ -84,13 +118,8 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         }
 
 
-        private DbTable _dbTable;
-        private SyncEventsDispatcher _syncEventsDispatcher;
-
-        public DbPartition(DbTable dbTable, string partitionKey, SyncEventsDispatcher syncEventsDispatcher)
+        public DbPartition(string partitionKey)
         {
-            _dbTable = dbTable;
-            _syncEventsDispatcher = syncEventsDispatcher;
             PartitionKey = partitionKey;
             LastTimeAccess = DateTimeOffset.UtcNow;
         }
@@ -187,5 +216,22 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         }
 
 
+        public void InitPartition(IReadOnlyList<DbRow> rows)
+        {
+            _rows.Clear();
+
+            foreach (var row in rows)
+                _rows.Add(row.RowKey, row);
+        }
+        
+        
+        public void ClearAndBulkInsertOrReplace(IReadOnlyList<DbRow> rows)
+        {
+            _rows.Clear();
+
+            foreach (var row in rows)
+                _rows.Add(row.RowKey, row);
+        }
+        
     }
 }

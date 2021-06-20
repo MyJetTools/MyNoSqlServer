@@ -20,7 +20,7 @@ namespace MyNoSqlServer.Api
             
             sc.AddSingleton(GrpcChannel
                 .ForAddress(settings.PersistenceDest)
-                .CreateGrpcService<ISnapshotStorage>());
+                .CreateGrpcService<ITablePersistenceStorage>());
         }
 
         public static void BindAsRootNodeServices(this IServiceCollection sc, SettingsModel settings)

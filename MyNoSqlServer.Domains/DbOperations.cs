@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db;
@@ -13,62 +14,24 @@ namespace MyNoSqlServer.Domains
     public class DbOperations
     {
         private readonly DbInstance _dbInstance;
+        private readonly SyncEventsDispatcher _syncEventsDispatcher;
 
-        public DbOperations(DbInstance dbInstance)
+        public DbOperations(DbInstance dbInstance, SyncEventsDispatcher syncEventsDispatcher)
         {
             _dbInstance = dbInstance;
+            _syncEventsDispatcher = syncEventsDispatcher;
         }
 
 
-        public void SetTableAttributes(string tableName, bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
+        public void SetTableAttributes(DbTable dbTable, bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
         {
-            var dbTable = _dbInstance.TryGetTable(tableName);
-            
-            if (dbTable == null)
-                return;
-            
             dbTable.SetAttributes(persist, maxPartitionsAmount, attributes);
-
         }
-
-
-        public void ReplaceTable(string tableName, bool persist, IMyMemory content,
-            TransactionEventAttributes attributes)
-        {
-
-            var partitionsAsMem = content.SplitJsonArrayToObjects();
-
-            var partitions = new Dictionary<string, List<DbRow>>();
-
-            foreach (var partitionMemory in partitionsAsMem)
-            {
-                var dbRows = partitionMemory.SplitJsonArrayToObjects();
-
-                foreach (var dbRowAsMemory in dbRows)
-                {
-                    var entity = dbRowAsMemory.ParseDynamicEntity();
-                    var dbRow = DbRow.RestoreSnapshot(entity, dbRowAsMemory);
-
-                    if (!partitions.ContainsKey(dbRow.PartitionKey))
-                        partitions.Add(dbRow.PartitionKey, new List<DbRow>());
-
-                    partitions[dbRow.PartitionKey].Add(dbRow);
-                }
-
-            }
-
-            var dbTable = _dbInstance.TryGetTable(tableName) ??
-                          _dbInstance.CreateTableIfNotExists(tableName, persist, attributes);
-
-            dbTable.GetWriteAccess(writeAccess => { writeAccess.InitTable(partitions, attributes); });
-        }
-
+   
         public OperationResult Insert(DbTable table, IMyMemory myMemory,
             DateTime now, TransactionEventAttributes attributes)
         {
-            
             var entity = myMemory.ParseDynamicEntity();
-
 
             if (string.IsNullOrEmpty(entity.PartitionKey))
                 return OperationResult.PartitionKeyIsNull;
@@ -86,16 +49,19 @@ namespace MyNoSqlServer.Domains
             {
                 var dbPartition = writeAccess.GetOrCreatePartition(entity.PartitionKey);
 
-                return dbPartition.Insert(dbRow, attributes) 
-                    ? OperationResult.Ok 
-                    : OperationResult.RecordExists;
+                var insert = dbPartition.Insert(dbRow);
+
+                if (!insert) 
+                    return OperationResult.RecordExists;
+                
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, table, dbRow));
+                return OperationResult.Ok;
+
             });
-            
   
             
         }
         
-
 
         public OperationResult InsertOrReplace(DbTable table, IMyMemory myMemory, 
             DateTime now, TransactionEventAttributes attributes)
@@ -108,11 +74,80 @@ namespace MyNoSqlServer.Domains
             if (string.IsNullOrEmpty(entity.RowKey))
                 return OperationResult.RowKeyIsNull;
             
-            table.InsertOrReplace(entity, now, attributes);
+            
+            var dbRow = DbRow.CreateNew(entity, now);
+
+            table.GetWriteAccess(writeAccess =>
+            {
+                var dbPartition = writeAccess.GetOrCreatePartition(entity.PartitionKey);
+                dbPartition.InsertOrReplace(dbRow);
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, table, dbRow));
+            });
 
             return OperationResult.Ok;
         }
+        
+        public OperationResult BulkInsertOrReplace(DbTable table, IEnumerable<IMyMemory> itemsAsArray, TransactionEventAttributes attributes)
+        {
+            var dbRows = itemsAsArray
+                .Select(arraySpan => arraySpan.ToDbRow())
+                .GroupBy(itm => itm.PartitionKey)
+                .ToDictionary(itm => itm.Key, itm => itm.AsReadOnlyList());
 
+            table.GetWriteAccess(writeAccess =>
+            {
+                
+                foreach (var (partitionKey, rows) in dbRows)
+                {
+                    var dbPartition = writeAccess.GetOrCreatePartition(partitionKey);
+                    dbPartition.BulkInsertOrReplace(rows);
+                }
+                
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRows(attributes, table, dbRows));
+                
+            });
+
+            return OperationResult.Ok;
+
+        }
+        
+        public void CleanPartitionAndBulkInsert(DbTable dbTable, string partitionKeyToClear, IEnumerable<IMyMemory> itemsAsArray, TransactionEventAttributes attributes)
+        {
+
+            var dbRowsByPartition = itemsAsArray
+                .Select(arraySpan => arraySpan
+                    .ToDbRow())
+                .GroupBy(itm => itm.PartitionKey)
+                .ToDictionary(itm => itm.Key, itm => itm.ToList());
+
+
+            dbTable.GetWriteAccess(writeAccess =>
+            {
+                var syncPartitions = new Dictionary<string, IReadOnlyList<DbRow>>();
+                
+                foreach (var (partitionKey, dbRows) in dbRowsByPartition)
+                {
+                    var dbPartition = writeAccess.GetOrCreatePartition(partitionKey);
+
+                    if (partitionKey == partitionKeyToClear)
+                    {
+                        dbPartition.ClearAndBulkInsertOrReplace(dbRows);
+                        _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.AsInitPartition(attributes, dbTable, dbPartition));
+                    }
+                        
+                    else
+                        dbPartition.BulkInsertOrReplace(dbRows);
+                    
+                    syncPartitions.Add(partitionKey, dbPartition.GetAllRows());
+                }
+                
+                
+                _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.Create(attributes, dbTable, syncPartitions));
+
+            });
+
+        }
+        
 
         public void ApplyTransactions(IReadOnlyDictionary<string, DbTable> tables, IEnumerable<IDbTransactionAction> transactions, 
             TransactionEventAttributes attributes)
@@ -140,8 +175,24 @@ namespace MyNoSqlServer.Domains
                     case IInsertOrReplaceEntitiesTransactionAction insertOrUpdate:
                     {
                         table = tables[insertOrUpdate.TableName];
-                        foreach (var entity in insertOrUpdate.Entities)
-                            table.InsertOrReplace(entity.Payload.ParseDynamicEntity(), DateTime.UtcNow, attributes);
+
+
+                        var entities = insertOrUpdate
+                            .Entities
+                            .Select(entity => DbRow.CreateNew(entity.Payload.ParseDynamicEntity(), DateTime.UtcNow))
+                            .GroupBy(itm => itm.PartitionKey)
+                            .ToDictionary(itm => itm.Key, itm => itm.AsReadOnlyList());
+
+                        table.GetWriteAccess(writeAccess =>
+                        {
+                            foreach (var (partitionKey, rows) in entities)
+                            {
+                                var dbPartition = writeAccess.GetOrCreatePartition(partitionKey);
+                                dbPartition.BulkInsertOrReplace(rows);
+                            }
+                            
+                            _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRows(attributes, table, entities));
+                        });
                         break;
                     }
                 }
@@ -194,5 +245,36 @@ namespace MyNoSqlServer.Domains
 
             table.DeletePartitions(partitionKeys, attributes);
         }
+
+        public void CleanTableAndBulkInsert(DbTable dbTable, IEnumerable<IMyMemory> itemsAsArray,
+            TransactionEventAttributes attributes)
+        {
+            var dbRowsByPartitions = itemsAsArray
+                .Select(arraySpan => arraySpan
+                    .ToDbRow())
+                .GroupBy(itm => itm.PartitionKey)
+                .ToDictionary(itm => itm.Key, itm => itm.AsReadOnlyList());
+            
+            CleanTableAndBulkInsert(dbTable, dbRowsByPartitions, attributes);
+
+        }
+        
+        public void CleanTableAndBulkInsert(DbTable dbTable, Dictionary<string, IReadOnlyList<DbRow>> snapshot,
+            TransactionEventAttributes attributes)
+        {
+
+            dbTable.GetWriteAccess(writeAccess =>
+            {
+                writeAccess.InitTable(snapshot, attributes);
+                
+                _syncEventsDispatcher.Dispatch(InitTableTransactionEvent.Create(attributes, dbTable, snapshot));
+            });
+
+        }
+
+
+
     }
+    
+    
 }
