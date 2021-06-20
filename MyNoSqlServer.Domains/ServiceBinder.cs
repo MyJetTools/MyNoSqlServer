@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Domains.DataReadersBroadcast;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Logs;
 using MyNoSqlServer.Domains.Nodes;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.SnapshotSaver;
@@ -26,11 +27,11 @@ namespace MyNoSqlServer.Domains
 
             services.AddSingleton<DataInitializer>();
 
-            services.AddSingleton<MyNoSqlLogger>();
-
             services.AddSingleton<SyncEventsDispatcher>();
             services.AddSingleton<PersistenceQueue>();
             services.AddSingleton<NodeSessionsList>();
+
+            services.AddSingleton<AppLogs>();
         }
 
 

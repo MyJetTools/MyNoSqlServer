@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.Logs;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.TransactionEvents;
 
@@ -22,6 +23,12 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
         public AzureTablePersistenceStorage(string connectionString)
         {
             _storageAccount = CloudStorageAccount.Parse(connectionString);
+        }
+
+        private AppLogs _appLogs;
+        public void Inject(AppLogs appLogs)
+        {
+            _appLogs = appLogs;
         }
 
 
@@ -62,14 +69,13 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
 
             if (container == null)
             {
-                Console.WriteLine($"{DateTime.UtcNow:s} Skipped synchronizing delete partition: {tableName}/{partitionKey}. It does not exist");
-                
+                _appLogs?.WriteInfo(tableName, "SavePartitionSnapshotAsync", $"{tableName}/{partitionKey}", "Skipped synchronizing partition");
                 return;
             }
 
             await container.SavePartitionAsync(partitionKey, snapshot);
             
-            Console.WriteLine($"{DateTime.UtcNow:s} Deleted partition: {tableName}/{partitionKey}");
+            _appLogs?.WriteInfo(tableName, "SavePartitionSnapshotAsync", $"{tableName}/{partitionKey}", "Partition Saved");
         }
 
         private async ValueTask SaveTableSnapshotAsync(DbTable dbTable)
@@ -77,12 +83,12 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             if (container == null)
             {
-                Console.WriteLine($"{DateTime.UtcNow:s} Skipped synchronizing table: {dbTable.Name}");
+                _appLogs?.WriteInfo(dbTable.Name, "SaveTableSnapshotAsync", dbTable.Name, "Skipped synchronizing table");
                 return;
             }
 
             await container.CleanContainerAsync();
-            Console.WriteLine($"{DateTime.UtcNow:s} Container cleaned: {dbTable.Name}");
+            _appLogs?.WriteInfo(dbTable.Name, "SaveTableSnapshotAsync", dbTable.Name, "Container cleaned");
 
             var partitions = dbTable.GetReadAccess(readAccess =>
             {
@@ -100,7 +106,7 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
             {
                 await container.SavePartitionAsync(partitionKey, snapshot);
             
-                Console.WriteLine($"{DateTime.UtcNow:s} Saved snapshot: {dbTable.Name}/{partitionKey}");
+                _appLogs?.WriteInfo(dbTable.Name, "SaveTableSnapshotAsync", $"{dbTable.Name}/{partitionKey}", "Saved snapshot");
             }
         }
 
@@ -109,14 +115,14 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
             var container = await _storageAccount.GetBlockBlobReferenceAsync(tableName);
             if (container == null)
             {
-                Console.WriteLine($"{DateTime.UtcNow:s} Skipped deleting snapshot: {tableName}/{partitionKey}");
+                _appLogs?.WriteInfo(tableName, "DeleteTablePartitionAsync", $"{tableName}/{partitionKey}", "Skipped deleting snapshot");
                 return;
             }
 
             await container.DeletePartitionAsync(partitionKey);
-            
-            Console.WriteLine($"{DateTime.UtcNow:s} Snapshot is deleted: {tableName}/{partitionKey}");
-            
+
+            _appLogs?.WriteInfo(tableName, "DeleteTablePartitionAsync", $"{tableName}/{partitionKey}", "Snapshot is deleted");
+
         }
 
 

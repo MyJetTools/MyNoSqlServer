@@ -115,8 +115,6 @@ namespace MyNoSqlServer.Api.Grpc
         public ValueTask<TransactionGrpcResponse> PostTransactionActionsAsync(TransactionPayloadGrpcRequest request)
         {
         
-            ServiceLocator.Logger.WriteInfo("PostTransactionActionsAsync", Newtonsoft.Json.JsonConvert.SerializeObject(request));
-
             try
             {
                 var transactionSeq = request.TransactionId == null
@@ -158,7 +156,10 @@ namespace MyNoSqlServer.Api.Grpc
             }
             catch (Exception e)
             {
-                ServiceLocator.Logger.WriteError("GRPC.PostTransactionActionsAsync", e);
+                ServiceLocator.AppLogs.WriteError(null, 
+                    "GRPC.PostTransactionActionsAsync", 
+                    Newtonsoft.Json.JsonConvert.SerializeObject(request),
+                    e);
                 throw;
             }
 

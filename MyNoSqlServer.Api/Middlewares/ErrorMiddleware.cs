@@ -17,7 +17,7 @@ namespace MyNoSqlServer.Api.Middlewares
                 }
                 catch (Exception e)
                 {
-                    ServiceLocator.Logger.WriteError(ctx.Request.Path.ToString(), e);
+                    ServiceLocator.AppLogs.WriteError(null, "RestApi",ctx.Request.Path.ToString(), e);
                     throw;
                 }
 

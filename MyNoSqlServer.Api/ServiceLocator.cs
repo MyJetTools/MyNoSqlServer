@@ -8,9 +8,11 @@ using DotNetCoreDecorators;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Api.DataReadersTcpServer;
 using MyNoSqlServer.Api.Services;
+using MyNoSqlServer.AzureStorage;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.DataReadersBroadcast;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Logs;
 using MyNoSqlServer.Domains.Nodes;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.TcpContracts;
@@ -70,6 +72,8 @@ namespace MyNoSqlServer.Api
         
         public static DataInitializer DataInitializer { get; private set; }
         
+        public static AppLogs AppLogs { get; private set; }
+        
 
         private static ITablePersistenceStorage _tablePersistenceStorage;
         public static DbOperations DbOperations { get; private set; }
@@ -81,14 +85,15 @@ namespace MyNoSqlServer.Api
                 .SetService(()=>new DataReaderTcpService())
                 .Logs.AddLogInfo((c, msg)=>
                 {
-                    Logger.WriteInfo(c == null ? "*:5125" : $"*:5125. ConnectionId:{c.Id}", msg);
+                    AppLogs.WriteInfo(null, "TcpLog", c == null ? "*:5125" : $"*:5125. ConnectionId:{c.Id}", msg);
                 })
                 .Logs.AddLogException((c, e)=>
                 {
-                    if (c == null)
-                        Logger.WriteError("*:5125", e);
-                    else
-                        Console.WriteLine($"*:5125. ConnectionId:{c.Id}", e);
+                    AppLogs.WriteError(null, "TcpLog", 
+                        c == null
+                            ? "*:5125" 
+                            : $"*:5125. ConnectionId:{c.Id}", 
+                        e);
                 });
 
 
@@ -98,29 +103,32 @@ namespace MyNoSqlServer.Api
         private static readonly TaskTimer TimerOneMinute = new (TimeSpan.FromMinutes(1));
 
         public static readonly PostTransactionsList PostTransactionsList = new();
-        public static MyNoSqlLogger Logger { get; private set; }
 
-        public static void Init(ServiceProvider sr)
+        public static void Init(IServiceProvider sp)
         {
-            sr.LinkDomainServices();
             
+
+            AzureStorageBinder.Init(sp);
             
-            DbInstance = sr.GetRequiredService<DbInstance>();
+            sp.LinkDomainServices();
             
-            GlobalVariables = sr.GetRequiredService<GlobalVariables>();
+            DbInstance = sp.GetRequiredService<DbInstance>();
+            
+            GlobalVariables = sp.GetRequiredService<GlobalVariables>();
 
-            DbOperations = sr.GetRequiredService<DbOperations>();
-            NodesSyncOperations = sr.GetRequiredService<NodesSyncOperations>();
+            DbOperations = sp.GetRequiredService<DbOperations>();
+            NodesSyncOperations = sp.GetRequiredService<NodesSyncOperations>();
 
-            _tablePersistenceStorage = sr.GetRequiredService<ITablePersistenceStorage>();
+            _tablePersistenceStorage = sp.GetRequiredService<ITablePersistenceStorage>();
 
-            Logger = sr.GetRequiredService<MyNoSqlLogger>();
 
-            DataReadersTcpBroadcaster = (DataReadersTcpBroadcaster)sr.GetRequiredService<IDataReadersBroadcaster>();
+            DataReadersTcpBroadcaster = (DataReadersTcpBroadcaster)sp.GetRequiredService<IDataReadersBroadcaster>();
 
-            NodeSessionsList = sr.GetRequiredService<NodeSessionsList>();
+            NodeSessionsList = sp.GetRequiredService<NodeSessionsList>();
 
-            DataInitializer = sr.GetRequiredService<DataInitializer>();
+            DataInitializer = sp.GetRequiredService<DataInitializer>();
+
+            AppLogs = sp.GetRequiredService<AppLogs>();
 
         }
 
@@ -144,7 +152,7 @@ namespace MyNoSqlServer.Api
             TimerSaver.Register("Persist", ()=> _tablePersistenceStorage.FlushIfNeededAsync());
             TimerSaver.RegisterExceptionHandler((msg, e) =>
             {
-                Logger.WriteError(msg, e);
+                AppLogs.WriteError(null, "TimerSaver", msg, e);
                 return new ValueTask();
             });
             
