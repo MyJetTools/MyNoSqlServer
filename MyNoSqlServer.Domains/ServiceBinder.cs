@@ -24,6 +24,8 @@ namespace MyNoSqlServer.Domains
             services.AddSingleton<DbOperations>();
             services.AddSingleton<NodesSyncOperations>();
 
+            services.AddSingleton<DataInitializer>();
+
             services.AddSingleton<MyNoSqlLogger>();
 
             services.AddSingleton<SyncEventsDispatcher>();

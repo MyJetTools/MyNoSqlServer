@@ -93,6 +93,7 @@ namespace MyNoSqlServer.Api
 
 
         private static readonly TaskTimer TimerSaver = new (TimeSpan.FromSeconds(1));
+        private static readonly TaskTimer NodesTimer = new (TimeSpan.FromSeconds(5));
 
         private static readonly TaskTimer TimerOneMinute = new (TimeSpan.FromMinutes(1));
 
@@ -146,14 +147,17 @@ namespace MyNoSqlServer.Api
                 Logger.WriteError(msg, e);
                 return new ValueTask();
             });
+            
+            
+            
 
-            TimerSaver.Register("NodeSessions GC", () =>
+            NodesTimer.Register("NodeSessions GC", () =>
             {
                 NodeSessionsList.Gc();
                 return new ValueTask();
             });
             
-            TimerSaver.Register("NodeSessions Ping", () =>
+            NodesTimer.Register("NodeSessions Ping", () =>
             {
                 NodeSessionsList.SendPing();
                 return new ValueTask();
@@ -163,6 +167,7 @@ namespace MyNoSqlServer.Api
             
             TimerSaver.Start();
             TcpServer.Start();
+            NodesTimer.Start();
         }
 
         public static void Stop()

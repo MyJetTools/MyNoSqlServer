@@ -8,11 +8,7 @@ namespace MyNoSqlServer.AzureStorage
     {
         public static void BindAzureStorage(this IServiceCollection services, string connectionString)
         {
-            if (string.IsNullOrEmpty(connectionString))
-                return;
-            
             services.AddSingleton<ITablePersistenceStorage>(new AzureTablePersistenceStorage(connectionString));
-
         }
     }
     

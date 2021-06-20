@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Api.Nodes;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.DataCompression;
 using MyNoSqlServer.Domains.Db.Rows;
@@ -39,7 +38,7 @@ namespace MyNoSqlServer.Api.Grpc
         
         public ValueTask<PingGrpcResponse> PingAsync(PingGrpcRequest request)
         {
-            NodesPool.GetOrCreateNode(request.Location);
+            ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
             return new ValueTask<PingGrpcResponse>(new PingGrpcResponse
             {
                 Location = Startup.Settings.Location

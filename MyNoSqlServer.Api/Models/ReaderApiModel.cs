@@ -3,7 +3,7 @@ using MyNoSqlServer.Api.DataReadersTcpServer;
 
 namespace MyNoSqlServer.Api.Models
 {
-    public class UiModel
+    public class ReaderApiModel
     {
         public string Name { get; set; }
         public string Ip { get; set; }
@@ -16,9 +16,9 @@ namespace MyNoSqlServer.Api.Models
         
         public string Id { get; set; }
 
-        public static UiModel Create(DataReaderTcpService connection)
+        public static ReaderApiModel Create(DataReaderTcpService connection)
         {
-            return new UiModel
+            return new ReaderApiModel
             {
                 Id = connection.Id.ToString(),
                 Name = connection.ContextName,

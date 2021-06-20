@@ -28,6 +28,8 @@ namespace MyNoSqlServer.Api
             sc.BindAzureStorage(settings.PersistenceDest);
         }
         
+        
+        
         public static void BindDataReadersTcpServices(this IServiceCollection services)
         {
             services.AddSingleton<IDataReadersBroadcaster, DataReadersTcpBroadcaster>();

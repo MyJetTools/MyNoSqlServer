@@ -29,13 +29,6 @@ namespace MyNoSqlServer.Api.Controllers
             return _isAliveResult;
         }
 
-        [HttpGet("/api/status")]
-        public IActionResult Status()
-        {
-            var connections = ServiceLocator.TcpServer.GetConnections();
-            
-            return Json(connections.Select(itm => UiModel.Create(itm as DataReaderTcpService)).OrderBy(iym => iym.Id));
-        }
         
     }
 }

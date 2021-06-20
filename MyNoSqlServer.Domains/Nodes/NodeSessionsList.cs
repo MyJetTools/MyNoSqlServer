@@ -101,5 +101,10 @@ namespace MyNoSqlServer.Domains.Nodes
             }
 
         }
+
+        public IReadOnlyList<NodeSession> GetAll()
+        {
+            return _sessions;
+        }
     }
 }

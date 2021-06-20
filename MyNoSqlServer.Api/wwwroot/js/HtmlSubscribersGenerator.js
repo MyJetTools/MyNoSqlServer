@@ -2,6 +2,12 @@ var HtmlSubscribersGenerator = /** @class */ (function () {
     function HtmlSubscribersGenerator() {
     }
     HtmlSubscribersGenerator.generateHtml = function (data) {
+        return '<h1>Nodes</h1>'
+            + this.generateNodesHtml(data.nodes)
+            + '<h1>Readers</h1>'
+            + this.generateReadersHtml(data.readers);
+    };
+    HtmlSubscribersGenerator.generateReadersHtml = function (data) {
         var html = "<table class=\"table table-striped\"><tr><th>Id</th><th>Client</th><th>Ip</th><th>tables</th><th></th></tr>";
         for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
             var itm = data_1[_i];
@@ -10,6 +16,15 @@ var HtmlSubscribersGenerator = /** @class */ (function () {
                 '<div><b>C:</b>' + itm.connectedTime + '</div>' +
                 '<div><b>L:</b>' + itm.lastIncomingTime + '</div>' +
                 '</td></tr>';
+        }
+        html += '</table>';
+        return html;
+    };
+    HtmlSubscribersGenerator.generateNodesHtml = function (data) {
+        var html = "<table class=\"table table-striped\"><tr><th>Location</th><th>Connected</th><th>LastAccess</th></tr>";
+        for (var _i = 0, data_2 = data; _i < data_2.length; _i++) {
+            var itm = data_2[_i];
+            html += '<tr><td>' + itm.location + '</td><td>' + itm.connected + '</td><td>' + itm.lastAccessed + '</td></tr>';
         }
         html += '</table>';
         return html;
@@ -25,8 +40,8 @@ var HtmlSubscribersGenerator = /** @class */ (function () {
     };
     HtmlSubscribersGenerator.renderTables = function (data) {
         var result = "";
-        for (var _i = 0, data_2 = data; _i < data_2.length; _i++) {
-            var itm = data_2[_i];
+        for (var _i = 0, data_3 = data; _i < data_3.length; _i++) {
+            var itm = data_3[_i];
             result += '<span class="badge badge-info" style="margin-left: 5px">' + itm + '</span>';
         }
         return result;
