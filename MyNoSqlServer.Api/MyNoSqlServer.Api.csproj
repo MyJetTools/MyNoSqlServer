@@ -4,7 +4,7 @@
         <LangVersion>9</LangVersion>
         <Version>1.0.29</Version>
         <RootNamespace>MyNoSqlServer.Api</RootNamespace>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
