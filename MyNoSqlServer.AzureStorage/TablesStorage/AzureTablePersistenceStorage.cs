@@ -256,11 +256,11 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
      
             
             var snapshots = GetSnapshotIterationToCommit();
-            Console.WriteLine("We have a snapshot to save");
+
             if (snapshots == null)
                 return;
 
-
+            Console.WriteLine("We have a snapshot to save");
             foreach (var snapshotIteration  in snapshots.Values)
             {
                 if (snapshotIteration.HasSyncTableAttributes)
