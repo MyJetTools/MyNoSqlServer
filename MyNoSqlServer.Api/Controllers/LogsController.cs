@@ -56,7 +56,7 @@ namespace MyNoSqlServer.Api.Controllers
         }
         
         [HttpGet("/Logs/{tableName}")]
-        public string GetLogsByTable([FromQuery]string tableName)
+        public string GetLogsByTable([FromRoute]string tableName)
         {
             var items = ServiceLocator.AppLogs.Get(tableName);
             return GetResponse(items);
