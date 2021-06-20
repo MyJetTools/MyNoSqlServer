@@ -103,15 +103,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         IPartitionReadAccess IDbTableReadAccess.TryGetPartition(string partitionKey)
         {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.TryGet(partitionKey);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
+            return _partitions.TryGet(partitionKey);
         }
 
 

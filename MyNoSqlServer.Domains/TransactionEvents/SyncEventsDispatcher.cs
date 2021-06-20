@@ -13,7 +13,7 @@ namespace MyNoSqlServer.Domains.TransactionEvents
                 subscriber(syncEntitiesEvent);
         }
 
-        private readonly List<Action<ITransactionEvent>> _subscribers = new List<Action<ITransactionEvent>>();
+        private readonly List<Action<ITransactionEvent>> _subscribers = new ();
 
 
         public void SubscribeOnSyncEvent(Action<ITransactionEvent> callback)
