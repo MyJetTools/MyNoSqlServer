@@ -23,7 +23,6 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
         public AzureTablePersistenceStorage(string connectionString)
         {
             _storageAccount = CloudStorageAccount.Parse(connectionString);
-            Console.WriteLine("Created AzureTablePersistenceStorage");
         }
 
         private AppLogs _appLogs;
@@ -253,6 +252,12 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
         
         public async ValueTask FlushIfNeededAsync()
         {
+
+            var snapshotsIteration = _snapshotIteration;
+            if (snapshotsIteration != null)
+            {
+                Console.WriteLine("Has data to save");
+            }
             
      
             
