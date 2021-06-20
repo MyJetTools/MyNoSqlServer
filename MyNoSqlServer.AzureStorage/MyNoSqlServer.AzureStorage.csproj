@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <LangVersion>9</LangVersion>
-        <TargetFrameworks>net5.0;net6.0</TargetFrameworks>
+        <TargetFramework>netstandard2.1</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
