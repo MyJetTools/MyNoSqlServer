@@ -104,7 +104,7 @@ namespace MyNoSqlServer.Api
             var sp = _services.BuildServiceProvider();
             ServiceLocator.Init(sp);
             
-            ServiceLocator.Start();
+            ServiceLocator.Start(sp);
         }
 
         private void OnShutdown()

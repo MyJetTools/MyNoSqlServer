@@ -258,7 +258,7 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
             {
                 Console.WriteLine("Has data to save");
             }
-            
+
      
             
             var snapshots = GetSnapshotIterationToCommit();

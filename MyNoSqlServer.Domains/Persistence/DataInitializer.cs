@@ -10,15 +10,12 @@ namespace MyNoSqlServer.Domains.Persistence
     {
         private readonly DbInstance _dbInstance;
         private readonly ITablePersistenceStorage _tablePersistenceStorage;
-        private readonly PersistenceQueue _persistenceQueue;
 
 
-        public DataInitializer(DbInstance dbInstance, ITablePersistenceStorage tablePersistenceStorage, 
-            PersistenceQueue persistenceQueue)
+        public DataInitializer(DbInstance dbInstance, ITablePersistenceStorage tablePersistenceStorage)
         {
             _dbInstance = dbInstance;
             _tablePersistenceStorage = tablePersistenceStorage;
-            _persistenceQueue = persistenceQueue;
         }
         
         public async Task LoadSnapshotsAsync()
@@ -60,18 +57,10 @@ namespace MyNoSqlServer.Domains.Persistence
 
             while (true)
             {
-                var unsavedAmount = _persistenceQueue.GetUnsavedAmount();
-
-                if (unsavedAmount > 0)
-                {
-                    Console.WriteLine($"We have data in Queue to save amounted as {unsavedAmount}... Waiting");
-                    await Task.Delay(500);
-                    continue;
-                }
 
                 if (_tablePersistenceStorage.HasDataAtSaveProcess)
                 {
-                    Console.WriteLine("We have data in Save... Waiting");
+                    Console.WriteLine("We have data to Save... Waiting");
                     await Task.Delay(500);
                     continue;
                 }

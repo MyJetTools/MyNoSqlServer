@@ -28,7 +28,6 @@ namespace MyNoSqlServer.Domains
             services.AddSingleton<DataInitializer>();
 
             services.AddSingleton<SyncEventsDispatcher>();
-            services.AddSingleton<PersistenceQueue>();
             services.AddSingleton<NodeSessionsList>();
 
             services.AddSingleton<AppLogs>();
@@ -38,7 +37,7 @@ namespace MyNoSqlServer.Domains
         public static void LinkDomainServices(this IServiceProvider sp)
         {
             var dispatcher = sp.GetRequiredService<SyncEventsDispatcher>();
-            dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<PersistenceQueue>().PublishPersistenceEvent);
+            dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<PersistenceHandler>().PersistEvent);
             dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<IDataReadersBroadcaster>().BroadcastEvent);
             dispatcher.SubscribeOnSyncEvent(sp.GetRequiredService<NodeSessionsList>().NewEvent);
             

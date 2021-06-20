@@ -132,10 +132,12 @@ namespace MyNoSqlServer.Api
 
         }
 
-        public static void Start()
+        public static void Start(IServiceProvider sp)
         {
 
             DataInitializer.LoadSnapshotsAsync().Wait();
+            
+            sp.GetRequiredService<PersistenceHandler>().Start();
 
             TimerOneMinute.Register("GC transactions", () =>
             {
@@ -155,9 +157,6 @@ namespace MyNoSqlServer.Api
                 AppLogs.WriteError(null, "TimerSaver", msg, e);
                 return new ValueTask();
             });
-            
-            
-            
 
             NodesTimer.Register("NodeSessions GC", () =>
             {

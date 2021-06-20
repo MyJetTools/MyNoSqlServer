@@ -6,6 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="AsyncAwaitUtils" Version="1.0.3" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
       <PackageReference Include="MyNoSqlServer.DataCompression" Version="1.0.3" />
       <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc20" />
