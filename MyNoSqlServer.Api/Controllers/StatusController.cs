@@ -22,6 +22,11 @@ namespace MyNoSqlServer.Api.Controllers
             
             var result = new
             {
+                location = new
+                {
+                   id = Startup.Settings.Location,
+                   compress = Startup.Settings.CompressData
+                },
                 nodes = nodeSessions.Select(itm => new
                 {
                     location = itm.Location,

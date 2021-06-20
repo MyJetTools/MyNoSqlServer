@@ -13,8 +13,14 @@ interface INodeStatus {
     connected: string,
 }
 
+interface ILocationStatus{
+    id: string,
+    compress: boolean
+}
+
 
 interface IStatus{
+    location: ILocationStatus,
     readers:IReaderStatus[],
     nodes: INodeStatus[]
 }
