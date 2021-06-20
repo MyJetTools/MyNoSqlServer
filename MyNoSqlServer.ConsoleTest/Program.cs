@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.DataWriter;
 
 namespace MyNoSqlServer.ConsoleTest
 {
@@ -7,10 +9,22 @@ namespace MyNoSqlServer.ConsoleTest
     {
         static async Task Main()
         {
-            const string writerUrl = "http://127.0.0.1:5123";
-            const string readHostPort = "127.0.0.1:5125";
+            const string writerUrl = "http://192.168.1.160:5123";
+            const string readHostPort = "192.168.1.160:5125";
 
-            await TestDataReader.TestReplaceAsync(readHostPort, writerUrl);
+
+            var writer = new MyNoSqlServerDataWriter<TestDataReader.ReplaceEntity>(() => writerUrl,
+                "test-table", 
+                true);
+
+            await writer.InsertOrReplaceAsync(new TestDataReader.ReplaceEntity
+            {
+                PartitionKey = "Pk1",
+                RowKey = "Rk1",
+                Value = "Test2"
+            });
+
+          //  await TestDataReader.TestReplaceAsync(readHostPort, writerUrl);
 
             //await TestDataWriter.TestReplaceAsync(writerUrl);
             //await TestDataWriter.TestMergeAsync(writerUrl);

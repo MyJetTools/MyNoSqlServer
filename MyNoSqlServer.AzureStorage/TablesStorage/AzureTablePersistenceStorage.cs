@@ -252,6 +252,9 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
         
         public async ValueTask FlushIfNeededAsync()
         {
+            
+            Console.WriteLine("Flush works");
+            
             var snapshots = GetSnapshotIterationToCommit();
             
             if (snapshots == null)
