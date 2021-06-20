@@ -91,6 +91,8 @@ namespace MyNoSqlServer.Api
                 {
                     throw new Exception($"MaxPayloadSize settings must be greater then {1024 * 1024}");
                 }
+                
+                Console.WriteLine("Settings are read ok");
 
                 return settingsModel;
             }
