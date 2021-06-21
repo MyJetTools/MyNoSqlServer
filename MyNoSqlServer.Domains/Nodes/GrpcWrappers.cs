@@ -1,15 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using MyNoSqlServer.Domains.Db.Rows;
-using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.Persistence;
-using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
 
-namespace MyNoSqlServer.NodePersistence
+namespace MyNoSqlServer.Domains.Nodes
 {
     public static class GrpcWrappers
     {

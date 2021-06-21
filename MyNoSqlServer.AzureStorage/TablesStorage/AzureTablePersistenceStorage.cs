@@ -1,24 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Logs;
 using MyNoSqlServer.Domains.Persistence;
-using MyNoSqlServer.Domains.TransactionEvents;
+using MyNoSqlServer.Domains.Persistence.Blobs;
 
 namespace MyNoSqlServer.AzureStorage.TablesStorage
 {
     
-    
-    public class AzureTablePersistenceStorage : ITablePersistenceStorage
+    public class AzureTablePersistenceStorage : IBlobPersistenceStorage, ITablesPersistenceReader
     {
         private readonly CloudStorageAccount _storageAccount;
-
-
-        private Dictionary<string, SnapshotIteration> _snapshotIteration;
-        private readonly object _lockObject = new();
 
         public AzureTablePersistenceStorage(string connectionString)
         {
@@ -32,7 +26,7 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
         }
 
 
-        private async ValueTask SavePartitionAsync(DbTable dbTable, string partitionKey)
+        public async ValueTask SavePartitionAsync(DbTable dbTable, string partitionKey)
         {
             IReadOnlyList<DbRow> rows = null;
             dbTable.GetReadAccess(readAccess =>
@@ -78,7 +72,7 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
             _appLogs?.WriteInfo(tableName, "SavePartitionSnapshotAsync", $"{tableName}/{partitionKey}", "Partition Saved");
         }
 
-        private async ValueTask SaveTableSnapshotAsync(DbTable dbTable)
+        public async ValueTask SaveTableAsync(DbTable dbTable)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             if (container == null)
@@ -126,96 +120,6 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
         }
 
 
-        private void GetSnapshotIteration(DbTable dbTable, Action<SnapshotIteration> callback)
-        {
-            lock (_lockObject)
-            {
-                _snapshotIteration ??= new Dictionary<string, SnapshotIteration>();
-                
-                if (!_snapshotIteration.ContainsKey(dbTable.Name))
-                    _snapshotIteration.Add(dbTable.Name, new SnapshotIteration(dbTable));
-                
-                callback(_snapshotIteration[dbTable.Name]);
-            }
-        }
-
-
-        private IReadOnlyDictionary<string, SnapshotIteration> GetSnapshotIterationToCommit()
-        {
-
-            lock (_lockObject)
-            {
-                var result = _snapshotIteration;
-                _snapshotIteration = null;
-
-                _hasDataOnProcess = result != null;
-                return result;
-            }
-            
-        }
-        
-        
-        public ValueTask SaveTableAttributesAsync(DbTable dbTable, UpdateTableAttributesTransactionEvent data)
-        {
-            GetSnapshotIteration(dbTable, snapshot =>
-            {
-                snapshot.SyncTableAttributes();    
-            });
-            
-            return new ValueTask();
-        }
-
-        public ValueTask SaveTableSnapshotAsync(DbTable dbTable, InitTableTransactionEvent data)
-        {
-            GetSnapshotIteration(dbTable, snapshot =>
-            {
-                snapshot.SyncTableAttributes();    
-            });
-            
-            return new ValueTask();
-        }
-
-        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, InitPartitionsTransactionEvent data)
-        {
-            GetSnapshotIteration(dbTable, snapshot =>
-            {
-                foreach (var (partitionKey, _) in data.Partitions)
-                {
-                    snapshot.SyncPartition(partitionKey);    
-                } 
-            });
-            
-            return new ValueTask();
-        }
-
-        public ValueTask SaveRowUpdatesAsync(DbTable dbTable, UpdateRowsTransactionEvent eventData)
-        {
-            GetSnapshotIteration(dbTable, snapshot =>
-            {
-                foreach (var (partitionKey, _) in eventData.RowsByPartition)
-                {
-                    snapshot.SyncPartition(partitionKey);    
-                } 
-            });
-            
-            return new ValueTask();
-        }
-
-        public ValueTask SaveRowDeletesAsync(DbTable dbTable, DeleteRowsTransactionEvent eventData)
-        {
-            GetSnapshotIteration(dbTable, snapshot =>
-            {
-                foreach (var (partitionKey, _) in eventData.Rows)
-                {
-                    snapshot.SyncPartition(partitionKey);    
-                } 
-            });
-            
-            return new ValueTask();
-        }
-
-
-
 
         public async IAsyncEnumerable<ITableLoader> LoadTablesAsync()
         {
@@ -233,66 +137,12 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
             }
         }
 
-        private bool _hasDataOnProcess;
 
-        public bool HasDataAtSaveProcess
-        {
-            get
-            {
-                lock (_lockObject)
-                    return _snapshotIteration != null || _hasDataOnProcess;
-            }
-        }
-
-        private async ValueTask SaveTableAttributesAsync(DbTable dbTable)
+        public async ValueTask SaveTableAttributesAsync(DbTable dbTable)
         {
             var container = await _storageAccount.GetBlockBlobReferenceAsync(dbTable.Name);
             await TableMetadataSaver.SaveTableMetadataAsync(container, dbTable.Persist, dbTable.MaxPartitionsAmount);
         }
-        
-        public async ValueTask FlushIfNeededAsync()
-        {
-
-            var snapshotsIteration = _snapshotIteration;
-            if (snapshotsIteration != null)
-            {
-                Console.WriteLine("Has data to save");
-            }
-
-     
-            
-            var snapshots = GetSnapshotIterationToCommit();
-
-            if (snapshots == null)
-                return;
-
-            Console.WriteLine("We have a snapshot to save");
-            foreach (var snapshotIteration  in snapshots.Values)
-            {
-                if (snapshotIteration.HasSyncTableAttributes)
-                    await SaveTableAttributesAsync(snapshotIteration.DbTable);
-
-                
-                if (snapshotIteration.SyncWholeTable)
-                {
-                    await SaveTableSnapshotAsync(snapshotIteration.DbTable);
-                    continue;
-                }
-
-                
-                if (snapshotIteration.PartitionsToSync == null)
-                    continue;
-
-                foreach (var (partitionKey, _) in snapshotIteration.PartitionsToSync)
-                    await SavePartitionAsync(snapshotIteration.DbTable, partitionKey);
-                    
-            }
-
-            lock (_lockObject)
-                _hasDataOnProcess = false;
-
-        }
-
 
 
     }

@@ -32,6 +32,7 @@ namespace MyNoSqlServer.Api
             _services = services;
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
             services.AddCodeFirstGrpc();
+            
 
             services.AddApplicationInsightsTelemetry(Configuration);
 
@@ -43,9 +44,13 @@ namespace MyNoSqlServer.Api
 
             Settings = SettingsLoader.LoadSettings();
             
+            services.AddSingleton<IMyNoSqlNodePersistenceSettings>(Settings);
+            services.AddSingleton<ISettingsLocation>(Settings);
+            
+            
             services.BindDomainsServices();
 
-            services.AddSingleton<ISettingsLocation>(Settings);
+   
             
             services.BindDataReadersTcpServices();
 

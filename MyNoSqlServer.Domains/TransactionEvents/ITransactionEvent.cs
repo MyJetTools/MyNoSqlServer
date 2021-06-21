@@ -106,7 +106,7 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
             var partitions = dbPartitions
                 .ToDictionary<DbPartition, string, IReadOnlyList<DbRow>>(
                     dbPartition => dbPartition.PartitionKey, 
-                    dbPartition => Array.Empty<DbRow>());
+                    _ => Array.Empty<DbRow>());
 
             return new InitPartitionsTransactionEvent
             {

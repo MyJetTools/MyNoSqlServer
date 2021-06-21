@@ -8,22 +8,28 @@ using NUnit.Framework;
 
 namespace MyNoSqlServer.Tests
 {
-    
+
     public class TestMergeCases
     {
         private class MergeEntity1 : MyNoSqlDbEntity
         {
+ 
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
             public string Value1 { get; set; }
         }
 
         private class MergeEntity2 : MyNoSqlDbEntity
         {
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
             public string Value2 { get; set; }
         }
 
         private class MergedEntity : MyNoSqlDbEntity
         {
+            
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
             public string Value1 { get; set; }
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
             public string Value2 { get; set; }
         }
         

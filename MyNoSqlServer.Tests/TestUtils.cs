@@ -9,7 +9,7 @@ using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
-using MyNoSqlServer.Domains.Persistence;
+using MyNoSqlServer.Domains.Persistence.Blobs;
 using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Tests
@@ -31,7 +31,7 @@ namespace MyNoSqlServer.Tests
         {
             var result = new ServiceCollection();
             result.BindDomainsServices();
-            result.AddSingleton<ITablePersistenceStorage>(new SnapshotStorageMock());
+            result.AddSingleton<IBlobPersistenceStorage>(new SnapshotStorageMock());
             
 
             return result.BuildServiceProvider();
@@ -67,44 +67,22 @@ namespace MyNoSqlServer.Tests
         
     }
 
-    public class SnapshotStorageMock : ITablePersistenceStorage
+    public class SnapshotStorageMock : IBlobPersistenceStorage
     {
-        public ValueTask SaveTableAttributesAsync(DbTable dbTable, UpdateTableAttributesTransactionEvent data)
+        public ValueTask SaveTableAttributesAsync(DbTable dbTable)
         {
             return new ValueTask();
         }
 
-        public ValueTask SaveTableSnapshotAsync(DbTable dbTable, InitTableTransactionEvent data)
+        public ValueTask SaveTableAsync(DbTable dbTable)
         {
             return new ValueTask();
         }
 
-        public ValueTask SavePartitionSnapshotAsync(DbTable dbTable, InitPartitionsTransactionEvent data)
+        public ValueTask SavePartitionAsync(DbTable dbTable, string partitionKey)
         {
             return new ValueTask();
         }
-
-        public ValueTask SaveRowUpdatesAsync(DbTable dbTable, UpdateRowsTransactionEvent eventData)
-        {
-            return new ValueTask();
-        }
-
-        public ValueTask SaveRowDeletesAsync(DbTable dbTable, DeleteRowsTransactionEvent eventData)
-        {
-            return new ValueTask();
-        }
-
-        public ValueTask FlushIfNeededAsync()
-        {
-            return new ValueTask();
-        }
-
-        public IAsyncEnumerable<ITableLoader> LoadTablesAsync()
-        {
-            return Array.Empty<ITableLoader>().ToAsyncEnumerable();
-        }
-
-        public bool HasDataAtSaveProcess => false;
     }
     
 

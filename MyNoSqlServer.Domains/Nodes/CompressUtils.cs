@@ -7,7 +7,7 @@ using MyNoSqlServer.Common;
 using MyNoSqlServer.DataCompression;
 using MyNoSqlServer.NodePersistence.Grpc;
 
-namespace MyNoSqlServer.NodePersistence
+namespace MyNoSqlServer.Domains.Nodes
 {
     public static class CompressUtils
     {

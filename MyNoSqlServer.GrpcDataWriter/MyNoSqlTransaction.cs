@@ -16,6 +16,7 @@ namespace MyNoSqlServer.GrpcDataWriter
         private string _transactionId;
 
         private readonly List<TransactionActionGrpcModel> _transactionActionsGrpcModels = new ();
+        
         //ToDo - we are going to use this parameter to calculate payload and separate operations
         private int _payloadSize = 0;
 

@@ -31,7 +31,6 @@
       <ProjectReference Include="..\MyNoSqlServer.AzureStorage\MyNoSqlServer.AzureStorage.csproj" />
       <ProjectReference Include="..\MyNoSqlServer.Domains\MyNoSqlServer.Domains.csproj" />
       <ProjectReference Include="..\MyNoSqlServer.Grpc\MyNoSqlServer.Grpc.csproj" />
-      <ProjectReference Include="..\MyNoSqlServer.NodePersistence\MyNoSqlServer.NodePersistence.csproj" />
       <ProjectReference Include="..\MyNoSqlServer.TcpContracts\MyNoSqlServer.TcpContracts.csproj" />
     </ItemGroup>
 

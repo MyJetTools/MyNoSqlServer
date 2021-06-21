@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
 
@@ -7,16 +10,16 @@ namespace MyNoSqlServer.Domains.Nodes
 {
     public class NodeClient
     {
-        private readonly NodesSyncOperations _nodesSyncOperations;
+        private readonly SyncTransactionHandler _syncTransactionHandler;
         private readonly IMyNoSqlServerNodeSynchronizationGrpcService _grpcService;
         private readonly ISettingsLocation _settingsLocation;
 
         private readonly string _sessionId;
 
-        public NodeClient(NodesSyncOperations nodesSyncOperations,
+        public NodeClient(SyncTransactionHandler syncTransactionHandler,
             IMyNoSqlServerNodeSynchronizationGrpcService grpcService, ISettingsLocation settingsLocation)
         {
-            _nodesSyncOperations = nodesSyncOperations;
+            _syncTransactionHandler = syncTransactionHandler;
             _grpcService = grpcService;
             _settingsLocation = settingsLocation;
             _sessionId = Guid.NewGuid().ToString("N");
@@ -32,14 +35,15 @@ namespace MyNoSqlServer.Domains.Nodes
             {
                 try
                 {
-                    var result = await _grpcService.SyncAsync(new SyncGrpcRequest
+                    var grpcResponse = await _grpcService.SyncAsync(new SyncGrpcRequest
                     {
                         Location = _settingsLocation.Location,
                         RequestId = requestId,
                         SessionId = _sessionId
                     });
 
-                    HandleSyncEvent(result);
+                    _syncTransactionHandler.HandleTransaction(grpcResponse, () =>
+                        CreateTransactionEventAttribute(grpcResponse.Locations, grpcResponse.Headers));
 
                     requestId++;
 
@@ -54,47 +58,18 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
 
-        private TransactionEventAttributes CreateTransactionEventAttribute()
+        private TransactionEventAttributes CreateTransactionEventAttribute(List<string> locations, SyncGrpcHeader[] headers)
         {
-            throw new NotImplementedException();
+            locations.Add(_settingsLocation.Location);
+            return new TransactionEventAttributes(locations,
+                DataSynchronizationPeriod.Sec5,
+                EventSource.Synchronization,
+                headers.ToDictionary(itm => itm.Key, itm => itm.Value)
+            );
         }
 
 
-        private void HandleSyncEvent(SyncGrpcResponse syncGrpcResponse)
-        {
 
-            var transactionEvents = syncGrpcResponse.ToTransactionEvents(CreateTransactionEventAttribute);
-
-            foreach (var transactionEvent in transactionEvents)
-            {
-                switch (transactionEvent)
-                {
-                    
-                    case UpdateTableAttributesTransactionEvent updateTableAttributesTransactionEvent:
-                        _nodesSyncOperations.SetTableAttributes(updateTableAttributesTransactionEvent);
-                        break;
-                    
-                    case InitTableTransactionEvent initTableTransactionEvent:
-                        _nodesSyncOperations.ReplaceTable(initTableTransactionEvent);
-                        break;
-                    
-                    case InitPartitionsTransactionEvent initPartitionsTransactionEvent:
-                        _nodesSyncOperations.ReplacePartitions(initPartitionsTransactionEvent);
-                        break;
-
-                    case UpdateRowsTransactionEvent updateRowsTransactionEvent:
-                        _nodesSyncOperations.UpdateRows(updateRowsTransactionEvent);
-                        break;
-
-                    case DeleteRowsTransactionEvent deleteRowsTransactionEvent:
-                        _nodesSyncOperations.DeleteRows(deleteRowsTransactionEvent);
-                        break;
-                }
-                
-            }
-
-
-        }
 
 
         private bool _working;

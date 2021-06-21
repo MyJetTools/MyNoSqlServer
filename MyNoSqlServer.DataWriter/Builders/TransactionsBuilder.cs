@@ -16,7 +16,7 @@ namespace MyNoSqlServer.DataWriter.Builders
         private readonly Func<string> _getUrl;
         private readonly string _tableName;
 
-        private bool _committed = false;
+        private bool _committed;
         private string Id { get; }
 
         private readonly TransactionDataSerializer<T> _transactionSerializer = new TransactionDataSerializer<T>();

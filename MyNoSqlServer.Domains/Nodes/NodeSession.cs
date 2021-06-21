@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db;
-using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
@@ -33,8 +32,6 @@ namespace MyNoSqlServer.Domains.Nodes
         
         public DateTime LastAccessed { get; private set; } 
         
-        public bool Compress { get; private set; }
-
         public NodeSession(string location, DbInstance dbInstance)
         {
             _dbInstance = dbInstance;
@@ -43,10 +40,8 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
 
-        private void InitNewSession(string sessionId, bool compress)
+        private void InitNewSession(string sessionId)
         {
-            
-            Compress = compress;
 
             if (_awaitingTask != null)
                 SetTaskException(new Exception("Now session is arrived. Old session is expired"));
@@ -80,14 +75,14 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
         private long _currentRequestId;
-        private SyncGrpcResponse _eventInProcess;
+        private SyncTransactionGrpcModel _eventInProcess;
         
-        private TaskCompletionSource<SyncGrpcResponse> _awaitingTask;
+        private TaskCompletionSource<SyncTransactionGrpcModel> _awaitingTask;
         private DateTime _taskSetTime;
         private readonly object _lockObject = new();
         
 
-        private ValueTask<SyncGrpcResponse> ProcessAsync(long requestId)
+        private ValueTask<SyncTransactionGrpcModel> ProcessAsync(long requestId)
         {
 
             if (requestId == _currentRequestId)
@@ -96,7 +91,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     throw new Exception(
                         "Debug it. It must be not null");
 
-                return new ValueTask<SyncGrpcResponse>(_eventInProcess);
+                return new ValueTask<SyncTransactionGrpcModel>(_eventInProcess);
             }
 
 
@@ -112,20 +107,20 @@ namespace MyNoSqlServer.Domains.Nodes
 
             if (_events.Count == 0)
             {
-                _awaitingTask = new TaskCompletionSource<SyncGrpcResponse>();
+                _awaitingTask = new TaskCompletionSource<SyncTransactionGrpcModel>();
                 _taskSetTime = DateTime.UtcNow;
-                return new ValueTask<SyncGrpcResponse>(_awaitingTask.Task);
+                return new ValueTask<SyncTransactionGrpcModel>(_awaitingTask.Task);
             }
 
             var nextEvent = _events.Dequeue();
-            _eventInProcess = nextEvent.ToSyncGrpcResponse(Compress);
+            _eventInProcess = nextEvent.ToSyncTransactionGrpcModel();
             
-            return new ValueTask<SyncGrpcResponse>(_eventInProcess);
+            return new ValueTask<SyncTransactionGrpcModel>(_eventInProcess);
         }
 
 
 
-        private void SetTaskResult(SyncGrpcResponse response)
+        private void SetTaskResult(SyncTransactionGrpcModel response)
         {
             var awaitingTask = _awaitingTask;
             _awaitingTask = null;
@@ -156,13 +151,13 @@ namespace MyNoSqlServer.Domains.Nodes
                     return;
 
                 var nextEvent = _events.Dequeue();
-                _eventInProcess = nextEvent.ToSyncGrpcResponse(Compress);
+                _eventInProcess = nextEvent.ToSyncTransactionGrpcModel();
                 SetTaskResult(_eventInProcess);
             }
         }
 
 
-        public ValueTask<SyncGrpcResponse> ProcessAsync(string sessionId, long requestId, bool compress)
+        public ValueTask<SyncTransactionGrpcModel> ProcessAsync(string sessionId, long requestId)
         {
             LastAccessed = DateTime.UtcNow;
   
@@ -173,7 +168,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     throw new Exception("Session is exposed");
 
                 if (Id != sessionId)
-                    InitNewSession(sessionId, compress);
+                    InitNewSession(sessionId);
 
                 return ProcessAsync(requestId);
             }
@@ -188,7 +183,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     return;
 
                 if (_taskSetTime - DateTime.UtcNow > PingTimeOut)
-                    SetTaskResult(new SyncGrpcResponse());
+                    SetTaskResult(new SyncTransactionGrpcModel());
             }
 
         }

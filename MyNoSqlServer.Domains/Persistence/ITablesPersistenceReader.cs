@@ -1,14 +1,10 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
-using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
-using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Persistence
 {
-    
     public class PartitionSnapshot
     {
         public string PartitionKey { get; set; }
@@ -41,8 +37,7 @@ namespace MyNoSqlServer.Domains.Persistence
             }
         }
     }
-
-
+    
     public interface ITableLoader
     {
         string TableName { get; }
@@ -53,21 +48,9 @@ namespace MyNoSqlServer.Domains.Persistence
 
     }
     
-    public interface ITablePersistenceStorage
+    public interface ITablesPersistenceReader
     {
-        ValueTask SaveTableAttributesAsync(DbTable dbTable, UpdateTableAttributesTransactionEvent data);
-        ValueTask SaveTableSnapshotAsync(DbTable dbTable, InitTableTransactionEvent data);
-        ValueTask SavePartitionSnapshotAsync(DbTable dbTable, InitPartitionsTransactionEvent data);
-        ValueTask SaveRowUpdatesAsync(DbTable dbTable, UpdateRowsTransactionEvent eventData);
-        ValueTask SaveRowDeletesAsync(DbTable dbTable, DeleteRowsTransactionEvent eventData);
-
-
-        ValueTask FlushIfNeededAsync();
-  
+        
         IAsyncEnumerable<ITableLoader> LoadTablesAsync();
-        
-        
-        bool HasDataAtSaveProcess { get; }
-
     }
 }

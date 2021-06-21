@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using MyNoSqlServer.DataCompression;
-using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.NodePersistence.Grpc;
 
-namespace MyNoSqlServer.NodePersistence
+namespace MyNoSqlServer.Domains.Persistence.MasterNode
 {
     public class MyNoSqlServerTableLoader : ITableLoader
     {

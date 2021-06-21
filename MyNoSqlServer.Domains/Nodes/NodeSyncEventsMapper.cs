@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.DataCompression;
@@ -28,7 +29,7 @@ namespace MyNoSqlServer.Domains.Nodes
 
 
 
-        public static IEnumerable<ITransactionEvent> ToTransactionEvents(this SyncGrpcResponse syncGrpcResponse, 
+        public static IEnumerable<ITransactionEvent> ToTransactionEvents(this SyncTransactionGrpcModel syncGrpcResponse, 
             Func<TransactionEventAttributes> getTransactionEventAttributes)
         {
             if (syncGrpcResponse.TableName == null)
@@ -63,7 +64,7 @@ namespace MyNoSqlServer.Domains.Nodes
                 yield return initTableTransactionEvent;
             }
             
-            if (syncGrpcResponse.InitPartitionData != null)
+            if (syncGrpcResponse.InitPartitionsData != null)
             {
                 transactionEventAttributes ??= getTransactionEventAttributes();
 
@@ -71,7 +72,7 @@ namespace MyNoSqlServer.Domains.Nodes
                 {
                     TableName = syncGrpcResponse.TableName,
                     Attributes = transactionEventAttributes,
-                    Partitions = syncGrpcResponse.InitPartitionData.DeserializeProtobufPartitionsData()
+                    Partitions = syncGrpcResponse.InitPartitionsData.DeserializeProtobufPartitionsData()
                 };
                 yield return initTableTransactionEvent;
             }
@@ -107,9 +108,9 @@ namespace MyNoSqlServer.Domains.Nodes
         }
         
 
-        public static SyncGrpcResponse ToSyncGrpcResponse(this ITransactionEvent @event, bool compress)
+        public static SyncTransactionGrpcModel ToSyncTransactionGrpcModel(this ITransactionEvent @event)
         {
-            var result = new SyncGrpcResponse
+            var result = new SyncTransactionGrpcModel
             {
                 TableName = @event.TableName,
                 Headers = @event.ToHeaders()
@@ -124,21 +125,15 @@ namespace MyNoSqlServer.Domains.Nodes
                         MaxPartitionsAmount = initTableEvent.Table.MaxPartitionsAmount,
                     };
 
-                    result.InitTableData = compress
-                        ? MyNoSqlServerDataCompression.ZipPayload(initTableEvent.TableData.SerializeProtobufPartitionsData())
-                        : initTableEvent.TableData.SerializeProtobufPartitionsData();
+                    result.InitTableData = initTableEvent.TableData.ToPartitionDataGrpcModel().ToList();
                     return result;
                 
                 case InitTableTransactionEvent initTableTransactionEvent:
-                    result.InitTableData = compress
-                        ? MyNoSqlServerDataCompression.ZipPayload(initTableTransactionEvent.Snapshot.SerializeProtobufPartitionsData())
-                        : initTableTransactionEvent.Snapshot.SerializeProtobufPartitionsData();
+                    result.InitTableData = initTableTransactionEvent.Snapshot.ToPartitionDataGrpcModel().ToList();
                     return result;
                 
                case InitPartitionsTransactionEvent initPartitionsTransactionEvent:
-                   result.InitPartitionData = compress
-                       ? MyNoSqlServerDataCompression.ZipPayload(initPartitionsTransactionEvent.Partitions.SerializeProtobufPartitionsData())
-                       : initPartitionsTransactionEvent.Partitions.SerializeProtobufPartitionsData();
+                   result.InitTableData = initPartitionsTransactionEvent.Partitions.ToPartitionDataGrpcModel().ToList();
                    return result;
                
                case UpdateTableAttributesTransactionEvent syncTableAttributes:
@@ -150,9 +145,7 @@ namespace MyNoSqlServer.Domains.Nodes
                    return result;
                
                case UpdateRowsTransactionEvent updateRowsTransactionEvent:
-                   result.UpdateRowsData = compress
-                       ? MyNoSqlServerDataCompression.ZipPayload(updateRowsTransactionEvent.RowsByPartition.SerializeProtobufPartitionsData())
-                       : updateRowsTransactionEvent.RowsByPartition.SerializeProtobufPartitionsData();
+                   result.InitTableData = updateRowsTransactionEvent.RowsByPartition.ToPartitionDataGrpcModel().ToList();
                    return result; 
                
                 case DeleteRowsTransactionEvent deleteRowsTransactionEvent:
@@ -164,6 +157,32 @@ namespace MyNoSqlServer.Domains.Nodes
             }
 
             throw new Exception($"Unsupported transaction event {@event.GetType()}");
+        }
+
+
+        public static PayloadWrapperGrpcModel ToProtobufWrapper(this object src, bool compressed)
+        {
+            var memoryStream = new MemoryStream();
+            ProtoBuf.Serializer.Serialize(memoryStream, src);
+
+            var result = memoryStream.ToArray();
+
+            return new PayloadWrapperGrpcModel
+            {
+                Payload = compressed ? MyNoSqlServerDataCompression.ZipPayload(result) : result
+            };
+        }
+
+
+        public static T Deserialize<T>(this PayloadWrapperGrpcModel src, bool compressed)
+        {
+            if (compressed)
+            {
+                var uncompressed = MyNoSqlServerDataCompression.UnZipPayload(src.Payload);
+                return ProtoBuf.Serializer.Deserialize<T>(uncompressed.AsMemory());
+            }
+            
+            return ProtoBuf.Serializer.Deserialize<T>(src.Payload.AsMemory());
         }
 
 

@@ -9,13 +9,18 @@ namespace MyNoSqlServer.Domains.Persistence
     public class DataInitializer 
     {
         private readonly DbInstance _dbInstance;
-        private readonly ITablePersistenceStorage _tablePersistenceStorage;
+        private readonly ITablesPersistenceReader _tablePersistenceStorage;
+        private readonly IPersistenceShutdown _persistenceShutdown;
+        private readonly PersistenceQueue _persistenceQueue;
 
 
-        public DataInitializer(DbInstance dbInstance, ITablePersistenceStorage tablePersistenceStorage)
+        public DataInitializer(DbInstance dbInstance, ITablesPersistenceReader tablePersistenceStorage, 
+            IPersistenceShutdown persistenceShutdown, PersistenceQueue persistenceQueue)
         {
             _dbInstance = dbInstance;
             _tablePersistenceStorage = tablePersistenceStorage;
+            _persistenceShutdown = persistenceShutdown;
+            _persistenceQueue = persistenceQueue;
         }
         
         public async Task LoadSnapshotsAsync()
@@ -58,14 +63,23 @@ namespace MyNoSqlServer.Domains.Persistence
             while (true)
             {
 
-                if (_tablePersistenceStorage.HasDataAtSaveProcess)
+                if (_persistenceShutdown.HasDataInProcess)
                 {
                     Console.WriteLine("We have data to Save... Waiting");
                     await Task.Delay(500);
                     continue;
                 }
+
+                var messagesInQueue = _persistenceQueue.Count;
+
+                if (messagesInQueue > 0)
+                {
+                    Console.WriteLine($"We have {messagesInQueue} messages to persist in the queue... Waiting");
+                    await Task.Delay(500);
+                    continue;  
+                }
                 
-                
+
                 break;
             }
             

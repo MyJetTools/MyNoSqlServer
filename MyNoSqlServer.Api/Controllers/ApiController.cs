@@ -1,8 +1,5 @@
 using System;
-using System.Linq;
 using Microsoft.AspNetCore.Mvc;
-using MyNoSqlServer.Api.DataReadersTcpServer;
-using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
 {

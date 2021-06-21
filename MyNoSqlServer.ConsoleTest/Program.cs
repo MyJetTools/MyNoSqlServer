@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.DataWriter;
 
 namespace MyNoSqlServer.ConsoleTest
@@ -10,7 +9,7 @@ namespace MyNoSqlServer.ConsoleTest
         static async Task Main()
         {
             const string writerUrl = "http://192.168.1.160:5123";
-            const string readHostPort = "192.168.1.160:5125";
+            //const string readHostPort = "192.168.1.160:5125";
 
 
             var writer = new MyNoSqlServerDataWriter<TestDataReader.ReplaceEntity>(() => writerUrl,

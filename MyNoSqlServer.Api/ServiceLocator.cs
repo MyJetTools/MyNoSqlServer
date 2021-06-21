@@ -15,6 +15,8 @@ using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Logs;
 using MyNoSqlServer.Domains.Nodes;
 using MyNoSqlServer.Domains.Persistence;
+using MyNoSqlServer.Domains.Persistence.Blobs;
+using MyNoSqlServer.Domains.Persistence.MasterNode;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
 
@@ -74,8 +76,13 @@ namespace MyNoSqlServer.Api
         
         public static AppLogs AppLogs { get; private set; }
         
+        public static SyncTransactionHandler SyncTransactionHandler { get; private set; }
 
-        private static ITablePersistenceStorage _tablePersistenceStorage;
+
+        private static BlobsSaver _blobsSaver;
+
+        private static MasterNodeSaver _masterNodeSaver;
+
         public static DbOperations DbOperations { get; private set; }
         public static NodesSyncOperations NodesSyncOperations { get; private set; }
         
@@ -119,7 +126,9 @@ namespace MyNoSqlServer.Api
             DbOperations = sp.GetRequiredService<DbOperations>();
             NodesSyncOperations = sp.GetRequiredService<NodesSyncOperations>();
 
-            _tablePersistenceStorage = sp.GetRequiredService<ITablePersistenceStorage>();
+            var persistenceShutdown = sp.GetRequiredService<IPersistenceShutdown>();
+            _blobsSaver =  persistenceShutdown as BlobsSaver;
+            _masterNodeSaver = persistenceShutdown as MasterNodeSaver;
 
 
             DataReadersTcpBroadcaster = (DataReadersTcpBroadcaster)sp.GetRequiredService<IDataReadersBroadcaster>();
@@ -130,14 +139,17 @@ namespace MyNoSqlServer.Api
 
             AppLogs = sp.GetRequiredService<AppLogs>();
 
+            SyncTransactionHandler = sp.GetRequiredService<SyncTransactionHandler>();
+
         }
 
         public static void Start(IServiceProvider sp)
         {
+            
+            sp.GetService<NodeClient>()?.Start();
 
             DataInitializer.LoadSnapshotsAsync().Wait();
             
-            sp.GetRequiredService<PersistenceHandler>().Start();
 
             TimerOneMinute.Register("GC transactions", () =>
             {
@@ -151,7 +163,20 @@ namespace MyNoSqlServer.Api
                 return new ValueTask();
             });
 
-            TimerSaver.Register("Persist", ()=> _tablePersistenceStorage.FlushIfNeededAsync());
+
+            if (_blobsSaver != null)
+            {
+                AppLogs.WriteInfo(null, "Start", null, "Plugged BlobSaver as persistence handler");
+                TimerSaver.Register("Persist", _blobsSaver.FlushToBlobAsync);    
+            }
+
+            if (_masterNodeSaver != null)
+            {
+                AppLogs.WriteInfo(null, "Start", null, "Plugged MasterNodeSaver as persistence handler");
+                TimerSaver.Register("Persist", _masterNodeSaver.FlushDataAsync);    
+            }
+
+            
             TimerSaver.RegisterExceptionHandler((msg, e) =>
             {
                 AppLogs.WriteError(null, "TimerSaver", msg, e);

@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using MyNoSqlServer.Domains;
-using MyNoSqlServer.NodePersistence;
 using MyYamlParser;
+using IMyNoSqlNodePersistenceSettings = MyNoSqlServer.Domains.IMyNoSqlNodePersistenceSettings;
 
 namespace MyNoSqlServer.Api
 {

@@ -10,7 +10,10 @@ using MyNoSqlServer.Grpc;
 
 namespace MyNoSqlServer.Api.Grpc
 {
+
+    #pragma warning disable 618
     public class MyNoSqlGrpcService : IMyNoSqlWriterGrpcService, IMyNoSqlWriterGrpcServiceLegacy
+    #pragma warning restore 618
     {
         private static readonly IReadOnlyDictionary<string, string> EmptyDictionary = new Dictionary<string, string>();
 
