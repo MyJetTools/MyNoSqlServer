@@ -185,9 +185,13 @@ namespace MyNoSqlServer.Domains.Nodes
             {
                 if (_awaitingTask == null)
                     return;
-                
+
                 if (DateTime.UtcNow - _taskSetTime > PingTimeOut)
+                {
+                    Console.WriteLine($"Set Ping Response for the connection {Location}");
                     SetTaskResult(PingResponse);
+                }
+                    
             }
 
         }
