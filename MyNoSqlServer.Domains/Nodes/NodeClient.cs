@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.DataCompression;
 using MyNoSqlServer.Domains.TransactionEvents;
 using MyNoSqlServer.NodePersistence.Grpc;
 
@@ -13,16 +14,46 @@ namespace MyNoSqlServer.Domains.Nodes
         private readonly SyncTransactionHandler _syncTransactionHandler;
         private readonly IMyNoSqlServerNodeSynchronizationGrpcService _grpcService;
         private readonly ISettingsLocation _settingsLocation;
+        private readonly IMyNoSqlNodePersistenceSettings _settings;
 
         private readonly string _sessionId;
 
         public NodeClient(SyncTransactionHandler syncTransactionHandler,
-            IMyNoSqlServerNodeSynchronizationGrpcService grpcService, ISettingsLocation settingsLocation)
+            IMyNoSqlServerNodeSynchronizationGrpcService grpcService, ISettingsLocation settingsLocation, IMyNoSqlNodePersistenceSettings settings)
         {
             _syncTransactionHandler = syncTransactionHandler;
             _grpcService = grpcService;
             _settingsLocation = settingsLocation;
+            _settings = settings;
             _sessionId = Guid.NewGuid().ToString("N");
+        }
+
+
+        private async Task<SyncTransactionGrpcModel> SyncAsync(long requestId)
+        {
+            if (_settings.CompressData)
+            {
+                var grpcPayload = await _grpcService.SyncCompressedAsync(new SyncGrpcRequest
+                {
+                    Location = _settingsLocation.Location,
+                    RequestId = requestId,
+                    SessionId = _sessionId
+                });
+
+
+                var payload = MyNoSqlServerDataCompression.UnZipPayload(grpcPayload.Payload);
+
+                return ProtoBuf.Serializer.Deserialize<SyncTransactionGrpcModel>(payload.AsMemory());
+            }
+            
+            
+            return await _grpcService.SyncAsync(new SyncGrpcRequest
+            {
+                Location = _settingsLocation.Location,
+                RequestId = requestId,
+                SessionId = _sessionId
+            });
+
         }
 
 
@@ -35,13 +66,8 @@ namespace MyNoSqlServer.Domains.Nodes
             {
                 try
                 {
-                    var grpcResponse = await _grpcService.SyncAsync(new SyncGrpcRequest
-                    {
-                        Location = _settingsLocation.Location,
-                        RequestId = requestId,
-                        SessionId = _sessionId
-                    });
 
+                    var grpcResponse = await SyncAsync(requestId);
 
                     if (grpcResponse.TableName == null)
                     {
