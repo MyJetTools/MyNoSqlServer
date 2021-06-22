@@ -68,8 +68,18 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
             {
                 try
                 {
-                    await _myNoSqlServerNodePersistenceGrpcService.SyncTransactionsAsync(
-                        CompilePayload(events).ToAsyncEnumerable());
+
+                    var payload = CompilePayload(events).ToAsyncEnumerable();
+
+                    if (_persistenceSettings.CompressData)
+                    {
+                        await _myNoSqlServerNodePersistenceGrpcService.SyncTransactionsCompressedAsync(payload);
+                    }
+                    else
+                    {
+                        await _myNoSqlServerNodePersistenceGrpcService.SyncTransactionsAsync(payload);
+                    }
+        
                     return;
                 }
                 catch (Exception e)
