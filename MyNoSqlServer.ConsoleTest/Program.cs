@@ -8,7 +8,7 @@ namespace MyNoSqlServer.ConsoleTest
     {
         static async Task Main()
         {
-            const string writerUrl = "http://192.168.1.160:5123";
+            const string writerUrl = "http://192.168.1.196:5123";
             //const string readHostPort = "192.168.1.160:5125";
 
 

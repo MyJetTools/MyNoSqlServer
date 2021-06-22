@@ -57,6 +57,8 @@ namespace MyNoSqlServer.Domains.Logs
             
             if (logItem.StackTrace != null)
                 Console.WriteLine($"StackTrace: {logItem.StackTrace}");
+            
+            Console.WriteLine("------------------------------");
         }
 
         public void WriteInfo(string table, string process,  string context, string message)
