@@ -89,7 +89,7 @@ namespace MyNoSqlServer.Domains.Nodes
             {
                 if (_eventInProcess == null)
                     throw new Exception(
-                        "Debug it. It must be not null");
+                        "Debug it. _eventInProcess must be not null");
 
                 return new ValueTask<SyncTransactionGrpcModel>(_eventInProcess);
             }
@@ -163,7 +163,6 @@ namespace MyNoSqlServer.Domains.Nodes
         public ValueTask<SyncTransactionGrpcModel> ProcessAsync(string sessionId, long requestId)
         {
             LastAccessed = DateTime.UtcNow;
-  
             
             lock (_lockObject)
             {
@@ -179,17 +178,16 @@ namespace MyNoSqlServer.Domains.Nodes
 
 
 
-        private static readonly SyncTransactionGrpcModel PingResponse = new SyncTransactionGrpcModel();
+        private static readonly SyncTransactionGrpcModel PingResponse = new ();
         public void SendPing()
         {
             lock (_lockObject)
             {
-                
                 if (_awaitingTask == null)
                     return;
                 
                 if (DateTime.UtcNow - _taskSetTime > PingTimeOut)
-                    SetTaskException(new Exception("Ping"));
+                    SetTaskResult(PingResponse);
             }
 
         }
