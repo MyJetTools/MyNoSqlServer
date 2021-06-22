@@ -25,19 +25,23 @@ namespace MyNoSqlServer.Domains.Persistence
 
         public void NewEvent(ITransactionEvent transactionEvent)
         {
-            lock (_lockObject)
-            {
-                _eventsToPersist ??= new Dictionary<string, List<ITransactionEvent>>();
+            
+            if (transactionEvent.Attributes.EventSource == EventSource.ClientRequest)
+                lock (_lockObject)
+                {
+                    _eventsToPersist ??= new Dictionary<string, List<ITransactionEvent>>();
 
-                if (_eventsToPersist.TryGetValue(transactionEvent.TableName, out var tableQueue))
-                    tableQueue.Add(transactionEvent);
-                else
-                    _eventsToPersist.Add(transactionEvent.TableName, new List<ITransactionEvent> { transactionEvent });
+                    if (_eventsToPersist.TryGetValue(transactionEvent.TableName, out var tableQueue))
+                        tableQueue.Add(transactionEvent);
+                    else
+                        _eventsToPersist.Add(transactionEvent.TableName,
+                            new List<ITransactionEvent> { transactionEvent });
 
-                Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"Enqueued persistence message. Table {transactionEvent.TableName}. {transactionEvent.GetType()} {transactionEvent.GetLocationsAsString()}");
-                Console.ResetColor();
-            }
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine(
+                        $"Enqueued persistence message. Table {transactionEvent.TableName}. {transactionEvent.GetType()} {transactionEvent.GetLocationsAsString()}");
+                    Console.ResetColor();
+                }
         }
 
         public Dictionary<string, List<ITransactionEvent>> GetSnapshot()
