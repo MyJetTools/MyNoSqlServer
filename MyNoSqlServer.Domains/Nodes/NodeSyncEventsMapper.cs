@@ -148,7 +148,7 @@ namespace MyNoSqlServer.Domains.Nodes
                    return result;
                
                case UpdateRowsTransactionEvent updateRowsTransactionEvent:
-                   result.InitTableData = updateRowsTransactionEvent.RowsByPartition.ToPartitionDataGrpcModel().ToList();
+                   result.UpdateRowsData = updateRowsTransactionEvent.RowsByPartition.ToPartitionDataGrpcModel().ToList();
                    return result; 
                
                 case DeleteRowsTransactionEvent deleteRowsTransactionEvent:
