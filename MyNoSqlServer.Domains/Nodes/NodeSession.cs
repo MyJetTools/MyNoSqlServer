@@ -78,7 +78,6 @@ namespace MyNoSqlServer.Domains.Nodes
         private SyncTransactionGrpcModel _eventInProcess;
         
         private TaskCompletionSource<SyncTransactionGrpcModel> _awaitingTask;
-        private DateTime _taskSetTime;
         private readonly object _lockObject = new();
         
 
@@ -108,7 +107,7 @@ namespace MyNoSqlServer.Domains.Nodes
             if (_events.Count == 0)
             {
                 _awaitingTask = new TaskCompletionSource<SyncTransactionGrpcModel>();
-                _taskSetTime = DateTime.UtcNow;
+                LastAccessed = DateTime.UtcNow;
                 return new ValueTask<SyncTransactionGrpcModel>(_awaitingTask.Task);
             }
 
@@ -186,7 +185,7 @@ namespace MyNoSqlServer.Domains.Nodes
                 if (_awaitingTask == null)
                     return;
 
-                if (DateTime.UtcNow - _taskSetTime > PingTimeOut)
+                if (DateTime.UtcNow - LastAccessed > PingTimeOut)
                 {
                     Console.WriteLine($"Set Ping Response for the connection {Location}");
                     SetTaskResult(PingResponse);

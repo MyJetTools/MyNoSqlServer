@@ -12,6 +12,7 @@ namespace MyNoSqlServer.Api.Grpc
 
             try
             {
+                Console.WriteLine("New Sync Request: " +Newtonsoft.Json.JsonConvert.SerializeObject(request));
                 var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
                 return session.ProcessAsync(request.SessionId, request.RequestId);
             }
