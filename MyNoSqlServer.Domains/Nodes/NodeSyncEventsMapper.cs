@@ -108,13 +108,14 @@ namespace MyNoSqlServer.Domains.Nodes
         }
         
 
-        public static SyncTransactionGrpcModel ToSyncTransactionGrpcModel(this ITransactionEvent @event)
+        public static SyncTransactionGrpcModel ToSyncTransactionGrpcModel(this ITransactionEvent @event, string location)
         {
             var result = new SyncTransactionGrpcModel
             {
                 TableName = @event.TableName,
                 Headers = @event.ToHeaders(),
-                Locations = @event.Attributes.Locations
+                Locations = @event.Attributes.Locations,
+                RemoteLocation = location
             };
             
             switch(@event) 

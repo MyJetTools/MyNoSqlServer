@@ -22,6 +22,7 @@ namespace MyNoSqlServer.Api.Controllers
             
             var result = new
             {
+                masterNode = ServiceLocator.NodeClient?.RemoteNode,
                 location = new
                 {
                    id = Startup.Settings.Location,

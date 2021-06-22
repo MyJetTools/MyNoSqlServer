@@ -64,32 +64,6 @@ namespace MyNoSqlServer.Domains
             return dbTable;
         }
 
-        public DbTable GetOrCreateTable(string tableName, bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
-        {
-            var result = _dbInstance.TryGetTable(tableName);
-            
-            if (result != null)
-                return result;
-
-            var tableCreated = false;
-            
-            result = _dbInstance.GetWriteAccess(writeAccess =>
-            {
-                var dbTable = writeAccess.TryGetTable(tableName);
-
-                tableCreated = true;
-
-                return dbTable ?? writeAccess.CreateTable(tableName, persist, maxPartitionsAmount);
-            });
-
-            if (tableCreated)
-                _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, result));
-
-            return result;
-
-        }
-
-
         public void SetTableAttributes(DbTable dbTable, bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
         {
             var set = dbTable.SetAttributes(persist, maxPartitionsAmount);

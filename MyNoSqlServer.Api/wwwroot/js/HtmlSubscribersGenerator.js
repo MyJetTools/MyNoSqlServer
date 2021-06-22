@@ -2,7 +2,8 @@ var HtmlSubscribersGenerator = /** @class */ (function () {
     function HtmlSubscribersGenerator() {
     }
     HtmlSubscribersGenerator.generateHtml = function (data) {
-        return '<h1>Location: ' + data.location.id + ' Compress:' + data.location.compress + '</h1><hr/>'
+        var masterNode = data.masterNode ? "  <h1>Connected to: " + data.masterNode + "</h1>" : "";
+        return '<h3>Location: ' + data.location.id + ' Compress:' + data.location.compress + masterNode + '</h3><hr/>'
             + '<h1>Connected Nodes</h1>'
             + this.generateNodesHtml(data.nodes)
             + '<h1>Readers</h1>'

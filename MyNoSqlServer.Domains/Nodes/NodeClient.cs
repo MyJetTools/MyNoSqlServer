@@ -17,6 +17,9 @@ namespace MyNoSqlServer.Domains.Nodes
         private readonly IMyNoSqlNodePersistenceSettings _settings;
 
         private readonly string _sessionId;
+        
+        
+        public string RemoteNode { get; private set; }
 
         public NodeClient(SyncTransactionHandler syncTransactionHandler,
             IMyNoSqlServerNodeSynchronizationGrpcService grpcService, ISettingsLocation settingsLocation, IMyNoSqlNodePersistenceSettings settings)
@@ -68,6 +71,8 @@ namespace MyNoSqlServer.Domains.Nodes
                 {
 
                     var grpcResponse = await SyncAsync(requestId);
+
+                    RemoteNode = grpcResponse.RemoteLocation;
 
                     if (grpcResponse.TableName == null)
                     {

@@ -121,7 +121,7 @@ namespace MyNoSqlServer.Domains.Nodes
             }
 
             var nextEvent = _events.Dequeue();
-            _eventInProcess = nextEvent.ToSyncTransactionGrpcModel();
+            _eventInProcess = nextEvent.ToSyncTransactionGrpcModel(Location);
             
             return new ValueTask<SyncTransactionGrpcModel>(_eventInProcess);
         }
@@ -164,7 +164,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     return;
 
                 var nextEvent = _events.Dequeue();
-                _eventInProcess = nextEvent.ToSyncTransactionGrpcModel();
+                _eventInProcess = nextEvent.ToSyncTransactionGrpcModel(Location);
                 SetTaskResult(_eventInProcess);
             }
         }

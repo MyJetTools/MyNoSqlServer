@@ -22,6 +22,7 @@ interface ILocationStatus{
 
 
 interface IStatus{
+    masterNode: string,
     location: ILocationStatus,
     readers:IReaderStatus[],
     nodes: INodeStatus[]

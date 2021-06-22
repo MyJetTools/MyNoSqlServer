@@ -16,14 +16,16 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
         private readonly PersistenceQueue _persistenceQueue;
         private readonly AppLogs _appLogs;
         private readonly IMyNoSqlNodePersistenceSettings _persistenceSettings;
+        private readonly ISettingsLocation _settingsLocation;
 
         public MasterNodeSaver(IMyNoSqlServerNodePersistenceGrpcService myNoSqlServerNodePersistenceGrpcService, 
-            PersistenceQueue persistenceQueue, AppLogs appLogs, IMyNoSqlNodePersistenceSettings persistenceSettings)
+            PersistenceQueue persistenceQueue, AppLogs appLogs, IMyNoSqlNodePersistenceSettings persistenceSettings, ISettingsLocation settingsLocation)
         {
             _myNoSqlServerNodePersistenceGrpcService = myNoSqlServerNodePersistenceGrpcService;
             _persistenceQueue = persistenceQueue;
             _appLogs = appLogs;
             _persistenceSettings = persistenceSettings;
+            _settingsLocation = settingsLocation;
         }
 
 
@@ -37,7 +39,7 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
 
                 foreach (var transactionEvent in transactionEvents)
                 {
-                    var grpcModel = transactionEvent.ToSyncTransactionGrpcModel();   
+                    var grpcModel = transactionEvent.ToSyncTransactionGrpcModel(_settingsLocation.Location);   
                     model.Add(grpcModel); 
                 }
             }
