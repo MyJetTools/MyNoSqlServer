@@ -135,7 +135,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     return result;
                 
                case InitPartitionsTransactionEvent initPartitionsTransactionEvent:
-                   result.InitTableData = initPartitionsTransactionEvent.Partitions.ToPartitionDataGrpcModel().ToList();
+                   result.InitPartitionsData = initPartitionsTransactionEvent.Partitions.ToPartitionDataGrpcModel().ToList();
                    return result;
                
                case UpdateTableAttributesTransactionEvent syncTableAttributes:
