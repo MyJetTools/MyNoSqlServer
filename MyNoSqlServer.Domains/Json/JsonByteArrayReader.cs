@@ -201,7 +201,7 @@ namespace MyNoSqlServer.Domains.Json
                         break;
 
                     case ExpectedToken.CloseNumberOrBoolValue:
-                        if (b == Comma || b == CloseBracket || b.IsSpace())
+                        if (b is Comma or CloseBracket || b.IsSpace())
                         {
                             var item = new MyJsonFirstLevelFieldData(
                                 inData.Slice(keyStartIndex, keyEndIndex-keyStartIndex),

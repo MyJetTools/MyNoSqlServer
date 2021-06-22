@@ -11,7 +11,11 @@ namespace MyNoSqlServer.AzureStorage
     {
         public static void BindAzureStorage(this IServiceCollection services, string connectionString)
         {
-            services.AddSingleton<IBlobPersistenceStorage>(new AzureTablePersistenceStorage(connectionString));
+
+            var storage = new AzureTablePersistenceStorage(connectionString);
+            services.AddSingleton<IBlobPersistenceStorage>(storage);
+            services.AddSingleton<ITablesPersistenceReader>(storage);
+            
             services.AddSingleton<IPersistenceShutdown, BlobsSaver>();
         }
 

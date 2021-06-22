@@ -84,7 +84,10 @@ namespace MyNoSqlServer.Api
         private static MasterNodeSaver _masterNodeSaver;
 
         public static DbOperations DbOperations { get; private set; }
-        public static NodesSyncOperations NodesSyncOperations { get; private set; }
+        
+        
+        public static NodeClient NodeClient { get; private set; }
+        
         
         public static readonly MyServerTcpSocket<IMyNoSqlTcpContract> TcpServer = 
             new MyServerTcpSocket<IMyNoSqlTcpContract>(new IPEndPoint(IPAddress.Any, 5125))
@@ -124,7 +127,6 @@ namespace MyNoSqlServer.Api
             GlobalVariables = sp.GetRequiredService<GlobalVariables>();
 
             DbOperations = sp.GetRequiredService<DbOperations>();
-            NodesSyncOperations = sp.GetRequiredService<NodesSyncOperations>();
 
             var persistenceShutdown = sp.GetRequiredService<IPersistenceShutdown>();
             _blobsSaver =  persistenceShutdown as BlobsSaver;
@@ -141,12 +143,20 @@ namespace MyNoSqlServer.Api
 
             SyncTransactionHandler = sp.GetRequiredService<SyncTransactionHandler>();
 
+            NodeClient = sp.GetService<NodeClient>();
+
         }
 
         public static void Start(IServiceProvider sp)
         {
+
+
+            if (NodeClient != null)
+            {
+                AppLogs.WriteInfo(null, "Start", null, "Plugged Grpc Node Client"); 
+                sp.GetService<NodeClient>()?.Start();    
+            }
             
-            sp.GetService<NodeClient>()?.Start();
 
             DataInitializer.LoadSnapshotsAsync().Wait();
             
