@@ -4,8 +4,8 @@ class HtmlSubscribersGenerator{
     
     public static generateHtml(data:IStatus):string {
 
-        return '<h1>Location: ' + data.location.id + ' Compress:' + data.location.compress + '</h1>'
-            + '<h1>Nodes</h1>'
+        return '<h1>Location: ' + data.location.id + ' Compress:' + data.location.compress + '</h1><hr/>'
+            + '<h1>Connected Nodes</h1>'
             + this.generateNodesHtml(data.nodes)
             + '<h1>Readers</h1>'
             + this.generateReadersHtml(data.readers);
