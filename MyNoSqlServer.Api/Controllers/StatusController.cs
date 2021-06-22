@@ -30,7 +30,8 @@ namespace MyNoSqlServer.Api.Controllers
                 nodes = nodeSessions.Select(itm => new
                 {
                     location = itm.Location,
-                    lastAccessed =  (dt - itm.LastAccessed).ToString("c")
+                    lastAccessed =  (dt - itm.LastAccessed).ToString("c"),
+                    connected = (dt - itm.Created).ToString("c")
                     
                 }),
                 readers = connections.Select(itm => ReaderApiModel.Create(itm as DataReaderTcpService))

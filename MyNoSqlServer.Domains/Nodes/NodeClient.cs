@@ -97,11 +97,12 @@ namespace MyNoSqlServer.Domains.Nodes
         {
 
             var locations = syncTransactionGrpcModel.Locations ?? new List<string>();
+
             locations.Add(_settingsLocation.Location);
             return new TransactionEventAttributes(locations,
                 DataSynchronizationPeriod.Sec5,
                 syncTransactionGrpcModel.InitPacket ? EventSource.Init : EventSource.Synchronization,
-                syncTransactionGrpcModel.Headers.ToDictionary(itm => itm.Key, itm => itm.Value)
+                syncTransactionGrpcModel.Headers?.ToDictionary(itm => itm.Key, itm => itm.Value)
             );
         }
 
