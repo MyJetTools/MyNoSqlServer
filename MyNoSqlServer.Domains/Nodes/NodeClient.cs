@@ -88,10 +88,6 @@ namespace MyNoSqlServer.Domains.Nodes
                 {
                     Console.WriteLine("NodeClient: " + e);
                 }
-                finally
-                {
-                    await Task.Delay(5000); //ToDo - Remove this Debug Delay
-                }
                 
             }
             
