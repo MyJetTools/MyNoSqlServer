@@ -265,9 +265,10 @@ namespace MyNoSqlServer.Domains
 
             dbTable.GetWriteAccess(writeAccess =>
             {
-                writeAccess.InitTable(snapshot, attributes);
+                writeAccess.InitTable(snapshot);
                 
-                _syncEventsDispatcher.Dispatch(InitTableTransactionEvent.Create(attributes, dbTable, snapshot));
+                if (attributes != null)
+                    _syncEventsDispatcher.Dispatch(InitTableTransactionEvent.Create(attributes, dbTable, snapshot));
             });
 
         }

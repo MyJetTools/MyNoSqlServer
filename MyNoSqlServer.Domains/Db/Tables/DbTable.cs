@@ -26,9 +26,9 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
     public interface IDbTableWriteAccess
     {
-        void InitTable(IReadOnlyDictionary<string, IReadOnlyList<DbRow>> partitions, TransactionEventAttributes transactionEventAttributes);
+        void InitTable(IReadOnlyDictionary<string, IReadOnlyList<DbRow>> partitions);
 
-        void InitPartition(string partitionKey, IReadOnlyList<DbRow> rows, TransactionEventAttributes transactionEventAttributes);
+        void InitPartition(string partitionKey, IReadOnlyList<DbRow> rows);
 
         IPartitionWriteAccess TryGetPartitionWriteAccess(string partitionKey);
         IPartitionWriteAccess GetOrCreatePartition(string partitionKey);
@@ -805,8 +805,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                     dbPartition => dbPartition.GetAllRows());
         }
 
-        void IDbTableWriteAccess.InitTable(IReadOnlyDictionary<string, IReadOnlyList<DbRow>> partitions, 
-            TransactionEventAttributes transactionEventAttributes)
+        void IDbTableWriteAccess.InitTable(IReadOnlyDictionary<string, IReadOnlyList<DbRow>> partitions)
         {
             _partitions.Clear();
 
@@ -815,26 +814,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 var dbPartition = _partitions.GetOrCreate(partitionKey);
                 dbPartition.InitPartition(partitionData);
             }
-            
-            if (transactionEventAttributes != null)
-                _syncEventsDispatcher.Dispatch(InitTableTransactionEvent.Create(transactionEventAttributes, this, partitions));
         }
 
-        void IDbTableWriteAccess.InitPartition(string partitionKey, IReadOnlyList<DbRow> rows,
-            TransactionEventAttributes transactionEventAttributes)
+        void IDbTableWriteAccess.InitPartition(string partitionKey, IReadOnlyList<DbRow> rows)
         {
             var partition = _partitions.GetOrCreate(partitionKey);
 
             partition.InitPartition(rows);
-
-            var partitionToSync = new Dictionary<string, IReadOnlyList<DbRow>>
-            {
-                [partitionKey] = rows
-            };
-            
-            if (transactionEventAttributes != null)
-                _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.Create(transactionEventAttributes, this, partitionToSync));
-     
         }
 
         

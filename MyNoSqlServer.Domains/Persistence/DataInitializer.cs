@@ -40,7 +40,7 @@ namespace MyNoSqlServer.Domains.Persistence
                             table.GetWriteAccess(writeAccess =>
                             {
                                 writeAccess.InitPartition(partitionSnapshot.PartitionKey,
-                                    partitionSnapshot.GetRecords().ToList(), null);
+                                    partitionSnapshot.GetRecords().ToList());
                             });
                     }
                     

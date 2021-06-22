@@ -42,8 +42,10 @@ namespace MyNoSqlServer.Domains.Nodes
 
             dbTable.GetWriteAccess(writeAccess =>
             {
-                writeAccess.InitTable(initTableTransactionEvent.Snapshot, initTableTransactionEvent.Attributes);
-                _syncEventsDispatcher.Dispatch(initTableTransactionEvent);
+                writeAccess.InitTable(initTableTransactionEvent.Snapshot);
+                
+                if (initTableTransactionEvent.Attributes != null)
+                    _syncEventsDispatcher.Dispatch(initTableTransactionEvent);
             });
         }
 
@@ -59,7 +61,8 @@ namespace MyNoSqlServer.Domains.Nodes
                     partition.ClearAndBulkInsertOrReplace(rows);
                 }
 
-                _syncEventsDispatcher.Dispatch(initPartitionsTransactionEvent);
+                if (initPartitionsTransactionEvent.Attributes != null)
+                    _syncEventsDispatcher.Dispatch(initPartitionsTransactionEvent);
             });
         }
 
