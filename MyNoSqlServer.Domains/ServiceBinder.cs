@@ -32,7 +32,9 @@ namespace MyNoSqlServer.Domains
             services.AddSingleton<SyncTransactionHandler>();
 
             services.AddSingleton<AppLogs>();
-            
+
+            services.AddSingleton<PersistenceQueue>();
+
         }
 
         public static void BindMasterNodeSaverServices(this IServiceCollection services)
