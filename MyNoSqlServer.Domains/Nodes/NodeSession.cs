@@ -189,7 +189,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     return;
                 
                 if (DateTime.UtcNow - _taskSetTime > PingTimeOut)
-                    SetTaskResult(PingResponse);
+                    SetTaskException(new Exception("Ping"));
             }
 
         }
