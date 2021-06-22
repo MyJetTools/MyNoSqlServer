@@ -14,6 +14,14 @@ namespace MyNoSqlServer.Domains.Nodes
     public static class ProtobufSerializers
     {
 
+        public static IAsyncEnumerable<PayloadWrapperGrpcModel> SplitAndWrap(this byte[] payload, int batchSize)
+        {
+            return payload.SplitPayload(batchSize).Select(itm => new PayloadWrapperGrpcModel
+            {
+                Payload = itm
+            }).ToAsyncEnumerable();
+        }
+
         public static IEnumerable<PartitionDataGrpcModel> ToPartitionDataGrpcModel(
             this IReadOnlyDictionary<string, IReadOnlyList<DbRow>> snapshot)
         {
@@ -23,6 +31,7 @@ namespace MyNoSqlServer.Domains.Nodes
                 Snapshot = itm.Value.ToJsonArray().AsArray()
             });
         }
+        
         
         public static byte[] SerializeProtobufPartitionsData(this IReadOnlyDictionary<string, IReadOnlyList<DbRow>> snapshot)
         {

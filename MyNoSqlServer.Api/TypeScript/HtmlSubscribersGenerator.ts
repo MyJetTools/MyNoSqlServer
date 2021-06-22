@@ -31,10 +31,10 @@ class HtmlSubscribersGenerator{
     }
 
     private static generateNodesHtml(data: INodeStatus[]):string{
-        let html=`<table class="table table-striped"><tr><th>Location</th><th>Connected</th><th>LastAccess</th></tr>`;
+        let html=`<table class="table table-striped"><tr><th>Location</th><th>Connected</th><th>LastAccess</th><th>Compress</th><th>Latency</th></tr>`;
 
         for(let itm of data){
-            html += '<tr><td>'+itm.location+'</td><td>'+itm.connected+'</td><td>'+itm.lastAccessed+'</td></tr>';
+            html += '<tr><td>'+itm.location+'</td><td>'+itm.connected+'</td><td>'+itm.lastAccessed+'</td><td>'+itm.compress+'</td><td>'+itm.latency+'</td></tr>';
         }
 
         html += '</table>';

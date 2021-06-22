@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using MyNoSqlServer.Common;
 using MyNoSqlServer.DataCompression;
 using MyNoSqlServer.Domains.Logs;
 using MyNoSqlServer.Domains.Nodes;
@@ -30,7 +28,7 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
 
 
 
-        private IEnumerable<PayloadWrapperGrpcModel> CompilePayload(Dictionary<string, List<ITransactionEvent>> events)
+        private (byte[] payload, bool compressed) CompilePayload(Dictionary<string, List<ITransactionEvent>> events)
         {
             var model = new List<SyncTransactionGrpcModel>();
             
@@ -56,17 +54,17 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
 
             if (_persistenceSettings.CompressData)
             {
-                payload = MyNoSqlServerDataCompression.ZipPayload(payload);
+                var compressedPayload = MyNoSqlServerDataCompression.ZipPayload(payload);
                 
-                Console.WriteLine($"Compressed size: {payload.Length}");
+                Console.WriteLine($"Compressed size: {compressedPayload.Length}");
+
+                return compressedPayload.Length < payload.Length ? (compressedPayload, true) : (payload, false);
             }
-                
 
 
-            return payload.SplitPayload(_persistenceSettings.MaxPayloadSize).Select(chunk => new PayloadWrapperGrpcModel
-            {
-                Payload = chunk
-            });
+            return (payload, false);
+
+
 
         }
 
@@ -78,15 +76,15 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
                 try
                 {
 
-                    var payload = CompilePayload(events).ToAsyncEnumerable();
+                    var (payload, compressed) = CompilePayload(events);
 
-                    if (_persistenceSettings.CompressData)
+                    if (compressed)
                     {
-                        await _myNoSqlServerNodePersistenceGrpcService.SyncTransactionsCompressedAsync(payload);
+                        await _myNoSqlServerNodePersistenceGrpcService.SyncTransactionsCompressedAsync(payload.SplitAndWrap(_persistenceSettings.MaxPayloadSize));
                     }
                     else
                     {
-                        await _myNoSqlServerNodePersistenceGrpcService.SyncTransactionsAsync(payload);
+                        await _myNoSqlServerNodePersistenceGrpcService.SyncTransactionsAsync(payload.SplitAndWrap(_persistenceSettings.MaxPayloadSize));
                     }
         
                     return;

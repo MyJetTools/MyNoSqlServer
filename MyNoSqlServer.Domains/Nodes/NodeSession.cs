@@ -27,10 +27,17 @@ namespace MyNoSqlServer.Domains.Nodes
         public string Location { get; }
         public string Id { get; private set; }
         
+        public bool Compression { get; private set; }
+        
         public DateTime Created { get; } = DateTime.UtcNow;
         private static readonly TimeSpan PingTimeOut = TimeSpan.FromSeconds(5);
         
         public DateTime LastAccessed { get; private set; } 
+        
+        
+        public TimeSpan Latency { get; private set; }
+        
+        public DateTime SetResultMoment = DateTime.UtcNow;
         
         public NodeSession(string location, DbInstance dbInstance)
         {
@@ -48,7 +55,7 @@ namespace MyNoSqlServer.Domains.Nodes
 
 
             Id = sessionId;
-            
+
             _events.Clear();
             _currentRequestId = -1;
             _subscribedToTables.Clear();
@@ -102,12 +109,14 @@ namespace MyNoSqlServer.Domains.Nodes
             //ToDo - Double Check it
             _eventInProcess = null;
             _currentRequestId = requestId;
+            LastAccessed = DateTime.UtcNow;
+
+            Latency = LastAccessed - SetResultMoment;
 
 
             if (_events.Count == 0)
             {
                 _awaitingTask = new TaskCompletionSource<SyncTransactionGrpcModel>();
-                LastAccessed = DateTime.UtcNow;
                 return new ValueTask<SyncTransactionGrpcModel>(_awaitingTask.Task);
             }
 
@@ -124,6 +133,7 @@ namespace MyNoSqlServer.Domains.Nodes
             var awaitingTask = _awaitingTask;
             _awaitingTask = null;
             awaitingTask.SetResult(response);
+            SetResultMoment = DateTime.UtcNow;
         }
 
         private void SetTaskException(Exception e)
@@ -134,6 +144,7 @@ namespace MyNoSqlServer.Domains.Nodes
             var awaitingTask = _awaitingTask;
             _awaitingTask = null;
             awaitingTask.SetException(e);
+            SetResultMoment = DateTime.UtcNow;
         }
         
 
@@ -159,9 +170,10 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
 
-        public ValueTask<SyncTransactionGrpcModel> ProcessAsync(string sessionId, long requestId)
+        public ValueTask<SyncTransactionGrpcModel> ProcessAsync(string sessionId, long requestId, bool compression)
         {
             LastAccessed = DateTime.UtcNow;
+            Compression = compression;
             
             lock (_lockObject)
             {

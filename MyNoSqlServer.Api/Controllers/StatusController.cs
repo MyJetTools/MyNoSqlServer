@@ -31,7 +31,9 @@ namespace MyNoSqlServer.Api.Controllers
                 {
                     location = itm.Location,
                     lastAccessed =  (dt - itm.LastAccessed).ToString("c"),
-                    connected = (dt - itm.Created).ToString("c")
+                    connected = (dt - itm.Created).ToString("c"),
+                    latency = itm.Latency.ToString("c"),
+                    compress = itm.Compression
                     
                 }),
                 readers = connections.Select(itm => ReaderApiModel.Create(itm as DataReaderTcpService))

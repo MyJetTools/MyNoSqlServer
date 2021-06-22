@@ -22,10 +22,10 @@ var HtmlSubscribersGenerator = /** @class */ (function () {
         return html;
     };
     HtmlSubscribersGenerator.generateNodesHtml = function (data) {
-        var html = "<table class=\"table table-striped\"><tr><th>Location</th><th>Connected</th><th>LastAccess</th></tr>";
+        var html = "<table class=\"table table-striped\"><tr><th>Location</th><th>Connected</th><th>LastAccess</th><th>Compress</th><th>Latency</th></tr>";
         for (var _i = 0, data_2 = data; _i < data_2.length; _i++) {
             var itm = data_2[_i];
-            html += '<tr><td>' + itm.location + '</td><td>' + itm.connected + '</td><td>' + itm.lastAccessed + '</td></tr>';
+            html += '<tr><td>' + itm.location + '</td><td>' + itm.connected + '</td><td>' + itm.lastAccessed + '</td><td>' + itm.compress + '</td><td>' + itm.latency + '</td></tr>';
         }
         html += '</table>';
         return html;

@@ -11,6 +11,8 @@ interface INodeStatus {
     location: string,
     lastAccessed: string,
     connected: string,
+    compress: boolean
+    latency: string
 }
 
 interface ILocationStatus{

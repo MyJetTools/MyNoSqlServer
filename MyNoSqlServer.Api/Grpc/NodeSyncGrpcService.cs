@@ -14,7 +14,7 @@ namespace MyNoSqlServer.Api.Grpc
             {
                 Console.WriteLine("New Sync Request: " +Newtonsoft.Json.JsonConvert.SerializeObject(request));
                 var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
-                return session.ProcessAsync(request.SessionId, request.RequestId);
+                return session.ProcessAsync(request.SessionId, request.RequestId, false);
             }
             catch (Exception e)
             {
@@ -30,7 +30,7 @@ namespace MyNoSqlServer.Api.Grpc
             try
             {
                 var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
-                var result = await session.ProcessAsync(request.SessionId, request.RequestId);
+                var result = await session.ProcessAsync(request.SessionId, request.RequestId, true);
                 return result.ToProtobufWrapper(true);
             }
             catch (Exception e)
