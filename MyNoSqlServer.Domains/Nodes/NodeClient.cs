@@ -44,7 +44,12 @@ namespace MyNoSqlServer.Domains.Nodes
 
 
                     if (grpcResponse.TableName == null)
+                    {
+                        Console.WriteLine("Node Client Got Ping");
+                        requestId++;
                         continue;
+                    }
+                        
                     
                     Console.WriteLine($"grpcResponse got table {grpcResponse.TableName} updates");
                     
