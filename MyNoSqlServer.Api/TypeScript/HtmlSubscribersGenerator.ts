@@ -4,7 +4,7 @@ class HtmlSubscribersGenerator{
     
     public static generateHtml(data:IStatus):string {
         
-        var masterNode = data.masterNode ? "  <h1>Connected to: "+data.masterNode+"</h1>" : "";
+        let masterNode = data.masterNode ? "  Connected to master node: "+data.masterNode : "";
 
         return '<h3>Location: ' + data.location.id + ' Compress:' + data.location.compress + masterNode+'</h3><hr/>'
             + '<h1>Connected Nodes</h1>'
