@@ -19,6 +19,11 @@ namespace MyNoSqlServer.Api.Controllers
             var nodeSessions = ServiceLocator.NodeSessionsList.GetAll();
 
             var dt = DateTime.UtcNow;
+
+            if (ServiceLocator.NodeClient == null)
+            {
+                Console.WriteLine("NodeClient is null");
+            }
             
             var result = new
             {

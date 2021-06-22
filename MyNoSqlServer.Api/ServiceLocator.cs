@@ -152,7 +152,7 @@ namespace MyNoSqlServer.Api
             if (settingsModel.IsNode())
             {
                 AppLogs.WriteInfo(null, "Start", null, "Plugged Grpc Node Client");
-                sp.GetRequiredService<NodeClient>().Start();
+                NodeClient.Start();
             }
             else
             {

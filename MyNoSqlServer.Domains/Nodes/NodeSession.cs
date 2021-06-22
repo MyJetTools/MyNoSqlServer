@@ -191,7 +191,7 @@ namespace MyNoSqlServer.Domains.Nodes
 
 
 
-        private static readonly SyncTransactionGrpcModel PingResponse = new ();
+        private SyncTransactionGrpcModel _pingResponse;
         public void SendPing()
         {
             lock (_lockObject)
@@ -201,7 +201,12 @@ namespace MyNoSqlServer.Domains.Nodes
 
                 if (DateTime.UtcNow - LastAccessed > PingTimeOut)
                 {
-                    SetTaskResult(PingResponse);
+                    _pingResponse ??= new SyncTransactionGrpcModel
+                    {
+                        RemoteLocation = MyLocation
+                    };
+                    
+                    SetTaskResult(_pingResponse);
                 }
                     
             }
