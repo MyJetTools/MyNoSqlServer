@@ -24,7 +24,8 @@ namespace MyNoSqlServer.Domains.Nodes
 
         private bool _disposed;
         
-        public string Location { get; }
+        public string RemoteLocation { get; }
+        public string MyLocation { get; }
         public string Id { get; private set; }
         
         public bool Compression { get; private set; }
@@ -39,11 +40,12 @@ namespace MyNoSqlServer.Domains.Nodes
         
         public DateTime SetResultMoment = DateTime.UtcNow;
         
-        public NodeSession(string location, DbInstance dbInstance)
+        public NodeSession(string remoteLocation, string myLocation, DbInstance dbInstance)
         {
             _dbInstance = dbInstance;
-            Location = location;
+            RemoteLocation = remoteLocation;
             LastAccessed = DateTime.UtcNow;
+            MyLocation = myLocation;
         }
 
 
@@ -121,7 +123,7 @@ namespace MyNoSqlServer.Domains.Nodes
             }
 
             var nextEvent = _events.Dequeue();
-            _eventInProcess = nextEvent.ToSyncTransactionGrpcModel(Location);
+            _eventInProcess = nextEvent.ToSyncTransactionGrpcModel(MyLocation);
             
             return new ValueTask<SyncTransactionGrpcModel>(_eventInProcess);
         }
@@ -155,7 +157,7 @@ namespace MyNoSqlServer.Domains.Nodes
                 if (!_subscribedToTables.ContainsKey(@event.TableName))
                     return;
                 
-                if (@event.Attributes.HasLocation(Location))
+                if (@event.Attributes.HasLocation(RemoteLocation))
                     return;
                 
                 _events.Enqueue(@event);
@@ -164,7 +166,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     return;
 
                 var nextEvent = _events.Dequeue();
-                _eventInProcess = nextEvent.ToSyncTransactionGrpcModel(Location);
+                _eventInProcess = nextEvent.ToSyncTransactionGrpcModel(MyLocation);
                 SetTaskResult(_eventInProcess);
             }
         }

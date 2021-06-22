@@ -25,16 +25,16 @@ namespace MyNoSqlServer.Domains.Nodes
             _dbInstance = dbInstance;
         }
 
-        public NodeSession GetOrCreate(string location)
+        public NodeSession GetOrCreate(string remoteLocation, string myLocation)
         {
             lock (_lockObject)
             {
-                if (_sessionsByLocation.TryGetValue(location, out var result))
+                if (_sessionsByLocation.TryGetValue(remoteLocation, out var result))
                     return result;
 
-                result = new NodeSession(location, _dbInstance);
+                result = new NodeSession(remoteLocation,  myLocation, _dbInstance);
 
-                _sessionsByLocation.Add(location, result);
+                _sessionsByLocation.Add(remoteLocation, result);
                 _sessions = _sessionsByLocation.Values.ToList();
 
                 return result;
@@ -89,7 +89,7 @@ namespace MyNoSqlServer.Domains.Nodes
             {
                 foreach (var session in sessionsToGc)
                 {
-                    if (_sessionsByLocation.Remove(session.Location))
+                    if (_sessionsByLocation.Remove(session.RemoteLocation))
                         hasDisposed = true;
                     
                     session.Dispose();

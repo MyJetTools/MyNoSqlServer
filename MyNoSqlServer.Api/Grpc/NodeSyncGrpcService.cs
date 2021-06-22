@@ -13,7 +13,7 @@ namespace MyNoSqlServer.Api.Grpc
             try
             {
                 Console.WriteLine("New Sync Request: " +Newtonsoft.Json.JsonConvert.SerializeObject(request));
-                var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
+                var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location, Startup.Settings.Location);
                 return session.ProcessAsync(request.SessionId, request.RequestId, false);
             }
             catch (Exception e)
@@ -29,7 +29,7 @@ namespace MyNoSqlServer.Api.Grpc
 
             try
             {
-                var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
+                var session = ServiceLocator.NodeSessionsList.GetOrCreate(request.Location, Startup.Settings.Location);
                 var result = await session.ProcessAsync(request.SessionId, request.RequestId, true);
                 return result.ToProtobufWrapper(true);
             }

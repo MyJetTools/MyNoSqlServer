@@ -39,7 +39,7 @@ namespace MyNoSqlServer.Api.Grpc
         
         public ValueTask<PingGrpcResponse> PingAsync(PingGrpcRequest request)
         {
-            ServiceLocator.NodeSessionsList.GetOrCreate(request.Location);
+            ServiceLocator.NodeSessionsList.GetOrCreate(request.Location, Startup.Settings.Location);
             return new ValueTask<PingGrpcResponse>(new PingGrpcResponse
             {
                 Location = Startup.Settings.Location

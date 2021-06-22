@@ -19,7 +19,7 @@ namespace MyNoSqlServer.Domains.Nodes
         private readonly string _sessionId;
         
         
-        public string RemoteNode { get; private set; }
+        public string RemoteLocation { get; private set; }
 
         public NodeClient(SyncTransactionHandler syncTransactionHandler,
             IMyNoSqlServerNodeSynchronizationGrpcService grpcService, ISettingsLocation settingsLocation, IMyNoSqlNodePersistenceSettings settings)
@@ -72,7 +72,7 @@ namespace MyNoSqlServer.Domains.Nodes
 
                     var grpcResponse = await SyncAsync(requestId);
 
-                    RemoteNode = grpcResponse.RemoteLocation;
+                    RemoteLocation = grpcResponse.RemoteLocation;
 
                     if (grpcResponse.TableName == null)
                     {
@@ -81,7 +81,7 @@ namespace MyNoSqlServer.Domains.Nodes
                     }
                         
                     
-                    Console.WriteLine($"grpcResponse got table {grpcResponse.TableName} updates");
+                    Console.WriteLine($"grpcResponse got table {grpcResponse.TableName} updates from location {RemoteLocation}. ");
                     
                     if (grpcResponse.TableAttributes != null)
                     {

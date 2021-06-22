@@ -22,7 +22,7 @@ namespace MyNoSqlServer.Api.Controllers
             
             var result = new
             {
-                masterNode = ServiceLocator.NodeClient?.RemoteNode,
+                masterNode = ServiceLocator.NodeClient?.RemoteLocation,
                 location = new
                 {
                    id = Startup.Settings.Location,
@@ -30,7 +30,7 @@ namespace MyNoSqlServer.Api.Controllers
                 },
                 nodes = nodeSessions.Select(itm => new
                 {
-                    location = itm.Location,
+                    location = itm.RemoteLocation,
                     lastAccessed =  (dt - itm.LastAccessed).ToString("c"),
                     connected = (dt - itm.Created).ToString("c"),
                     latency = itm.Latency.ToString("c"),
