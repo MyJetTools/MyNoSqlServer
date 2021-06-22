@@ -129,6 +129,9 @@ namespace MyNoSqlServer.Domains.Nodes
 
         private void SetTaskException(Exception e)
         {
+            if (_awaitingTask == null)
+                return;
+            
             var awaitingTask = _awaitingTask;
             _awaitingTask = null;
             awaitingTask.SetException(e);
