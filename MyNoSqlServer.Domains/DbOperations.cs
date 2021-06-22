@@ -49,11 +49,12 @@ namespace MyNoSqlServer.Domains
                 var foundTable = writeAccess.TryGetTable(tableName);
 
                 if (foundTable != null)
-                    return (false, null);
+                    return (false, foundTable);
 
                 var newTable = writeAccess.CreateTable(tableName, persistTable, maxPartitionsAmount);
                 return (true, newTable);
             });
+            
 
             var set = dbTable.SetAttributes(persistTable, maxPartitionsAmount);
 

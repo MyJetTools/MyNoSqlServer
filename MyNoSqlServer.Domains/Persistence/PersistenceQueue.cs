@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Persistence
@@ -34,7 +35,7 @@ namespace MyNoSqlServer.Domains.Persistence
                     _eventsToPersist.Add(transactionEvent.TableName, new List<ITransactionEvent> { transactionEvent });
 
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"Enqueued persistence message. Table {transactionEvent.TableName}. {transactionEvent.GetType()} {transactionEvent.Attributes.Locations}");
+                Console.WriteLine($"Enqueued persistence message. Table {transactionEvent.TableName}. {transactionEvent.GetType()} {transactionEvent.GetLocationsAsString()}");
                 Console.ResetColor();
             }
         }
@@ -49,5 +50,28 @@ namespace MyNoSqlServer.Domains.Persistence
             }
         }
         
+    }
+
+
+    public static class TransactionEventUtils
+    {
+        public static string GetLocationsAsString(this ITransactionEvent transactionEvent)
+        {
+            if (transactionEvent.Attributes == null)
+                return "Attribute is null";
+
+            if (transactionEvent.Attributes.Locations == null)
+                return "Null";
+
+            var result = new StringBuilder();
+
+            foreach (var location in transactionEvent.Attributes.Locations)
+            {
+                result.Append(location + ";");
+            }
+
+            return result.ToString();
+
+        }
     }
 }

@@ -49,9 +49,18 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
             ProtoBuf.Serializer.Serialize(memStream, model);
 
             var payload = memStream.ToArray();
+            
+            
+            //ToDo - Remove Debug logs
+            Console.WriteLine($"Non compressed size: {payload.Length}");
 
             if (_persistenceSettings.CompressData)
+            {
                 payload = MyNoSqlServerDataCompression.ZipPayload(payload);
+                
+                Console.WriteLine($"Compressed size: {payload.Length}");
+            }
+                
 
 
             return payload.SplitPayload(_persistenceSettings.MaxPayloadSize).Select(chunk => new PayloadWrapperGrpcModel

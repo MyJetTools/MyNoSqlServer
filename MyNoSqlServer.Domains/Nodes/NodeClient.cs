@@ -87,6 +87,7 @@ namespace MyNoSqlServer.Domains.Nodes
                 catch (Exception e)
                 {
                     Console.WriteLine("NodeClient: " + e);
+                    await Task.Delay(1000);
                 }
                 
             }
