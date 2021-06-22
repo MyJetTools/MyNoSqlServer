@@ -2,7 +2,6 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Json;
 using NUnit.Framework;
 
@@ -31,9 +30,8 @@ namespace MyNoSqlServer.Tests
             
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable", false, TestUtils.GetTestEventAttributes());
+            var table = dbOperations.CreateTableIfNotExists("mytable",
+                false,  0,TestUtils.GetTestEventAttributes());
 
             var now = DateTime.UtcNow;
 

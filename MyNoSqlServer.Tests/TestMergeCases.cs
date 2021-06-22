@@ -2,7 +2,6 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Json;
 using NUnit.Framework;
 
@@ -40,9 +39,7 @@ namespace MyNoSqlServer.Tests
 
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable", false, TestUtils.GetTestEventAttributes());
+            var table = dbOperations.CreateTableIfNotExists("mytable", false,  0,TestUtils.GetTestEventAttributes());
 
             var rawClass1 = new MergeEntity1
             {
@@ -69,7 +66,7 @@ namespace MyNoSqlServer.Tests
 
             var opResult = dbOperations
                 .Merge(table,
-                    memory2,
+                    memory2.ParseDynamicEntity(),
                     DateTime.UtcNow, 
                     TestUtils.GetTestEventAttributes());
             
@@ -88,9 +85,8 @@ namespace MyNoSqlServer.Tests
 
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
 
-            var table = dbInstance.CreateTableIfNotExists("mytable", false, 
+            var table = dbOperations.CreateTableIfNotExists("mytable", false, 0,
                 TestUtils.GetTestEventAttributes());
 
             var rawClass1 = new MergeEntity1
@@ -116,7 +112,7 @@ namespace MyNoSqlServer.Tests
 
             var mergeDateTime1 = DateTime.UtcNow.AddSeconds(1);
 
-            var opResult1 = dbOperations.Merge(table, insertedEntity1.ToMemory(), 
+            var opResult1 = dbOperations.Merge(table, insertedEntity1.ToMemory().ParseDynamicEntity(), 
                 mergeDateTime1, 
                 TestUtils.GetTestEventAttributes());
 
@@ -125,7 +121,7 @@ namespace MyNoSqlServer.Tests
              Assert.AreEqual(mergeDateTime1.ToTimeStampString(), entity.TimeStamp);
             
             var mergeDateTime2 = DateTime.UtcNow.AddSeconds(1);
-            var opResult2 = dbOperations.Merge(table, insertedEntity2.ToMemory(), 
+            var opResult2 = dbOperations.Merge(table, insertedEntity2.ToMemory().ParseDynamicEntity(), 
                  mergeDateTime2, 
                  TestUtils.GetTestEventAttributes());
 

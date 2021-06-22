@@ -11,15 +11,17 @@ namespace MyNoSqlServer.AzureStorage
     {
         private readonly CloudBlobContainer _container;
 
-        public AzurePartitionsLoader(CloudBlobContainer container, bool persist)
+        public AzurePartitionsLoader(CloudBlobContainer container, bool persist, int maxPartitionsAmount)
         {
             _container = container;
             Persist = persist;
+            MaxPartitionsAmount = maxPartitionsAmount;
         }
 
         public string TableName => _container.Name;
         public bool Persist { get; }
-        
+        public int MaxPartitionsAmount { get; }
+
         public async IAsyncEnumerable<PartitionSnapshot> GetPartitionsAsync()
         {
             await foreach (var blockBlob in _container.GetListOfBlobsAsync())

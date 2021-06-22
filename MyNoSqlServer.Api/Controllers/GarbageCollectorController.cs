@@ -13,12 +13,12 @@ namespace MyNoSqlServer.Api.Controllers
             [FromQuery] [Required] int maxAmount, [FromQuery] string syncPeriod)
         {
             
-            var (getTableResult, table) = this.GetTable(tableName);
+            var (getTableResult, dbtable) = this.GetTable(tableName);
             
             if (getTableResult != null)
                 return getTableResult;
 
-            table.KeepMaxPartitions(maxAmount, HttpContext.GetRequestAttributes(syncPeriod));
+            ServiceLocator.DbOperations.KeepMaxPartitionsAmount(dbtable, maxAmount, HttpContext.GetRequestAttributes(syncPeriod));
 
             return Ok("Ok");
         }
@@ -35,7 +35,8 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
 
-            table.CleanAndKeepLastRecords(partitionKey, maxAmount, HttpContext.GetRequestAttributes(syncPeriod));
+            ServiceLocator.DbOperations.CleanAndKeepLastRecords(table, partitionKey, maxAmount,
+                HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.ResponseOk();
         }

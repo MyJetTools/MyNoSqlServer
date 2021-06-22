@@ -15,7 +15,11 @@ namespace MyNoSqlServer.Grpc
         public bool PersistTable { get; set; }
         
         [DataMember(Order = 3)]
+        public int? MaxPartitionsAmount { get; set; }
+        
+        [DataMember(Order = 4)]
         public MyNoSqlServerGrpcHeader[] Headers { get; set; }
+
 
     }
 
@@ -29,6 +33,9 @@ namespace MyNoSqlServer.Grpc
         public int? MaxPartitionsAmount { get; set; }
         
         [DataMember(Order = 3)]
+        public bool PersistTable { get; set; }
+        
+        [DataMember(Order = 4)]
         public MyNoSqlServerGrpcHeader[] Headers { get; set; }
     }
 }

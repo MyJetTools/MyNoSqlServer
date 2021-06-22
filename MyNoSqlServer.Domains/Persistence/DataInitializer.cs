@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Domains.Db;
 
 namespace MyNoSqlServer.Domains.Persistence
@@ -9,35 +10,36 @@ namespace MyNoSqlServer.Domains.Persistence
     public class DataInitializer 
     {
         private readonly DbInstance _dbInstance;
-        private readonly ITablesPersistenceReader _tablePersistenceStorage;
         private readonly IPersistenceShutdown _persistenceShutdown;
         private readonly PersistenceQueue _persistenceQueue;
 
 
-        public DataInitializer(DbInstance dbInstance, ITablesPersistenceReader tablePersistenceStorage, 
+        public DataInitializer(DbInstance dbInstance,
             IPersistenceShutdown persistenceShutdown, PersistenceQueue persistenceQueue)
         {
             _dbInstance = dbInstance;
-            _tablePersistenceStorage = tablePersistenceStorage;
             _persistenceShutdown = persistenceShutdown;
             _persistenceQueue = persistenceQueue;
         }
-        
-        public async Task LoadSnapshotsAsync()
+
+        public async Task LoadSnapshotsAsync(ITablesPersistenceReader tablesPersistenceReader)
         {
 
-            await foreach (var tableLoader in _tablePersistenceStorage.LoadTablesAsync())
+            await foreach (var tableLoader in tablesPersistenceReader.LoadTablesAsync())
             {
                 try
                 {
                     Console.WriteLine("Restoring table: '"+tableLoader.TableName+"'");
                     var started = DateTime.UtcNow;
-                    var table = _dbInstance.RestoreTable(tableLoader.TableName, tableLoader.Persist);
+
+                    var dbTable = _dbInstance.GetWriteAccess(writeAccess => writeAccess.CreateTable(
+                        tableLoader.TableName, tableLoader.Persist,
+                        tableLoader.MaxPartitionsAmount));
 
                     if (tableLoader.Persist)
                     {
                         await foreach (var partitionSnapshot in tableLoader.GetPartitionsAsync())
-                            table.GetWriteAccess(writeAccess =>
+                            dbTable.GetWriteAccess(writeAccess =>
                             {
                                 writeAccess.InitPartition(partitionSnapshot.PartitionKey,
                                     partitionSnapshot.GetRecords().ToList());
@@ -51,10 +53,10 @@ namespace MyNoSqlServer.Domains.Persistence
                 {
                     Console.WriteLine(
                         $"Snapshots  for table {tableLoader.TableName} could not be loaded: " + e.Message);
-                    throw;//Todo - remove after debug
                 } 
             }
-            
+
+            //ToDo - Since we are not loading tables in Node Mode - we have to establish flag - initialized
         }
 
 

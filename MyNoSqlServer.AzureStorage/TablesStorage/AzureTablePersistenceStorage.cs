@@ -131,7 +131,7 @@ namespace MyNoSqlServer.AzureStorage.TablesStorage
 
                 var tableMetadata = await TableMetadataSaver.GetTableMetadataAsync(container);
 
-                var loader = new AzurePartitionsLoader(container, tableMetadata.Persist);
+                var loader = new AzurePartitionsLoader(container, tableMetadata.Persist, tableMetadata.MaxPartitionsAmount);
 
                 yield return loader;
             }

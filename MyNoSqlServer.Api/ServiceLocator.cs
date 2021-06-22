@@ -147,18 +147,19 @@ namespace MyNoSqlServer.Api
 
         }
 
-        public static void Start(IServiceProvider sp)
+        public static void Start(IServiceProvider sp, SettingsModel settingsModel)
         {
-            
-            DataInitializer.LoadSnapshotsAsync().Wait();
-            
-
-            if (NodeClient != null)
+            if (settingsModel.IsNode())
             {
-                AppLogs.WriteInfo(null, "Start", null, "Plugged Grpc Node Client"); 
-                sp.GetService<NodeClient>()?.Start();    
+                AppLogs.WriteInfo(null, "Start", null, "Plugged Grpc Node Client");
+                sp.GetRequiredService<NodeClient>().Start();
             }
-            
+            else
+            {
+                DataInitializer.LoadSnapshotsAsync(sp.GetRequiredService<ITablesPersistenceReader>()).Wait();
+            }
+
+
             TimerOneMinute.Register("GC transactions", () =>
             {
                 PostTransactionsList.GcTransactions();
@@ -167,7 +168,7 @@ namespace MyNoSqlServer.Api
             
             TimerOneMinute.Register("GC TableRecords", () =>
             {
-                DbInstance.Gc();
+                DbOperations.Gc();
                 return new ValueTask();
             });
 

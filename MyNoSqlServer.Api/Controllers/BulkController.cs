@@ -94,8 +94,7 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
             
-
-            table.BulkDelete(partitionsAndRows, HttpContext.GetRequestAttributes(syncPeriod));
+            ServiceLocator.DbOperations.BulkDelete(table, partitionsAndRows, HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.ResponseOk();
         }

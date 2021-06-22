@@ -89,10 +89,16 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         }
 
 
-        public void Clear()
+        public bool Clear()
         {
+
+            if (_partitions.Count == 0)
+                return false;
+            
             _partitions.Clear();
             _partitionKeys = null;
+
+            return true;
         }
         
         public IEnumerable<DbRow> ApplyQuery(IEnumerable<QueryCondition> queryConditions)

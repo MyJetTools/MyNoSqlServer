@@ -23,6 +23,10 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         IReadOnlyList<DbRow> GetAllRows();
 
         DbRow DeleteRow(string rowKey);
+        
+        IReadOnlyList<DbRow> CleanAndKeepLastRecords(int amount);
+
+        DbRow TryGetRow(string rowKey);
     }
 
 
@@ -31,6 +35,8 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         string PartitionKey { get; }
 
         IReadOnlyList<DbRow> GetAllRows();
+        
+        DbRow TryGetRow(string rowKey);
     }
     
     /// <summary>
@@ -85,10 +91,12 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             _rowsAsList = null;
         }
 
-
-
-
-        public DbRow TryGetRow(string rowKey)
+        DbRow IPartitionWriteAccess.TryGetRow(string rowKey)
+        {
+            return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;
+        }
+        
+        DbRow IPartitionReadAccess.TryGetRow(string rowKey)
         {
             return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;
         }
@@ -132,6 +140,8 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             _rowsAsList = null;
             return result;
         }
+
+
 
         public void RestoreRecord(IMyNoSqlDbEntity entityInfo, IMyMemory data)
         {
@@ -178,8 +188,9 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         {
             _rows.Clear();
         }
+        
             
-        public IReadOnlyList<DbRow> CleanAndKeepLastRecords(int amount)
+        IReadOnlyList<DbRow> IPartitionWriteAccess.CleanAndKeepLastRecords(int amount)
         {
             
             if (amount<0)

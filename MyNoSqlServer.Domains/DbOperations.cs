@@ -4,6 +4,7 @@ using System.Linq;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db;
+using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
@@ -22,10 +23,108 @@ namespace MyNoSqlServer.Domains
             _syncEventsDispatcher = syncEventsDispatcher;
         }
 
+        public bool CreateTable(string tableName, bool persistTable, int maxPartitionsAmount, TransactionEventAttributes attributes)
+        {
+            var (result, dbTable) = _dbInstance.GetWriteAccess(writeAccess =>
+            {
+                var foundTable = writeAccess.TryGetTable(tableName);
+
+                if (foundTable != null)
+                    return (false, null);
+
+                var newTable = writeAccess.CreateTable(tableName, persistTable, maxPartitionsAmount);
+                return (true, newTable);
+            });
+
+            if (result && attributes != null)
+                _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, dbTable));
+
+            return result;
+        }
+        
+        public DbTable CreateTableIfNotExists(string tableName, bool persistTable, int maxPartitionsAmount, TransactionEventAttributes attributes)
+        {
+            var (created, dbTable) = _dbInstance.GetWriteAccess(writeAccess =>
+            {
+                var foundTable = writeAccess.TryGetTable(tableName);
+
+                if (foundTable != null)
+                    return (false, null);
+
+                var newTable = writeAccess.CreateTable(tableName, persistTable, maxPartitionsAmount);
+                return (true, newTable);
+            });
+
+            var set = dbTable.SetAttributes(persistTable, maxPartitionsAmount);
+
+            if ((created || set) && attributes != null)
+                _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, dbTable));
+
+            return dbTable;
+        }
+
+        public DbTable GetOrCreateTable(string tableName, bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
+        {
+            var result = _dbInstance.TryGetTable(tableName);
+            
+            if (result != null)
+                return result;
+
+            var tableCreated = false;
+            
+            result = _dbInstance.GetWriteAccess(writeAccess =>
+            {
+                var dbTable = writeAccess.TryGetTable(tableName);
+
+                tableCreated = true;
+
+                return dbTable ?? writeAccess.CreateTable(tableName, persist, maxPartitionsAmount);
+            });
+
+            if (tableCreated && attributes != null)
+                _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, result));
+
+            return result;
+
+        }
+
 
         public void SetTableAttributes(DbTable dbTable, bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
         {
-            dbTable.SetAttributes(persist, maxPartitionsAmount, attributes);
+            var set = dbTable.SetAttributes(persist, maxPartitionsAmount);
+
+            if (set && attributes != null)
+                _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, dbTable));
+        }
+        
+        public OperationResult DeleteRow(DbTable dbTable, string partitionKey, string rowKey, TransactionEventAttributes attributes)
+        {
+            return dbTable.GetWriteAccess(writeAccess =>
+            {
+                var partition = writeAccess.TryGetPartitionWriteAccess(partitionKey);
+                if (partition == null)
+                    return OperationResult.RowNotFound;
+
+                var row = partition.DeleteRow(rowKey);
+
+                if (row == null)
+                    return OperationResult.RowNotFound;
+                
+                if (attributes != null)
+                    _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRow(attributes, dbTable, row));
+                
+                return OperationResult.Ok;
+            });
+        }
+
+
+        public void DeleteRows(DbTable dbTable, string partitionKey,
+            IEnumerable<string> rowKeys, TransactionEventAttributes attributes)
+        {
+            var deletedRows = dbTable.GetWriteAccess(writeAccess => writeAccess.DeleteRows(partitionKey, rowKeys));
+
+            if (deletedRows != null && attributes != null)
+                _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRows(attributes, dbTable, deletedRows));   
         }
    
         public OperationResult Insert(DbTable table, IMyMemory myMemory,
@@ -159,17 +258,17 @@ namespace MyNoSqlServer.Domains
                 {
                     case ICleanTableTransactionAction cleanTableTransaction:
                             table = tables[cleanTableTransaction.TableName];
-                            table.Clear(attributes);
+                            Clear(table, attributes);
                             break;
                     case IDeletePartitionsTransactionAction cleanPartitionsTransaction:
                     {
                         table = tables[cleanPartitionsTransaction.TableName];
-                        table.DeletePartitions(cleanPartitionsTransaction.PartitionKeys, attributes);
+                        DeletePartitions(table, cleanPartitionsTransaction.PartitionKeys, attributes);
                         break;
                     }
                     case IDeleteRowsTransactionAction deleteRows:
                         table = tables[deleteRows.TableName];
-                        table.DeleteRows(deleteRows.PartitionKey, deleteRows.RowKeys, attributes);
+                        DeleteRows(table, deleteRows.PartitionKey, deleteRows.RowKeys, attributes);
                         break;
 
                     case IInsertOrReplaceEntitiesTransactionAction insertOrUpdate:
@@ -200,50 +299,83 @@ namespace MyNoSqlServer.Domains
 
         }
         
-        public OperationResult Replace(DbTable table, IMyMemory myMemory, 
+        public OperationResult Replace(DbTable dbTable, IMyMemory myMemory, 
             DateTime now, TransactionEventAttributes attributes)
         {
             
             var entity = myMemory.ParseDynamicEntity();
 
-            var result = table.Replace(entity, now, attributes);
-            
-            if (result != OperationResult.Ok)
-                return result;
-            
+            return dbTable.GetWriteAccess(writeAccess =>
+            {
+                var partition = writeAccess.TryGetPartitionWriteAccess(entity.PartitionKey);
+                if (partition == null)
+                    return OperationResult.RecordNotFound;
 
-            return OperationResult.Ok;
+                var record = partition.TryGetRow(entity.RowKey);
+
+                if (record == null)
+                    return OperationResult.RecordNotFound;
+
+                if (record.TimeStamp != entity.TimeStamp)
+                    return OperationResult.RecordChangedConcurrently;
+
+                record.Replace(entity, now);
+
+                if (attributes != null)
+                    _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
+
+                return OperationResult.Ok;
+            });
+
         }
 
+        /*
         public OperationResult Merge(DbTable table, IMyMemory myMemory,
             DateTime now, TransactionEventAttributes attributes)
         {
             var entity = myMemory.ParseDynamicEntity();
             return table.Merge(entity, now, attributes);
         }
-
-        public OperationResult DeleteRow(DbTable table, string partitionKey, string rowKey, 
-            TransactionEventAttributes attributes)
+*/
+        
+        public void CleanAndKeepLastRecords(DbTable dbTable, string partitionKey,
+            int amount, TransactionEventAttributes attributes)
         {
-            return table.DeleteRow(partitionKey, rowKey, attributes);
-        }
 
+            dbTable.GetWriteAccess(writeAccess =>
+            {
+                var partition = writeAccess.TryGetPartitionWriteAccess(partitionKey);
+                if (partition == null)
+                    return;
 
-        public OperationResult CleanAndKeepLastRecords(DbTable table, string partitionKey, int amount, 
-            TransactionEventAttributes attributes)
-        {
-             table.CleanAndKeepLastRecords(partitionKey, amount, attributes);
-            return OperationResult.Ok;
-        }
+                var dbRows = partition.CleanAndKeepLastRecords(amount);
 
-        public void DeletePartitions(string tableName, string[] partitionKeys, TransactionEventAttributes attributes)
-        {
-            var table = _dbInstance.TryGetTable(tableName);
+                if (attributes != null && dbRows != null)
+                    _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRows(attributes, dbTable, dbRows));
+            });
             
-            if (table == null)
-                return;
+        }
 
-            table.DeletePartitions(partitionKeys, attributes);
+
+        public void DeletePartitions(DbTable table, string[] partitionKeys, TransactionEventAttributes attributes)
+        {
+            table.GetWriteAccess(writeAccess =>
+            {
+                var partitions = writeAccess.DeletePartitions(partitionKeys);
+
+                if (partitions != null)
+                {
+                    if (attributes != null)
+                    {
+                        _syncEventsDispatcher.Dispatch(
+                            InitPartitionsTransactionEvent.AsDeletePartitions(attributes, table, partitions));
+                    }
+
+                }
+
+            });
+
+
         }
 
         public void CleanTableAndBulkInsert(DbTable dbTable, IEnumerable<IMyMemory> itemsAsArray,
@@ -272,8 +404,211 @@ namespace MyNoSqlServer.Domains
             });
 
         }
+        
+        public void Clear(DbTable dbTable, TransactionEventAttributes attributes)
+        {
+            dbTable.GetWriteAccess(writeAccess =>
+            {
+                var cleaned = writeAccess.Clear();
+                
+                if (cleaned && attributes != null)
+                    _syncEventsDispatcher.Dispatch( InitTableTransactionEvent.AsDelete(attributes, dbTable));
+            });
+        }
+        
+        public void KeepMaxPartitionsAmount(DbTable dbTable, int maxPartitionsAmount, TransactionEventAttributes attributes)
+        {
+
+            var partitionsAmount = dbTable.GetReadAccess(readAccess => readAccess.GetPartitionsAmount());
+
+            if (partitionsAmount <= maxPartitionsAmount)
+                return;
+
+            dbTable.GetWriteAccess(writeAccess =>
+            {
+                var partitionsToGc = writeAccess.GetPartitionsToGc(maxPartitionsAmount);
+                
+                List<DbPartition> deleted = null;
+                foreach (var dbPartition in partitionsToGc)
+                {
+                    var deletedPartition = writeAccess.DeletePartition(dbPartition.PartitionKey);
+
+                    if (deletedPartition != null)
+                    {
+                        deleted ??= new List<DbPartition>();
+                        deleted.Add(deletedPartition);
+                    }
+                }
+                
+                if (attributes != null && deleted != null)
+                    _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.AsDeletePartitions(attributes, dbTable, deleted));
+
+            });
+
+        }
+        
+        public OperationResult Replace(DbTable dbTable,
+            DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
+        {
+
+            return dbTable.GetWriteAccess(writeAccess =>
+            {
+                var partition = writeAccess.TryGetPartitionWriteAccess(entity.PartitionKey);
+                if (partition == null)
+                    return OperationResult.RecordNotFound;
+
+                var record = partition.TryGetRow(entity.RowKey);
+
+                if (record == null)
+                    return OperationResult.RecordNotFound;
+
+                if (record.TimeStamp != entity.TimeStamp)
+                    return OperationResult.RecordChangedConcurrently;
+
+                record.Replace(entity, now);
+                
+                if (attributes != null)
+                    _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
+
+                return OperationResult.Ok;
+            });
+
+        }
+        
+        public OperationResult Merge(DbTable dbTable,
+            DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
+        {
+            var dbRow = dbTable.GetReadAccess(readAccess => readAccess.TryGetRow(entity.PartitionKey, entity.RowKey));
+
+            if (dbRow == null)
+                return OperationResult.RecordNotFound;
+
+            if (dbRow.TimeStamp != entity.TimeStamp)
+                return OperationResult.RecordChangedConcurrently;
+
+            var newEntities = dbRow.MergeEntities(entity);
 
 
+            return dbTable.GetWriteAccess(writeAccess =>
+            {
+                var partition = writeAccess.TryGetPartitionWriteAccess(entity.PartitionKey);
+                if (partition == null)
+                    return OperationResult.RecordNotFound;
+
+                var record = partition.TryGetRow(entity.RowKey);
+
+                if (record == null)
+                    return OperationResult.RecordNotFound;
+
+                if (record.TimeStamp != entity.TimeStamp)
+                    return OperationResult.RecordChangedConcurrently;
+
+                record.Replace(newEntities, now);
+                
+                if  (attributes != null)
+                    _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
+
+                return OperationResult.Ok;
+            });
+
+        }
+        
+        
+        public void BulkDelete(DbTable dbTable, Dictionary<string, List<string>> partitionsAndRows, 
+            TransactionEventAttributes attributes)
+        {
+
+            dbTable.GetWriteAccess(writeAccess =>
+            {
+                foreach (var (partitionKey, rowKeys) in partitionsAndRows)
+                {
+                    if (rowKeys == null || rowKeys.Count == 0)
+                    {
+                        var deletedPartition = writeAccess.DeletePartition(partitionKey);
+                        if (deletedPartition != null && attributes != null)
+                            _syncEventsDispatcher.Dispatch(
+                                InitPartitionsTransactionEvent.AsDeletePartition(attributes, dbTable, deletedPartition));
+                    }
+                    else
+                    {
+                        var partition = writeAccess.TryGetPartitionWriteAccess(partitionKey);
+
+                        if (partition != null)
+                        {
+                            List<DbRow> deletedRows = null;
+                            foreach (var rowKey in rowKeys)
+                            {
+                                var dbRow = partition.DeleteRow(rowKey);
+                                if (dbRow != null)
+                                {
+                                    deletedRows ??= new List<DbRow>();
+                                    deletedRows.Add(dbRow);
+                                }
+                            }
+
+                            if (deletedRows != null && attributes != null)
+                                _syncEventsDispatcher.Dispatch(
+                                    DeleteRowsTransactionEvent.AsRows(attributes, dbTable, deletedRows));
+                        }
+                    }
+
+                }
+
+            });
+
+        }
+        
+        //ToDo - UnitTest It
+        public IReadOnlyList<DbRow> GetRecordsByRowKey(DbTable dbTable, string rowKey, int? limit, int? skip)
+        {
+
+            return dbTable.GetReadAccess(readAccess =>
+            {
+                List<DbRow> resultRecords = null;
+
+                var skippedRemains = skip ?? 0;
+
+
+                foreach (var partition in readAccess.GetAllPartitions())
+                {
+
+                    var dbRow = partition.TryGetRow(rowKey);
+
+                    if (skippedRemains > 0)
+                    {
+                        skippedRemains--;
+                        continue;
+                    }
+
+                    if (dbRow != null)
+                    {
+                        resultRecords ??= new List<DbRow>();
+                        resultRecords.Add(dbRow);
+                        
+                        if (limit != null)
+                        {
+                            if (resultRecords.Count >= limit)
+                                return resultRecords;
+                        }
+                    }
+                }
+
+                return (IReadOnlyList<DbRow>)resultRecords ?? Array.Empty<DbRow>();
+
+            });
+            
+        }
+        
+        
+        public void Gc()
+        {
+            foreach (var table in _dbInstance.GetTables())
+            {
+                // ToDo - Attributes = 0 - change it
+                if (table.MaxPartitionsAmount >0)
+                    KeepMaxPartitionsAmount(table, table.MaxPartitionsAmount, null);
+            }
+        }
 
     }
     

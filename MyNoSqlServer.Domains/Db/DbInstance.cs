@@ -3,145 +3,52 @@ using System.Collections.Generic;
 using System.Linq;
 
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Db
 {
-    public class DbInstance
+
+    public interface IDbInstanceWriteAccess
+    {
+        DbTable CreateTable(string tableName, bool persist, int maxPartitionsAmount);
+        DbTable TryGetTable(string tableName);
+
+    }
+    
+    public class DbInstance: IDbInstanceWriteAccess
     {
         private readonly object _lockObject = new ();
         
         private Dictionary<string, DbTable> _tables = new ();
         private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
 
-        private readonly SyncEventsDispatcher _syncEventsDispatcher;
 
-        public DbInstance(SyncEventsDispatcher syncEventsDispatcher)
-        {
-            _syncEventsDispatcher = syncEventsDispatcher;
-        }
-
-        private (DbTable table, bool createdNow) TryToCreateNewTable(string tableName, bool persistTable, TransactionEventAttributes attributes)
-        {
-            DbTable syncCreateTable = null;
-
-            try
-            {
-                lock (_lockObject)
-                {
-
-                    if (_tables.TryGetValue(tableName, out var result))
-                    {
-                        if (result.Persist != persistTable)
-                        {
-                            result.UpdatePersist(persistTable, attributes);
-                            syncCreateTable = result;
-                        }
-                        return (result, false);
-                    }
-
-        
-                    
-                    var tableInstance = DbTable.CreateByRequest(tableName, persistTable, _syncEventsDispatcher);
-
-                    var tables = new Dictionary<string, DbTable>(_tables)
-                    {
-                        {tableInstance.Name, tableInstance}
-                    };
-
-                    _tables = tables;
-
-                    _tablesAsArray = _tables.Values.ToList();
-                    
-                    syncCreateTable = tableInstance;
-
-                    return (tableInstance, true);
-                }
-            }
-            finally
-            {
-              
-                if (syncCreateTable != null)
-                    _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, syncCreateTable));
-            }
-  
-        }
-        
-        public DbTable CreateTableIfNotExists(string tableName, bool persistTable,int maxPartitionsAmount, TransactionEventAttributes attributes)
-        {
-            var tables = _tables;
-
-            if (tables.TryGetValue(tableName, out var foundTable))
-            {
-                if (foundTable.Persist != persistTable || foundTable.MaxPartitionsAmount != maxPartitionsAmount)
-                    foundTable.SetAttributes(persistTable, maxPartitionsAmount, attributes);
-                return foundTable;
-            }
-
-            var createdTable = TryToCreateNewTable(tableName, persistTable, attributes);
-            return createdTable.table;
-        }
-        
-
-        public DbTable CreateTableIfNotExists(string tableName, bool persistTable, TransactionEventAttributes attributes)
-        {
-            var tables = _tables;
-
-            if (tables.TryGetValue(tableName, out var foundTable))
-            {
-                if (foundTable.Persist != persistTable)
-                {
-                    foundTable.UpdatePersist(persistTable, attributes);
-                    
-                }
-
-                return foundTable;
-            }
-
-            var createdTable = TryToCreateNewTable(tableName, persistTable, attributes);
-            return createdTable.table;
-        }
-
-
-        public void SetMaxPartitionsAmount(string tableName, int maxPartitionsAmount, TransactionEventAttributes attributes)
-        {
-            var table = GetTable(tableName);
-            
-            if (table.MaxPartitionsAmount == maxPartitionsAmount)
-                return;
-            
-            table.SetMaxPartitionsAmount(maxPartitionsAmount, attributes);
-     
-        }
-
-        public DbTable RestoreTable(string tableName, bool persist)
+        public T GetWriteAccess<T>(Func<IDbInstanceWriteAccess, T> writeAccess)
         {
             lock (_lockObject)
             {
-                var result = new DbTable(tableName, persist, _syncEventsDispatcher);
-                _tables.Add(tableName, result);
-                _tablesAsArray = _tables.Values.ToList();
-                return result;
+                return writeAccess(this);
             }
         }
 
-        public bool CreateTable(string tableName, bool persistTable, TransactionEventAttributes attributes)
+        DbTable IDbInstanceWriteAccess.CreateTable(string tableName, bool persist, int maxPartitionsAmount)
         {
 
-            var tables = _tables;
-            if (tables.TryGetValue(tableName, out var foundTable))
+
+            if (_tables.TryGetValue(tableName, out var result))
+                return result;
+
+            var tableInstance = new DbTable(tableName, persist, maxPartitionsAmount);
+
+            var tables = new Dictionary<string, DbTable>(_tables)
             {
-                if (foundTable.Persist != persistTable)
-                {
-                    foundTable.UpdatePersist(persistTable, attributes);
-                }
+                { tableInstance.Name, tableInstance }
+            };
 
-                return false;
-            }
+            _tables = tables;
 
-            var createdTable = TryToCreateNewTable(tableName, persistTable, attributes);
+            _tablesAsArray = _tables.Values.ToList();
 
-            return createdTable.createdNow;
+            return tableInstance;
         }
         
         public IReadOnlyList<DbTable> GetTables()
@@ -168,13 +75,6 @@ namespace MyNoSqlServer.Domains.Db
 
         }
 
-        public void Gc()
-        {
-            foreach (var table in _tablesAsArray)
-            {
-                table.Gc();
-            }
-        }
 
         public void ReplaceTable(DbTable table)
         {

@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.Domains.Json;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -91,7 +92,7 @@ namespace MyNoSqlServer.Api.Controllers
 
             var body = await Request.BodyAsIMemoryAsync();
 
-            var result = ServiceLocator.DbOperations.Merge(table, body,
+            var result = ServiceLocator.DbOperations.Merge(table, body.ParseDynamicEntity(),
                 DateTime.UtcNow, HttpContext.GetRequestAttributes(syncPeriod));
 
             return this.GetResult(result);
@@ -149,13 +150,11 @@ namespace MyNoSqlServer.Api.Controllers
             
             if (getTableResult != null)
                 return getTableResult;
-            
 
-
-            var result = ServiceLocator.DbOperations.CleanAndKeepLastRecords(table, partitionKey, amount,
+            ServiceLocator.DbOperations.CleanAndKeepLastRecords(table, partitionKey, amount,
                  HttpContext.GetRequestAttributes(syncPeriod));
             
-            return this.GetResult(result);
+            return this.ResponseOk();
             
         }
 

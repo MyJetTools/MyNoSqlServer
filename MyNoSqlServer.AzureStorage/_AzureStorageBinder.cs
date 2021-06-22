@@ -28,7 +28,7 @@ namespace MyNoSqlServer.AzureStorage
 
             if (blobPersistenceStorage == null)
             {
-                appLogs.WriteInfo(null, "AzureStorageBinder.Init", null, "Instance works and node. Skipping Blob services initialization");
+                appLogs.WriteInfo(null, "AzureStorageBinder.Init", null, "Instance works as a replica node. Skipping Blob services initialization");
                 return;
             }
             

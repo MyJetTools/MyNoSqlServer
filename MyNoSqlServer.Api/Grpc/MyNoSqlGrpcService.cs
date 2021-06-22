@@ -42,16 +42,20 @@ namespace MyNoSqlServer.Api.Grpc
         
         public ValueTask CreateTableIfNotExistsAsync(CreateTableIfNotExistsGrpcRequest request)
         {
-            ServiceLocator.DbInstance.CreateTableIfNotExists(request.TableName, request.PersistTable, 
+            ServiceLocator.DbOperations.CreateTableIfNotExists(request.TableName, request.PersistTable, 
+                request.MaxPartitionsAmount ?? 0,
                 GetGrpcRequestAttributes(request.Headers));
             return new ValueTask();
         }
 
         public ValueTask SetTableAttributesAsync(SetTableAttributesGrpcRequest request)
         {
-            if (request.MaxPartitionsAmount != null)
-                ServiceLocator.DbInstance.SetMaxPartitionsAmount(request.TableName, request.MaxPartitionsAmount.Value,
-                    GetGrpcRequestAttributes(request.Headers));
+
+            var table = ServiceLocator.DbInstance.GetTable(request.TableName);
+
+            ServiceLocator.DbOperations.SetTableAttributes(table, request.PersistTable,
+                request.MaxPartitionsAmount ?? 0,
+                GetGrpcRequestAttributes(request.Headers));
 
             return new ValueTask();
         }
@@ -74,7 +78,7 @@ namespace MyNoSqlServer.Api.Grpc
             else
             if (request.PartitionKey == null && request.RowKey != null)
             {
-                result = table.GetRecordsByRowKey(request.RowKey, request.Limit, request.Skip).Select(itm => itm.ToTransportContract());
+                result = ServiceLocator.DbOperations.GetRecordsByRowKey(table,request.RowKey, request.Limit, request.Skip).Select(itm => itm.ToTransportContract());
             }
             else
             {

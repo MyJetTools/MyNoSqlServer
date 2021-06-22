@@ -4,6 +4,7 @@ using MyNoSqlServer.NodePersistence.Grpc;
 
 namespace MyNoSqlServer.Domains.Persistence.MasterNode
 {
+    /*
     public class MyNoSqlServerTableLoader : ITableLoader
     {
         private readonly IMyNoSqlServerNodePersistenceGrpcService _grpcService;
@@ -54,4 +55,5 @@ namespace MyNoSqlServer.Domains.Persistence.MasterNode
           
         }
     }
+    */
 }

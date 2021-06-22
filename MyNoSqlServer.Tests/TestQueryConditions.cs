@@ -4,7 +4,6 @@ using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Tables;
 using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Query;
-using MyNoSqlServer.Domains.TransactionEvents;
 using NUnit.Framework;
 
 namespace MyNoSqlServer.Tests
@@ -23,7 +22,7 @@ namespace MyNoSqlServer.Tests
         {
             
             
-            var dbTable = DbTable.CreateByRequest("myTable", false, new SyncEventsDispatcher());
+            var dbTable = new DbTable("myTable", false, 0);
 
             var recordToInsert = new TestRecord
             {
@@ -51,7 +50,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false, new SyncEventsDispatcher());
+            var dbTable = new DbTable("myTable", false, 0);
 
             for (var i = 0; i < 100; i++)
             {
@@ -85,7 +84,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeAboveQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false, new SyncEventsDispatcher());
+            var dbTable = new DbTable("myTable", false, 0);
 
             for (var i = 0; i <= 100; i++)
             {

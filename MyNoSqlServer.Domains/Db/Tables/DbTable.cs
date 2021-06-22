@@ -5,7 +5,6 @@ using System.Threading;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
-using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.Query;
 using MyNoSqlServer.Domains.TransactionEvents;
@@ -17,12 +16,15 @@ namespace MyNoSqlServer.Domains.Db.Tables
     {
         IReadOnlyDictionary<string, IReadOnlyList<DbRow>> GetAllRows();
 
-        IEnumerable<DbPartition> GetAllPartitions();
+        IEnumerable<IPartitionReadAccess> GetAllPartitions();
 
         IPartitionReadAccess TryGetPartition(string partitionKey);
 
-    }
+        int GetPartitionsAmount();
 
+        DbRow TryGetRow(string partitionKey, string rowKey);
+
+    }
 
     public interface IDbTableWriteAccess
     {
@@ -32,6 +34,15 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         IPartitionWriteAccess TryGetPartitionWriteAccess(string partitionKey);
         IPartitionWriteAccess GetOrCreatePartition(string partitionKey);
+
+        IReadOnlyList<DbPartition> DeletePartitions(IEnumerable<string> partitions);
+        
+        IReadOnlyDictionary<string, List<DbRow>> DeleteRows(string partitionKey, IEnumerable<string> rowKeys);
+
+        IReadOnlyList<DbPartition> GetPartitionsToGc(int maxPartitionsAmount);
+
+        DbPartition DeletePartition(string partitionKey);
+        bool Clear();
     }
     
 
@@ -41,44 +52,43 @@ namespace MyNoSqlServer.Domains.Db.Tables
         
         public int MaxPartitionsAmount { get; private set; }
 
-        private readonly SyncEventsDispatcher _syncEventsDispatcher;
         
-        
-        public void SetAttributes(bool persist, int maxPartitionsAmount, TransactionEventAttributes attributes)
+        public bool SetAttributes(bool persist, int maxPartitionsAmount)
         {
             
             if (persist == Persist && MaxPartitionsAmount == maxPartitionsAmount)
-                return;
+                return false;
             
             Persist = persist;
             MaxPartitionsAmount = maxPartitionsAmount;
-            _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, this));
+            return true;
         }
 
         
-        public void SetMaxPartitionsAmount(int maxPartitionsAmount, TransactionEventAttributes attributes)
+        public bool SetMaxPartitionsAmount(int maxPartitionsAmount)
         {
+            if (MaxPartitionsAmount == maxPartitionsAmount)
+                return false;
             MaxPartitionsAmount = maxPartitionsAmount;
-            _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, this));
+
+            return true;
         }
 
-        public DbTable(string name, bool persistThisTable, SyncEventsDispatcher syncEventsDispatcher)
+        public DbTable(string name, bool persistThisTable, int maxPartitionsAmount)
         {
             Name = name;
             Persist = persistThisTable;
-            _syncEventsDispatcher = syncEventsDispatcher;
 
         }
 
-        public static DbTable CreateByRequest(string name, bool persistThisTable, SyncEventsDispatcher syncEventsDispatcher)
-        {
-            return new DbTable(name, persistThisTable, syncEventsDispatcher);
-        }
 
-        public void UpdatePersist(bool persist, TransactionEventAttributes attributes)
+        public bool UpdatePersist(bool persist, TransactionEventAttributes attributes)
         {
+            if (Persist == persist)
+                return false;
             Persist = persist;
-            _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, this));
+
+            return true;
         }
 
         public string Name { get; }
@@ -88,7 +98,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
         private readonly DbPartitionsList _partitions = new ();
 
 
-        IEnumerable<DbPartition> IDbTableReadAccess.GetAllPartitions()
+        IEnumerable<IPartitionReadAccess> IDbTableReadAccess.GetAllPartitions()
         {
             return _partitions.GetAllPartitions().ToList();
         }
@@ -96,6 +106,11 @@ namespace MyNoSqlServer.Domains.Db.Tables
         IPartitionReadAccess IDbTableReadAccess.TryGetPartition(string partitionKey)
         {
             return _partitions.TryGet(partitionKey);
+        }
+
+        int IDbTableReadAccess.GetPartitionsAmount()
+        {
+            return _partitions.Count;
         }
 
 
@@ -107,8 +122,17 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         public DbRow GetEntity(string partitionKey, string rowKey)
         {
-            return TryGetDbRowWithReadLock(partitionKey, rowKey);
+            return GetReadAccess(readAccess => readAccess.TryGetRow(partitionKey, rowKey));
         }
+        
+        
+        
+        DbRow IDbTableReadAccess.TryGetRow(string partitionKey, string rowKey)
+        {
+            var dbPartition = _partitions.TryGet(partitionKey) as IPartitionReadAccess;
+            return dbPartition?.TryGetRow(rowKey);
+        }
+
 
 
         public IReadOnlyList<DbRow> GetAllRecords(int? limit, int? skip)
@@ -214,102 +238,35 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
         
-        public IReadOnlyList<DbRow> GetRecordsByRowKey(string rowKey, int? limit, int? skip)
+
+        IReadOnlyDictionary<string, List<DbRow>> IDbTableWriteAccess.DeleteRows(string partitionKey,
+            IEnumerable<string> rowKeys)
         {
-            List<DbRow> result = null;
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-
-                var recordsByRowKey = _partitions.GetAllPartitions().Select(dbPartition => dbPartition.TryGetRow(rowKey))
-                    .Where(dbRow => dbRow != null);
-
-                if (skip != null)
-                    recordsByRowKey = recordsByRowKey.Skip(skip.Value);
-
-                foreach (var dbRow in recordsByRowKey)
-                {
-                    result ??= new List<DbRow>();
-                    result.Add(dbRow);
-                    
-                    if (limit != null)
-                    {
-                        if (result.Count >= limit)
-                            return result;
-                    }
-                }
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
-
-            return (IReadOnlyList<DbRow>)result ?? Array.Empty<DbRow>();
-        }
-
-        public void DeleteRows(string partitionKey, IEnumerable<string> rowKeys, TransactionEventAttributes attributes)
-        {
-            if (partitionKey == null)
-                throw new Exception("PartitionKey == null");
-                        
-            if (rowKeys == null)
-                throw new Exception("RowKey == null");
-            
             Dictionary<string, List<DbRow>> deletedRows = null;
-            
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                var partition = _partitions.TryGet(partitionKey);
-                if (partition == null)
-                    return;
 
-                foreach (var rowKey in rowKeys)
-                {
-                    var dbRow = partition.DeleteRow(rowKey);
-                    if (dbRow != null)
-                    {
-                        deletedRows ??= new Dictionary<string, List<DbRow>>();
-                        
-                        if (!deletedRows.ContainsKey(dbRow.PartitionKey))
-                            deletedRows.Add(dbRow.PartitionKey, new List<DbRow>());
-                        
-                        deletedRows[dbRow.PartitionKey].Add(dbRow);
-                    }
-                }
+            var partition = _partitions.TryGet(partitionKey);
+            if (partition == null)
+                return null;
+
+            foreach (var rowKey in rowKeys)
+            {
+                var dbRow = partition.DeleteRow(rowKey);
+                if (dbRow == null) 
+                    continue;
                 
-                if (deletedRows != null)
-                    _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRows(attributes, this, deletedRows));
+                deletedRows ??= new Dictionary<string, List<DbRow>>();
+
+                if (!deletedRows.ContainsKey(dbRow.PartitionKey))
+                    deletedRows.Add(dbRow.PartitionKey, new List<DbRow>());
+
+                deletedRows[dbRow.PartitionKey].Add(dbRow);
             }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
+
+            return deletedRows;
+
         }
 
-        public OperationResult DeleteRow(string partitionKey, string rowKey, TransactionEventAttributes attributes)
-        {
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                var partition = _partitions.TryGet(partitionKey);
-                if (partition == null)
-                    return OperationResult.RowNotFound;
-
-                var row = partition.DeleteRow(rowKey);
-
-                if (row == null)
-                    return OperationResult.RowNotFound;
-                _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRow(attributes, this, row));
-                return OperationResult.Ok;
-
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-        }
-
+        /*
         public void CleanAndKeepLastRecords(string partitionKey,
             int amount, TransactionEventAttributes attributes)
         {
@@ -331,6 +288,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitWriteLock();
             }
         }
+        */
 
         public bool HasRecord(IMyNoSqlDbEntity entityInfo)
         {
@@ -349,102 +307,34 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-
- 
-        /*
-
-        public void CleanAndBulkInsert(string partitionKey, IEnumerable<IMyMemory> itemsAsArray, TransactionEventAttributes attributes)
+        DbPartition IDbTableWriteAccess.DeletePartition(string partitionKey)
         {
-
-            var dbRows = itemsAsArray
-                .Select(arraySpan => arraySpan
-                    .ToDbRow())
-                .ToArray();
-
-            _readerWriterLockSlim.EnterWriteLock();
-
-
-            try
-            {
-                var syncData = new Dictionary<string, IReadOnlyList<DbRow>>();
-                
-                var partitionToClean = _partitions.TryGet(partitionKey);
-                if (partitionToClean != null)
-                {
-                    partitionToClean.Clean();    
-                    syncData.Add(partitionToClean.PartitionKey, Array.Empty<DbRow>());
-                }
-                
-
-              
-                foreach (var dbRow in dbRows)
-                {
-                    var partition = _partitions.GetOrCreate(dbRow.PartitionKey);
-
-                    partition.InsertOrReplace(dbRow);
-                    
-                    if (!syncData.ContainsKey(dbRow.PartitionKey))
-                        syncData.Add(dbRow.PartitionKey, null);
-                }
-
-                foreach (var pk in syncData.Keys.ToList())
-                {
-                    if (syncData[pk] == null)
-                    {
-                        var partition = _partitions.TryGet(pk);
-
-                        if (partition == null)
-                            syncData.Remove(pk);
-                        else
-                            syncData[pk] = partition.GetAllRows();
-                    }
-                }
-                
-                _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.Create(attributes, this, syncData));
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-
-        }
-        
-        */
-
-        public void Clear(TransactionEventAttributes attributes)
-        {
-            _readerWriterLockSlim.EnterWriteLock();
-
-            try
-            {
-                _partitions.Clear();
-                _syncEventsDispatcher.Dispatch( InitTableTransactionEvent.AsDelete(attributes, this));
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
+            return _partitions.DeletePartition(partitionKey);
         }
 
-        public void DeletePartitions(IEnumerable<string> partitions, TransactionEventAttributes attributes)
+        bool IDbTableWriteAccess.Clear()
         {
-            _readerWriterLockSlim.EnterWriteLock();
+            return _partitions.Clear();
+        }
 
-            try
+        IReadOnlyList<DbPartition> IDbTableWriteAccess.DeletePartitions(IEnumerable<string> partitions)
+        {
+
+            List<DbPartition> result = null;
+            
+            foreach (var partitionKey in partitions)
             {
-                foreach (var partitionKey in partitions)
+                var dbPartition = _partitions.DeletePartition(partitionKey);
+                
+                
+                if (dbPartition != null)
                 {
-                    var dbPartition = _partitions.DeletePartition(partitionKey);
-                    if (dbPartition != null)
-                    {
-                        _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.AsDeletePartition(attributes, this, dbPartition));
-                    }
+                    result ??= new List<DbPartition>();
+                    result.Add(dbPartition);
                 }
             }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
+
+            return result;
 
         }
 
@@ -461,7 +351,6 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitReadLock();
             }
         }
-
 
         public int GetRecordsCount(string partitionKey)
         {
@@ -526,6 +415,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
         }
 
 
+        /*
         public void KeepMaxPartitions(in int amount, TransactionEventAttributes attributes)
         {
             var partitionsToGc = GetPartitionsToGc(amount);
@@ -558,9 +448,8 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitWriteLock();
             }
 
-
         }
-
+*/
 
         private DbPartition GetPartitionIfItHasToBeCleaned(string partitionKey, int maxAmount)
         {
@@ -580,8 +469,8 @@ namespace MyNoSqlServer.Domains.Db.Tables
         }
 
 
-        public OperationResult Replace(
-            DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
+        /*
+        public OperationResult Replace(DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
         {
             _readerWriterLockSlim.EnterWriteLock();
             try
@@ -611,22 +500,6 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-
-
-
-        private DbRow TryGetDbRowWithReadLock(string partitionKey, string rowKey)
-        {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.TryGet(partitionKey)?.TryGetRow(rowKey);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
-
-        }
 
 
         public OperationResult Merge(
@@ -670,6 +543,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
+        
         public DbPartition KeepMaxRecordsAmount(string partitionKey, int maxAmount)
         {
 
@@ -696,7 +570,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
 
         }
-
+        */
         public PartitionSnapshot GetPartitionSnapshot(string partitionKey)
         {
             _readerWriterLockSlim.EnterReadLock();
@@ -716,6 +590,8 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
+        
+        /*
         public void BulkDelete(Dictionary<string, List<string>> partitionsAndRows, TransactionEventAttributes attributes)
         {
             _readerWriterLockSlim.ExitWriteLock();
@@ -761,41 +637,14 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
 
         }
+        */
+        
 
-        private IReadOnlyList<DbPartition> GetPartitionsToGc(int maxAmount)
+        IReadOnlyList<DbPartition> IDbTableWriteAccess.GetPartitionsToGc(int maxAmount)
         {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.GetPartitionsToGc(maxAmount);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
+            return _partitions.GetPartitionsToGc(maxAmount);
         }
 
-
-        public void Gc()
-        {
-
-            var partitionsToGc = GetPartitionsToGc(MaxPartitionsAmount);
-            
-            if (partitionsToGc.Count == 0)
-                return;
-            
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                foreach (var dbPartition in partitionsToGc)
-                    _partitions.DeletePartition(dbPartition.PartitionKey);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-
-        }
 
         IReadOnlyDictionary<string, IReadOnlyList<DbRow>> IDbTableReadAccess.GetAllRows()
         {

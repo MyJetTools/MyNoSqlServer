@@ -5,33 +5,44 @@ namespace MyNoSqlServer.Domains.Nodes
 {
     public class NodesSyncOperations
     {
-
-        private readonly DbInstance _dbInstance;
         private readonly SyncEventsDispatcher _syncEventsDispatcher;
+        private readonly DbInstance _dbInstance;
 
-        public NodesSyncOperations(DbInstance dbInstance, SyncEventsDispatcher syncEventsDispatcher)
+        public NodesSyncOperations(SyncEventsDispatcher syncEventsDispatcher, DbInstance dbInstance)
         {
-            _dbInstance = dbInstance;
             _syncEventsDispatcher = syncEventsDispatcher;
+            _dbInstance = dbInstance;
         }
+
+
 
         public void SetTableAttributes(UpdateTableAttributesTransactionEvent tableAttributesEvent)
         {
 
             var dbTable = _dbInstance.TryGetTable(tableAttributesEvent.TableName);
 
+            var tableCreated = false;
+
             if (dbTable == null)
-            {
-                _dbInstance.CreateTableIfNotExists(tableAttributesEvent.TableName,
-                    tableAttributesEvent.PersistTable,
-                    tableAttributesEvent.MaxPartitionsAmount,
-                    tableAttributesEvent.Attributes);
+                dbTable = _dbInstance.GetWriteAccess(writeAccess =>
+                {
+                    var result = writeAccess.TryGetTable(tableAttributesEvent.TableName);
+                    if (result != null)
+                        return result;
 
-                return;
-            }
+                    tableCreated = true;
 
-            dbTable.SetAttributes(tableAttributesEvent.PersistTable, tableAttributesEvent.MaxPartitionsAmount,
-                tableAttributesEvent.Attributes);
+                    return writeAccess.CreateTable(tableAttributesEvent.TableName, tableAttributesEvent.PersistTable,
+                        tableAttributesEvent.MaxPartitionsAmount);
+
+                });
+
+
+            var set = dbTable.SetAttributes(tableAttributesEvent.PersistTable,
+                tableAttributesEvent.MaxPartitionsAmount);
+
+            if ((tableCreated || set) && tableAttributesEvent.Attributes != null)
+                _syncEventsDispatcher.Dispatch(tableAttributesEvent);
         }
 
 

@@ -40,7 +40,7 @@ namespace MyNoSqlServer.Domains
         public static void BindMasterNodeSaverServices(this IServiceCollection services)
         {
             services.AddSingleton<IPersistenceShutdown, MasterNodeSaver>();
-            services.AddSingleton<ITablesPersistenceReader, MyNoSqlServerNodePersistence>();
+          //  services.AddSingleton<ITablesPersistenceReader, MyNoSqlServerNodePersistence>();
             services.AddSingleton<NodeClient>();
         }
 

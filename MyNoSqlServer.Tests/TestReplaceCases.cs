@@ -29,9 +29,7 @@ namespace MyNoSqlServer.Tests
 
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable", false,
+            var table = dbOperations.CreateTableIfNotExists("mytable", false, 0,
                 TestUtils.GetTestEventAttributes());
 
             var rawClass = new TestReplaceEntity
@@ -70,9 +68,7 @@ namespace MyNoSqlServer.Tests
 
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable", false,
+            var table = dbOperations.CreateTableIfNotExists("mytable", false, 0,
                 TestUtils.GetTestEventAttributes());
 
             var rawClass = new TestReplaceEntity

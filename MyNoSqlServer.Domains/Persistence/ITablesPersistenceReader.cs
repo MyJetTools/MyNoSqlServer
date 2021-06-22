@@ -43,6 +43,8 @@ namespace MyNoSqlServer.Domains.Persistence
         string TableName { get; }
         
         bool Persist { get; }
+        
+        int MaxPartitionsAmount { get; }
 
         IAsyncEnumerable<PartitionSnapshot> GetPartitionsAsync();
 

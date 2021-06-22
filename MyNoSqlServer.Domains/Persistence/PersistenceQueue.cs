@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using MyNoSqlServer.Domains.TransactionEvents;
@@ -31,6 +32,10 @@ namespace MyNoSqlServer.Domains.Persistence
                     tableQueue.Add(transactionEvent);
                 else
                     _eventsToPersist.Add(transactionEvent.TableName, new List<ITransactionEvent> { transactionEvent });
+
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine($"Enqueued persistence message. Table {transactionEvent.TableName}. {transactionEvent.GetType()}");
+                Console.ResetColor();
 
             }
         }
