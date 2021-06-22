@@ -28,7 +28,7 @@ namespace MyNoSqlServer.Domains.Nodes
         public string Id { get; private set; }
         
         public DateTime Created { get; } = DateTime.UtcNow;
-        private static readonly TimeSpan PingTimeOut = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan PingTimeOut = TimeSpan.FromSeconds(5);
         
         public DateTime LastAccessed { get; private set; } 
         
@@ -178,15 +178,18 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
 
+
+        private static readonly SyncTransactionGrpcModel PingResponse = new SyncTransactionGrpcModel();
         public void SendPing()
         {
             lock (_lockObject)
             {
+                
                 if (_awaitingTask == null)
                     return;
-
-                if (_taskSetTime - DateTime.UtcNow > PingTimeOut)
-                    SetTaskResult(new SyncTransactionGrpcModel());
+                
+                if (DateTime.UtcNow - _taskSetTime > PingTimeOut)
+                    SetTaskResult(PingResponse);
             }
 
         }
