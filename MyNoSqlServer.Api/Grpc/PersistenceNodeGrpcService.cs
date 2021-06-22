@@ -65,7 +65,7 @@ namespace MyNoSqlServer.Api.Grpc
         {
             try
             {
-                var model = await payloads.MergePayloadAndDeserialize<List<SyncTransactionGrpcModel>>(false);
+                var model = await payloads.MergePayloadAndDeserialize<List<SyncTransactionGrpcModel>>(true);
                 HandleGrpcResponse(model);
             }
             catch (Exception e)
