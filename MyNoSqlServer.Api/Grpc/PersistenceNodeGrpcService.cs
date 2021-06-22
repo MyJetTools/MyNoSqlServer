@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -47,14 +48,32 @@ namespace MyNoSqlServer.Api.Grpc
 
         public async ValueTask SyncTransactionsAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
         {
-            var model = await payloads.MergePayloadAndDeserialize<List<SyncTransactionGrpcModel>>(false);
-            HandleGrpcResponse(model);
+            try
+            {
+                var model = await payloads.MergePayloadAndDeserialize<List<SyncTransactionGrpcModel>>(false);
+                HandleGrpcResponse(model);
+            }
+            catch (Exception e)
+            {
+               ServiceLocator.AppLogs.WriteError(null, "PersistenceNodeGrpcService.SyncTransactionsAsync", "N/A", e);
+                throw;
+            }
+       
         }
 
         public async ValueTask SyncTransactionsCompressedAsync(IAsyncEnumerable<PayloadWrapperGrpcModel> payloads)
         {
-            var model = await payloads.MergePayloadAndDeserialize<List<SyncTransactionGrpcModel>>(false);
-            HandleGrpcResponse(model);
+            try
+            {
+                var model = await payloads.MergePayloadAndDeserialize<List<SyncTransactionGrpcModel>>(false);
+                HandleGrpcResponse(model);
+            }
+            catch (Exception e)
+            {
+                ServiceLocator.AppLogs.WriteError(null, "PersistenceNodeGrpcService.SyncTransactionsCompressedAsync", "N/A", e);
+                throw;
+            }
+
         }
 
 
