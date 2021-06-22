@@ -7,7 +7,7 @@ namespace MyNoSqlServer.Domains.Persistence
 {
     public class PersistenceQueue
     {
-        private Dictionary<string, List<ITransactionEvent>> _eventsToPersist = new();
+        private Dictionary<string, List<ITransactionEvent>> _eventsToPersist;
 
         private readonly object _lockObject = new();
 
@@ -34,9 +34,8 @@ namespace MyNoSqlServer.Domains.Persistence
                     _eventsToPersist.Add(transactionEvent.TableName, new List<ITransactionEvent> { transactionEvent });
 
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"Enqueued persistence message. Table {transactionEvent.TableName}. {transactionEvent.GetType()}");
+                Console.WriteLine($"Enqueued persistence message. Table {transactionEvent.TableName}. {transactionEvent.GetType()} {transactionEvent.Attributes.Locations}");
                 Console.ResetColor();
-
             }
         }
 

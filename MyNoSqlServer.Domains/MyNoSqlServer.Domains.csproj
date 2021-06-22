@@ -9,7 +9,7 @@
       <PackageReference Include="AsyncAwaitUtils" Version="1.0.3" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
       <PackageReference Include="MyNoSqlServer.DataCompression" Version="1.0.3" />
-      <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc23" />
+      <PackageReference Include="MyNoSqlServer.NodePersistence.Grpc" Version="1.0.0-rc24" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="protobuf-net" Version="3.0.101" />
       <PackageReference Include="System.Text.Json" Version="5.0.2" />

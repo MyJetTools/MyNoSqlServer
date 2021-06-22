@@ -7,7 +7,7 @@ namespace  MyNoSqlServer.Domains.TransactionEvents
 
     public enum EventSource
     {
-        ClientRequest, Synchronization
+        ClientRequest, Synchronization, Init
     }
     
     

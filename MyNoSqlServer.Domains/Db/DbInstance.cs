@@ -22,6 +22,14 @@ namespace MyNoSqlServer.Domains.Db
         private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
 
 
+        public void GetWriteAccess(Action<IDbInstanceWriteAccess> writeAccess)
+        {
+            lock (_lockObject)
+            {
+                writeAccess(this);
+            }
+        }
+        
         public T GetWriteAccess<T>(Func<IDbInstanceWriteAccess, T> writeAccess)
         {
             lock (_lockObject)

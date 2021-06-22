@@ -36,7 +36,7 @@ namespace MyNoSqlServer.Domains
                 return (true, newTable);
             });
 
-            if (result && attributes != null)
+            if (result)
                 _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, dbTable));
 
             return result;
@@ -57,7 +57,7 @@ namespace MyNoSqlServer.Domains
 
             var set = dbTable.SetAttributes(persistTable, maxPartitionsAmount);
 
-            if ((created || set) && attributes != null)
+            if (created || set)
                 _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, dbTable));
 
             return dbTable;
@@ -81,7 +81,7 @@ namespace MyNoSqlServer.Domains
                 return dbTable ?? writeAccess.CreateTable(tableName, persist, maxPartitionsAmount);
             });
 
-            if (tableCreated && attributes != null)
+            if (tableCreated)
                 _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, result));
 
             return result;
@@ -93,7 +93,7 @@ namespace MyNoSqlServer.Domains
         {
             var set = dbTable.SetAttributes(persist, maxPartitionsAmount);
 
-            if (set && attributes != null)
+            if (set)
                 _syncEventsDispatcher.Dispatch(UpdateTableAttributesTransactionEvent.Create(attributes, dbTable));
         }
         
@@ -110,8 +110,8 @@ namespace MyNoSqlServer.Domains
                 if (row == null)
                     return OperationResult.RowNotFound;
                 
-                if (attributes != null)
-                    _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRow(attributes, dbTable, row));
+    
+                _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRow(attributes, dbTable, row));
                 
                 return OperationResult.Ok;
             });
@@ -123,7 +123,7 @@ namespace MyNoSqlServer.Domains
         {
             var deletedRows = dbTable.GetWriteAccess(writeAccess => writeAccess.DeleteRows(partitionKey, rowKeys));
 
-            if (deletedRows != null && attributes != null)
+            if (deletedRows != null)
                 _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRows(attributes, dbTable, deletedRows));   
         }
    
@@ -321,8 +321,7 @@ namespace MyNoSqlServer.Domains
 
                 record.Replace(entity, now);
 
-                if (attributes != null)
-                    _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
 
                 return OperationResult.Ok;
             });
@@ -350,7 +349,7 @@ namespace MyNoSqlServer.Domains
 
                 var dbRows = partition.CleanAndKeepLastRecords(amount);
 
-                if (attributes != null && dbRows != null)
+                if (dbRows != null)
                     _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRows(attributes, dbTable, dbRows));
             });
             
@@ -365,14 +364,10 @@ namespace MyNoSqlServer.Domains
 
                 if (partitions != null)
                 {
-                    if (attributes != null)
-                    {
-                        _syncEventsDispatcher.Dispatch(
-                            InitPartitionsTransactionEvent.AsDeletePartitions(attributes, table, partitions));
-                    }
 
+                    _syncEventsDispatcher.Dispatch(
+                        InitPartitionsTransactionEvent.AsDeletePartitions(attributes, table, partitions));
                 }
-
             });
 
 
@@ -399,7 +394,6 @@ namespace MyNoSqlServer.Domains
             {
                 writeAccess.InitTable(snapshot);
                 
-                if (attributes != null)
                     _syncEventsDispatcher.Dispatch(InitTableTransactionEvent.Create(attributes, dbTable, snapshot));
             });
 
@@ -409,9 +403,7 @@ namespace MyNoSqlServer.Domains
         {
             dbTable.GetWriteAccess(writeAccess =>
             {
-                var cleaned = writeAccess.Clear();
-                
-                if (cleaned && attributes != null)
+                if (writeAccess.Clear())
                     _syncEventsDispatcher.Dispatch( InitTableTransactionEvent.AsDelete(attributes, dbTable));
             });
         }
@@ -440,7 +432,7 @@ namespace MyNoSqlServer.Domains
                     }
                 }
                 
-                if (attributes != null && deleted != null)
+                if (deleted != null)
                     _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.AsDeletePartitions(attributes, dbTable, deleted));
 
             });
@@ -467,8 +459,7 @@ namespace MyNoSqlServer.Domains
 
                 record.Replace(entity, now);
                 
-                if (attributes != null)
-                    _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
 
                 return OperationResult.Ok;
             });
@@ -505,8 +496,8 @@ namespace MyNoSqlServer.Domains
 
                 record.Replace(newEntities, now);
                 
-                if  (attributes != null)
-                    _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
+
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, dbTable, record));
 
                 return OperationResult.Ok;
             });
@@ -525,7 +516,7 @@ namespace MyNoSqlServer.Domains
                     if (rowKeys == null || rowKeys.Count == 0)
                     {
                         var deletedPartition = writeAccess.DeletePartition(partitionKey);
-                        if (deletedPartition != null && attributes != null)
+                        if (deletedPartition != null)
                             _syncEventsDispatcher.Dispatch(
                                 InitPartitionsTransactionEvent.AsDeletePartition(attributes, dbTable, deletedPartition));
                     }
@@ -546,7 +537,7 @@ namespace MyNoSqlServer.Domains
                                 }
                             }
 
-                            if (deletedRows != null && attributes != null)
+                            if (deletedRows != null)
                                 _syncEventsDispatcher.Dispatch(
                                     DeleteRowsTransactionEvent.AsRows(attributes, dbTable, deletedRows));
                         }
@@ -598,7 +589,6 @@ namespace MyNoSqlServer.Domains
             });
             
         }
-        
         
         public void Gc()
         {

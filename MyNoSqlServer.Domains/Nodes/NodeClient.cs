@@ -47,6 +47,7 @@ namespace MyNoSqlServer.Domains.Nodes
                         continue;
                     
                     Console.WriteLine($"grpcResponse got table {grpcResponse.TableName} updates");
+                    
                     if (grpcResponse.TableAttributes != null)
                     {
                         Console.WriteLine("grpcResponse.TableAttributes not null");    
@@ -71,10 +72,9 @@ namespace MyNoSqlServer.Domains.Nodes
                     {
                         Console.WriteLine("initTableData.DeleteRows not null");    
                     }
-                    
 
                     _syncTransactionHandler.HandleTransaction(grpcResponse, () =>
-                        CreateTransactionEventAttribute(grpcResponse.Locations, grpcResponse.Headers));
+                        CreateTransactionEventAttribute(grpcResponse));
 
                     requestId++;
 
@@ -93,20 +93,17 @@ namespace MyNoSqlServer.Domains.Nodes
         }
 
 
-        private TransactionEventAttributes CreateTransactionEventAttribute(List<string> locations, SyncGrpcHeader[] headers)
+        private TransactionEventAttributes CreateTransactionEventAttribute(SyncTransactionGrpcModel syncTransactionGrpcModel)
         {
-            if (locations == null)
-                return null;
-            
+
+            var locations = syncTransactionGrpcModel.Locations ?? new List<string>();
             locations.Add(_settingsLocation.Location);
             return new TransactionEventAttributes(locations,
                 DataSynchronizationPeriod.Sec5,
-                EventSource.Synchronization,
-                headers.ToDictionary(itm => itm.Key, itm => itm.Value)
+                syncTransactionGrpcModel.InitPacket ? EventSource.Init : EventSource.Synchronization,
+                syncTransactionGrpcModel.Headers.ToDictionary(itm => itm.Key, itm => itm.Value)
             );
         }
-
-
 
 
 

@@ -1,3 +1,4 @@
+using System;
 using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.TransactionEvents;
 
@@ -14,35 +15,45 @@ namespace MyNoSqlServer.Domains.Nodes
             _dbInstance = dbInstance;
         }
 
-
-
         public void SetTableAttributes(UpdateTableAttributesTransactionEvent tableAttributesEvent)
         {
 
+
             var dbTable = _dbInstance.TryGetTable(tableAttributesEvent.TableName);
+            if (dbTable != null)
+            {
+                var set = dbTable.SetAttributes(tableAttributesEvent.PersistTable,
+                    tableAttributesEvent.MaxPartitionsAmount);
 
-            var tableCreated = false;
+                if (set)
+                    _syncEventsDispatcher.Dispatch(tableAttributesEvent);
+                
+                return;
+            }
 
-            if (dbTable == null)
-                dbTable = _dbInstance.GetWriteAccess(writeAccess =>
+            _dbInstance.GetWriteAccess(writeAccess =>
+            {
+                var foundTable = writeAccess.TryGetTable(tableAttributesEvent.TableName);
+
+                if (foundTable == null)
                 {
-                    var result = writeAccess.TryGetTable(tableAttributesEvent.TableName);
-                    if (result != null)
-                        return result;
+                    writeAccess.CreateTable(tableAttributesEvent.TableName, tableAttributesEvent.PersistTable,
+                        tableAttributesEvent.MaxPartitionsAmount);
+                    
 
-                    tableCreated = true;
-
-                    return writeAccess.CreateTable(tableAttributesEvent.TableName, tableAttributesEvent.PersistTable,
+                        _syncEventsDispatcher.Dispatch(tableAttributesEvent);
+                }
+                else
+                {
+                    var set = foundTable.SetAttributes(tableAttributesEvent.PersistTable,
                         tableAttributesEvent.MaxPartitionsAmount);
 
-                });
 
+                    if (set)
+                        _syncEventsDispatcher.Dispatch(tableAttributesEvent);
+                }
+            });
 
-            var set = dbTable.SetAttributes(tableAttributesEvent.PersistTable,
-                tableAttributesEvent.MaxPartitionsAmount);
-
-            if ((tableCreated || set) && tableAttributesEvent.Attributes != null)
-                _syncEventsDispatcher.Dispatch(tableAttributesEvent);
         }
 
 
@@ -54,9 +65,8 @@ namespace MyNoSqlServer.Domains.Nodes
             dbTable.GetWriteAccess(writeAccess =>
             {
                 writeAccess.InitTable(initTableTransactionEvent.Snapshot);
-                
-                if (initTableTransactionEvent.Attributes != null)
-                    _syncEventsDispatcher.Dispatch(initTableTransactionEvent);
+
+                _syncEventsDispatcher.Dispatch(initTableTransactionEvent);
             });
         }
 
@@ -72,8 +82,8 @@ namespace MyNoSqlServer.Domains.Nodes
                     partition.ClearAndBulkInsertOrReplace(rows);
                 }
 
-                if (initPartitionsTransactionEvent.Attributes != null)
-                    _syncEventsDispatcher.Dispatch(initPartitionsTransactionEvent);
+
+                _syncEventsDispatcher.Dispatch(initPartitionsTransactionEvent);
             });
         }
 

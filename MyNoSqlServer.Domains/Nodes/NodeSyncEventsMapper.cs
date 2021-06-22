@@ -113,7 +113,8 @@ namespace MyNoSqlServer.Domains.Nodes
             var result = new SyncTransactionGrpcModel
             {
                 TableName = @event.TableName,
-                Headers = @event.ToHeaders()
+                Headers = @event.ToHeaders(),
+                Locations = @event.Attributes.Locations
             };
             
             switch(@event) 
@@ -125,6 +126,7 @@ namespace MyNoSqlServer.Domains.Nodes
                         MaxPartitionsAmount = initTableEvent.Table.MaxPartitionsAmount,
                     };
 
+                    result.InitPacket = true;
                     result.InitTableData = initTableEvent.TableData.ToPartitionDataGrpcModel().ToList();
                     return result;
                 
