@@ -34,7 +34,8 @@ namespace MyNoSqlServer.Api
                         .UseStartup<Startup>()
                         .ConfigureLogging((_, logging) =>
                         {
-                            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
+                            //ToDo - remove it after Debug
+                            //if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
                                 logging.ClearProviders();
                         });
 

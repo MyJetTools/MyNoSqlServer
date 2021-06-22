@@ -16,7 +16,8 @@ namespace MyNoSqlServer.Domains.Nodes
         private readonly object _lockObject = new();
         
         
-        public static TimeSpan SessionTimeout = TimeSpan.FromMinutes(10);
+        //ToDo - Put it to the Settings
+        public static TimeSpan SessionTimeout = TimeSpan.FromSeconds(30);
         
 
         public NodeSessionsList(DbInstance dbInstance)
