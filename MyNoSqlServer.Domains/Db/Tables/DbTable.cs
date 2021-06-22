@@ -90,15 +90,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
         IEnumerable<DbPartition> IDbTableReadAccess.GetAllPartitions()
         {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.GetAllPartitions().ToList();
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
+            return _partitions.GetAllPartitions().ToList();
         }
 
         IPartitionReadAccess IDbTableReadAccess.TryGetPartition(string partitionKey)
@@ -112,26 +104,6 @@ namespace MyNoSqlServer.Domains.Db.Tables
             return _partitions.Count;
         }
 
-        /*
-        public void InsertOrReplace(DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
-        {
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                var partition = _partitions.GetOrCreate(entity.PartitionKey);
-
-                var dbRow = DbRow.CreateNew(entity, now);
-                partition.InsertOrReplace(dbRow);
-                
-                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, this, dbRow));
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-
-        }
-        */
 
         public DbRow GetEntity(string partitionKey, string rowKey)
         {

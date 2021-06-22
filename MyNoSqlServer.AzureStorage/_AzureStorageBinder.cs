@@ -22,9 +22,19 @@ namespace MyNoSqlServer.AzureStorage
 
         public static void Init(IServiceProvider sp)
         {
+
+            var blobPersistenceStorage = sp.GetService<IBlobPersistenceStorage>();
+            var appLogs = sp.GetRequiredService<AppLogs>();
+
+            if (blobPersistenceStorage == null)
+            {
+                appLogs.WriteInfo(null, "AzureStorageBinder.Init", null, "Instance works and node. Skipping Blob services initialization");
+                return;
+            }
+            
             AzureStorageBlobDecorators.Init(sp);
             
-            var persistence = (AzureTablePersistenceStorage)sp.GetRequiredService<IBlobPersistenceStorage>();
+            var persistence = (AzureTablePersistenceStorage)blobPersistenceStorage;
             persistence.Inject(sp.GetRequiredService<AppLogs>());
         }
     }

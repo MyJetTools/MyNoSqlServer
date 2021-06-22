@@ -51,6 +51,7 @@ namespace MyNoSqlServer.Domains.Persistence
                 {
                     Console.WriteLine(
                         $"Snapshots  for table {tableLoader.TableName} could not be loaded: " + e.Message);
+                    throw;//Todo - remove after debug
                 } 
             }
             
@@ -59,6 +60,7 @@ namespace MyNoSqlServer.Domains.Persistence
 
         public async Task StopAsync()
         {
+            return; //ToDo - Disabled while debugging
 
             while (true)
             {

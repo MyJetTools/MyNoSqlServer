@@ -149,7 +149,9 @@ namespace MyNoSqlServer.Api
 
         public static void Start(IServiceProvider sp)
         {
-
+            
+            DataInitializer.LoadSnapshotsAsync().Wait();
+            
 
             if (NodeClient != null)
             {
@@ -157,10 +159,6 @@ namespace MyNoSqlServer.Api
                 sp.GetService<NodeClient>()?.Start();    
             }
             
-
-            DataInitializer.LoadSnapshotsAsync().Wait();
-            
-
             TimerOneMinute.Register("GC transactions", () =>
             {
                 PostTransactionsList.GcTransactions();

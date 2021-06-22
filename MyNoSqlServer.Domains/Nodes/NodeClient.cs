@@ -42,15 +42,26 @@ namespace MyNoSqlServer.Domains.Nodes
                         SessionId = _sessionId
                     });
 
+
+                    if (grpcResponse.TableName == null)
+                        continue;
+
                     _syncTransactionHandler.HandleTransaction(grpcResponse, () =>
                         CreateTransactionEventAttribute(grpcResponse.Locations, grpcResponse.Headers));
+
+
+
 
                     requestId++;
 
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("NodeClient: "+e);
+                    Console.WriteLine("NodeClient: " + e);
+                }
+                finally
+                {
+                    await Task.Delay(5000); //ToDo - Remove this Debug Delay
                 }
                 
             }
