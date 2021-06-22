@@ -71,7 +71,6 @@ namespace MyNoSqlServer.Domains.Nodes
 
                     if (grpcResponse.TableName == null)
                     {
-                        Console.WriteLine("Node Client Got Ping");
                         requestId++;
                         continue;
                     }

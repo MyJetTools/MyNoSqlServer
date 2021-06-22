@@ -199,7 +199,6 @@ namespace MyNoSqlServer.Domains.Nodes
 
                 if (DateTime.UtcNow - LastAccessed > PingTimeOut)
                 {
-                    Console.WriteLine($"Set Ping Response for the connection {Location}. RequestId: {_currentRequestId}");
                     SetTaskResult(PingResponse);
                 }
                     
