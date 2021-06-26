@@ -2,18 +2,16 @@
 
 class HtmlSubscribersGenerator{
     
+    
+    public static generateLayout():string {
+        return '<div id="main"></div>' +
+            HtmlStatusBar.template() +
+            '</div>';
+    }
+    
     public static generateHtml(data:IStatus):string {
 
-        let masterNode = data.masterNode ? "  Connected to master node: "+data.masterNode : "";
-        
-        let header = '<table style="width: 100%"><tr>' +
-            '<td>Location: '+data.location.id+'</td>' +
-            '<td>Compression: '+data.location.compress+'</td><td>'+masterNode+'</td></tr></table>';
-        
-
-
-        return header
-            + '<h3>Connected Nodes</h3>'
+        return '<h3>Connected Nodes</h3>'
             + this.generateNodesHtml(data.nodes)
             + '<h3>Readers</h3>'
             + this.generateReadersHtml(data.readers);

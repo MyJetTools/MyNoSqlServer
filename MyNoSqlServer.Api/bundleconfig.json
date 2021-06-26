@@ -3,6 +3,7 @@
     "outputFileName": "wwwroot/js/main.min.js",
     "inputFiles": [
       "wwwroot/js/HtmlSubscribersGenerator.js",
+      "wwwroot/js/HtmlStatusBar.js",
       "wwwroot/js/main.js"
     ],
     "minify": {

@@ -1,13 +1,13 @@
 var HtmlSubscribersGenerator = /** @class */ (function () {
     function HtmlSubscribersGenerator() {
     }
+    HtmlSubscribersGenerator.generateLayout = function () {
+        return '<div id="main"></div>' +
+            HtmlStatusBar.template() +
+            '</div>';
+    };
     HtmlSubscribersGenerator.generateHtml = function (data) {
-        var masterNode = data.masterNode ? "  Connected to master node: " + data.masterNode : "";
-        var header = '<table style="width: 100%"><tr>' +
-            '<td>Location: ' + data.location.id + '</td>' +
-            '<td>Compression: ' + data.location.compress + '</td><td>' + masterNode + '</td></tr></table>';
-        return header
-            + '<h3>Connected Nodes</h3>'
+        return '<h3>Connected Nodes</h3>'
             + this.generateNodesHtml(data.nodes)
             + '<h3>Readers</h3>'
             + this.generateReadersHtml(data.readers);

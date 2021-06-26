@@ -23,6 +23,10 @@ namespace MyNoSqlServer.Api.Controllers
             var result = new
             {
                 masterNode = ServiceLocator.NodeClient?.RemoteLocation,
+                queues = new
+                {
+                  persistence =   ServiceLocator.PersistenceQueue.Count
+                },
                 location = new
                 {
                    id = Startup.Settings.Location,

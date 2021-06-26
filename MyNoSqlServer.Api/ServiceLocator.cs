@@ -85,6 +85,8 @@ namespace MyNoSqlServer.Api
 
         public static DbOperations DbOperations { get; private set; }
         
+        public static PersistenceQueue PersistenceQueue { get; private set; }
+        
         
         public static NodeClient NodeClient { get; private set; }
         
@@ -143,6 +145,8 @@ namespace MyNoSqlServer.Api
 
             SyncTransactionHandler = sp.GetRequiredService<SyncTransactionHandler>();
 
+            PersistenceQueue = sp.GetRequiredService<PersistenceQueue>();
+            
             NodeClient = sp.GetService<NodeClient>();
 
         }
