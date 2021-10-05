@@ -15,11 +15,11 @@
     <ItemGroup>
         <PackageReference Include="AsyncAwaitUtils" Version="1.0.3" />
         <PackageReference Include="DotNetCoreDecorators" Version="1.0.21" />
-        <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.17.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.7" />
+        <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.18.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.10" />
         <PackageReference Include="MyYamlParser" Version="1.0.1" />
-        <PackageReference Include="NSwag.AspNetCore" Version="13.11.3" />
-        <PackageReference Include="prometheus-net.AspNetCore" Version="4.1.1" />
+        <PackageReference Include="NSwag.AspNetCore" Version="13.13.2" />
+        <PackageReference Include="prometheus-net.AspNetCore" Version="5.0.1" />
         <PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
         <PackageReference Include="protobuf-net.Grpc" Version="1.0.152" />
         <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.0.152" />

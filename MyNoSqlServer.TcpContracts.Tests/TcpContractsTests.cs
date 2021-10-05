@@ -20,11 +20,12 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var pingContract = new PingContract();
 
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(pingContract);
 
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
 
             var tc = new CancellationTokenSource();
 
@@ -44,11 +45,12 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
             var testContract = new PongContract();
             
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
 
             var rawData = serializer.Serialize(testContract);
 
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
 
             var tc = new CancellationTokenSource();
 
@@ -71,11 +73,12 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Name = "Test"
             };
 
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
 
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
 
             var result
                 = (GreetingContract)
@@ -101,10 +104,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
 
 
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
             
             var result
                 = (InitTableContract) await serializer
@@ -132,10 +136,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Data = new byte[] {1, 2, 3}
             };
 
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
 
             var result
                 = (InitPartitionContract) await serializer
@@ -163,10 +168,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Data = new byte[] {1, 2, 3}
             };
 
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
 
             var result
                 = (UpdateRowsContract) await serializer
@@ -192,10 +198,11 @@ namespace MyNoSqlServer.TcpContracts.Tests
             };
 
 
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
             
             var result
                 = (SubscribeContract) await serializer
@@ -218,10 +225,12 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 RowsToDelete = new[]{("pk1", "rk1"), ("pk2", "rk2")}
             };
 
-            var dataReader = new TcpDataReader(ReadBufferSize);
+            var incomingTraffic = new IncomingTcpTrafficMock();
+            var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
+            
             var rawData = serializer.Serialize(testContract);
             
-            await dataReader.NewPackageAsync(rawData);
+            incomingTraffic.NewPackageAsync(rawData);
 
             var result
                 = (DeleteRowsContract) await serializer

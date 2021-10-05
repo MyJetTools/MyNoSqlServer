@@ -36,7 +36,7 @@ namespace MyNoSqlServer.TcpContracts
 
         public static async ValueTask<IMyNoSqlTcpContract> DeserializeAsync(ITcpDataReader dataReader, CancellationToken ct)
         {
-            var command = (CommandType)await dataReader.ReadAndCommitByteAsync(ct);
+            var command = (CommandType)await dataReader.ReadByteAsync(ct);
 
             var instance = CommandToContractMapper[command]();
             
