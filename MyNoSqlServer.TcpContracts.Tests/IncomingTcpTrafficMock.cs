@@ -31,6 +31,32 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
                 await Task.Delay(100, token);
             }
+
+
+
         }
 
-}
+        public ValueTask<int> ReadBytesAsync(Memory<byte> buffer, CancellationToken token)
+        {
+
+            var pos = 0;
+
+            var span = buffer.Span;
+
+            while (pos<buffer.Length)
+            {
+
+                if (IncomingTraffic.Count == 0)
+                    return new ValueTask<int>(pos);
+
+                var b= IncomingTraffic.Dequeue();
+                span[pos] = b;
+                pos++;
+            }
+
+            return new ValueTask<int>(pos);
+
+        }
+
+    }
+} 
