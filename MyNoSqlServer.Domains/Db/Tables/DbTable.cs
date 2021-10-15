@@ -3,186 +3,217 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Partitions;
 using MyNoSqlServer.Domains.Db.Rows;
-using MyNoSqlServer.Domains.Json;
 using MyNoSqlServer.Domains.Persistence;
 using MyNoSqlServer.Domains.Query;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Domains.Db.Tables
 {
 
-    public class DbTable
+    public interface IDbTableReadAccess
     {
+        IReadOnlyDictionary<string, IReadOnlyList<DbRow>> GetAllRows();
 
+        IEnumerable<IPartitionReadAccess> GetAllPartitions();
+
+        IPartitionReadAccess TryGetPartition(string partitionKey);
+
+        int GetPartitionsAmount();
+
+        DbRow TryGetRow(string partitionKey, string rowKey);
+
+    }
+
+    public interface IDbTableWriteAccess
+    {
+        void InitTable(IReadOnlyDictionary<string, IReadOnlyList<DbRow>> partitions);
+
+        void InitPartition(string partitionKey, IReadOnlyList<DbRow> rows);
+
+        IPartitionWriteAccess TryGetPartitionWriteAccess(string partitionKey);
+        IPartitionWriteAccess GetOrCreatePartition(string partitionKey);
+
+        IReadOnlyList<DbPartition> DeletePartitions(IEnumerable<string> partitions);
+        
+        IReadOnlyDictionary<string, List<DbRow>> DeleteRows(string partitionKey, IEnumerable<string> rowKeys);
+
+        IReadOnlyList<DbPartition> GetPartitionsToGc(int maxPartitionsAmount);
+
+        DbPartition DeletePartition(string partitionKey);
+        bool Clear();
+    }
+    
+
+    public class DbTable : IDbTableReadAccess, IDbTableWriteAccess
+    {
         public bool Persist { get; private set; }
+        
+        public int MaxPartitionsAmount { get; private set; }
 
-        public DbTable(string name, bool persistThisTable)
+        
+        public bool SetAttributes(bool persist, int maxPartitionsAmount)
+        {
+            
+            if (persist == Persist && MaxPartitionsAmount == maxPartitionsAmount)
+                return false;
+            
+            Persist = persist;
+            MaxPartitionsAmount = maxPartitionsAmount;
+            return true;
+        }
+
+        
+        public bool SetMaxPartitionsAmount(int maxPartitionsAmount)
+        {
+            if (MaxPartitionsAmount == maxPartitionsAmount)
+                return false;
+            MaxPartitionsAmount = maxPartitionsAmount;
+
+            return true;
+        }
+
+        public DbTable(string name, bool persistThisTable, int maxPartitionsAmount)
         {
             Name = name;
             Persist = persistThisTable;
+
         }
 
-        public static DbTable CreateByRequest(string name, bool persistThisTable)
-        {
-            return new DbTable(name, persistThisTable);
-        }
 
-        public void UpdatePersist(bool persist)
+        public bool UpdatePersist(bool persist, TransactionEventAttributes attributes)
         {
+            if (Persist == persist)
+                return false;
             Persist = persist;
+
+            return true;
         }
 
         public string Name { get; }
 
-        private readonly ReaderWriterLockSlim _readerWriterLockSlim = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _readerWriterLockSlim = new ();
 
-        private readonly SortedList<string, DbPartition> _partitions = new SortedList<string, DbPartition>();
+        private readonly DbPartitionsList _partitions = new ();
 
 
-        public IReadOnlyList<DbPartition> GetAllPartitions()
+        IEnumerable<IPartitionReadAccess> IDbTableReadAccess.GetAllPartitions()
         {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.Values.ToList();
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
+            return _partitions.GetAllPartitions().ToList();
+        }
+
+        IPartitionReadAccess IDbTableReadAccess.TryGetPartition(string partitionKey)
+        {
+            return _partitions.TryGet(partitionKey);
+        }
+
+        int IDbTableReadAccess.GetPartitionsAmount()
+        {
+            return _partitions.Count;
         }
 
 
-        public DbPartition GetPartition(string partitionKey)
+        public int GetPartitionsCount()
         {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return _partitions.ContainsKey(partitionKey) ? _partitions[partitionKey] : null;
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
+            return _partitions.Count;
         }
 
-
-        public void InitPartitionFromSnapshot(PartitionSnapshot partitionSnapshot)
-        {
-
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-
-                var partition = DbPartition.Create(partitionSnapshot.PartitionKey);
-
-                if (_partitions.ContainsKey(partitionSnapshot.PartitionKey))
-                    return;
-
-                _partitions.Add(partition.PartitionKey, partition);
-
-
-                var partitionAsMyMemory = new MyMemoryAsByteArray(partitionSnapshot.Snapshot);
-
-
-                foreach (var dbRowMemory in partitionAsMyMemory.SplitJsonArrayToObjects())
-                {
-                    var entity = dbRowMemory.ParseDynamicEntity();
-                    var dbRow = DbRow.RestoreSnapshot(entity, dbRowMemory);
-                    partition.InsertOrReplace(dbRow);
-                }
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-        }
-
-        public (OperationResult result, DbPartition partition, DbRow dbRow)
-            Insert(DynamicEntity entity, DateTime now)
-        {
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                if (!_partitions.ContainsKey(entity.PartitionKey))
-                    _partitions.Add(entity.PartitionKey, DbPartition.Create(entity.PartitionKey));
-
-                var partition = _partitions[entity.PartitionKey];
-
-                var dbRow = DbRow.CreateNew(entity, now);
-
-                if (partition.Insert(dbRow, now))
-                    return (OperationResult.Ok, partition, dbRow);
-
-                return (OperationResult.RecordExists, null, null);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-
-
-        }
-
-        public (DbPartition partition, DbRow dbRow) InsertOrReplace(DynamicEntity entity, DateTime now)
-        {
-
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                if (!_partitions.ContainsKey(entity.PartitionKey))
-                    _partitions.Add(entity.PartitionKey, DbPartition.Create(entity.PartitionKey));
-
-                var partition = _partitions[entity.PartitionKey];
-
-                var dbRow = DbRow.CreateNew(entity, now);
-                partition.InsertOrReplace(dbRow);
-
-                return (partition, dbRow);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
-
-        }
 
         public DbRow GetEntity(string partitionKey, string rowKey)
         {
-            return TryGetDbRowWithReadLock(partitionKey, rowKey);
+            return GetReadAccess(readAccess => readAccess.TryGetRow(partitionKey, rowKey));
+        }
+        
+        
+        
+        DbRow IDbTableReadAccess.TryGetRow(string partitionKey, string rowKey)
+        {
+            var dbPartition = _partitions.TryGet(partitionKey) as IPartitionReadAccess;
+            return dbPartition?.TryGetRow(rowKey);
         }
 
 
-        public IReadOnlyList<DbRow> GetAllRecords(int? limit)
+
+        public IReadOnlyList<DbRow> GetAllRecords(int? limit, int? skip)
         {
-            var result = new List<DbRow>();
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                if (limit == null)
-                {
-                    foreach (var partition in _partitions.Values)
-                        result.AddRange(partition.GetAllRows());
-                }
-                else
-                {
-                    foreach (var partition in _partitions.Values)
-                    foreach (var dbRow in partition.GetAllRows())
-                    {
-                        result.Add(dbRow);
-                        if (result.Count >= limit.Value)
-                            return result;
-                    }
-                }
+
+                var records 
+                    = _partitions
+                        .GetAllPartitions()
+                        .SelectMany(partition => partition.GetAllRows());
+
+                if (skip != null)
+                    records = records.Skip(skip.Value);
+
+                if (limit != null)
+                    records = records.Take(limit.Value);
+
+                return records.ToList();
+
             }
             finally
             {
                 _readerWriterLockSlim.ExitReadLock();
             }
+        }
+        
+        public void GetReadAccess(Action<IDbTableReadAccess> readAccess)
+        {
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
 
-            return result;
+                readAccess(this);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+        }
+        
+        public void GetWriteAccess(Action<IDbTableWriteAccess> readAccess)
+        {
+            _readerWriterLockSlim.EnterWriteLock();
+            try
+            {
+
+                readAccess(this);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
+            }
+        }
+        
+        public T GetReadAccess<T>(Func<IDbTableReadAccess, T> writeAccess)
+        {
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                return writeAccess(this);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
+        }
+        
+        public T GetWriteAccess<T>(Func<IDbTableWriteAccess, T> writeAccess)
+        {
+            _readerWriterLockSlim.EnterWriteLock();
+            try
+            {
+
+                return writeAccess(this);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitWriteLock();
+            }
         }
 
         public IReadOnlyList<DbRow> GetRecords(string partitionKey, int? limit, int? skip)
@@ -190,14 +221,14 @@ namespace MyNoSqlServer.Domains.Db.Tables
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                if (!_partitions.ContainsKey(partitionKey))
-                    return Array.Empty<DbRow>();
 
-                var partition = _partitions[partitionKey];
+                var partition = _partitions.TryGet(partitionKey);
+                
+                if (partition == null)
+                    return Array.Empty<DbRow>();
 
                 if (skip == null && limit == null)
                     return partition.GetAllRows();
-
 
                 return partition.GetRowsWithLimit(limit, skip);
             }
@@ -206,60 +237,67 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitReadLock();
             }
         }
+        
 
-        public (DbPartition dbPartition, DbRow dbRow) DeleteRow(string partitionKey, string rowKey)
+        IReadOnlyDictionary<string, List<DbRow>> IDbTableWriteAccess.DeleteRows(string partitionKey,
+            IEnumerable<string> rowKeys)
         {
-            _readerWriterLockSlim.EnterWriteLock();
-            try
+            Dictionary<string, List<DbRow>> deletedRows = null;
+
+            var partition = _partitions.TryGet(partitionKey);
+            if (partition == null)
+                return null;
+
+            foreach (var rowKey in rowKeys)
             {
-                if (!_partitions.ContainsKey(partitionKey))
-                    return (null, null);
+                var dbRow = partition.DeleteRow(rowKey);
+                if (dbRow == null) 
+                    continue;
+                
+                deletedRows ??= new Dictionary<string, List<DbRow>>();
 
-                var partition = _partitions[partitionKey];
+                if (!deletedRows.ContainsKey(dbRow.PartitionKey))
+                    deletedRows.Add(dbRow.PartitionKey, new List<DbRow>());
 
-                var row = partition.DeleteRow(rowKey);
-
-                if (row != null)
-                    return (partition, row);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
+                deletedRows[dbRow.PartitionKey].Add(dbRow);
             }
 
-            return (null, null);
+            return deletedRows;
+
         }
 
-        public (DbPartition dbPartition, IReadOnlyList<DbRow> dbRows) CleanAndKeepLastRecords(string partitionKey,
-            int amount)
+        /*
+        public void CleanAndKeepLastRecords(string partitionKey,
+            int amount, TransactionEventAttributes attributes)
         {
             _readerWriterLockSlim.EnterWriteLock();
             try
             {
-                if (!_partitions.ContainsKey(partitionKey))
-                    return (null, null);
-
-                var partition = _partitions[partitionKey];
+                var partition = _partitions.TryGet(partitionKey);
+                if (partition == null)
+                    return;
 
                 var dbRows = partition.CleanAndKeepLastRecords(amount);
+                
+                
+                _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRows(attributes, this, dbRows));
 
-                return (partition, dbRows);
             }
             finally
             {
                 _readerWriterLockSlim.ExitWriteLock();
             }
         }
+        */
 
         public bool HasRecord(IMyNoSqlDbEntity entityInfo)
         {
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                if (!_partitions.ContainsKey(entityInfo.PartitionKey))
+                var partition = _partitions.TryGet(entityInfo.PartitionKey);
+                if (partition == null)
                     return false;
-
-                var partition = _partitions[entityInfo.PartitionKey];
 
                 return partition.HasRecord(entityInfo.RowKey);
             }
@@ -269,155 +307,50 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-
-        public (IEnumerable<DbPartition> partitions, IReadOnlyList<DbRow> rows) BulkInsertOrReplace(
-            IEnumerable<IMyMemory> itemsAsArray)
+        DbPartition IDbTableWriteAccess.DeletePartition(string partitionKey)
         {
-
-            var dbRows = itemsAsArray
-                .Select(arraySpan => arraySpan.ToDbRow())
-                .ToList();
-
-
-            var partitionsToSync = new Dictionary<string, DbPartition>();
-
-            var rowsToSync = new List<DbRow>();
-
-            _readerWriterLockSlim.EnterWriteLock();
-            try
-            {
-                foreach (var dbRow in dbRows)
-                {
-                    if (!_partitions.ContainsKey(dbRow.PartitionKey))
-                        _partitions.Add(dbRow.PartitionKey, DbPartition.Create(dbRow.PartitionKey));
-
-                    var partition = _partitions[dbRow.PartitionKey];
-
-                    partition.InsertOrReplace(dbRow);
-
-                    if (!partitionsToSync.ContainsKey(partition.PartitionKey))
-                        partitionsToSync.Add(partition.PartitionKey, partition);
-
-                    rowsToSync.Add(dbRow);
-                }
-
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-
-            }
-
-
-            return (partitionsToSync.Values, rowsToSync);
+            return _partitions.DeletePartition(partitionKey);
         }
 
-
-        public void CleanAndBulkInsert(IEnumerable<IMyMemory> itemsAsArray)
+        bool IDbTableWriteAccess.Clear()
         {
-
-            var dbRows = itemsAsArray
-                .Select(arraySpan => arraySpan
-                    .ToDbRow())
-                .ToList();
-
-            _readerWriterLockSlim.EnterWriteLock();
-
-            try
-            {
-                _partitions.Clear();
-
-                foreach (var dbRow in dbRows)
-                {
-                    if (!_partitions.ContainsKey(dbRow.PartitionKey))
-                        _partitions.Add(dbRow.PartitionKey, DbPartition.Create(dbRow.PartitionKey));
-
-                    var partition = _partitions[dbRow.PartitionKey];
-
-                    partition.InsertOrReplace(dbRow);
-                }
-
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
+            return _partitions.Clear();
         }
 
-        public IEnumerable<DbPartition> CleanAndBulkInsert(string partitionKey, IEnumerable<IMyMemory> itemsAsArray)
+        IReadOnlyList<DbPartition> IDbTableWriteAccess.DeletePartitions(IEnumerable<string> partitions)
         {
 
-            var dbRows = itemsAsArray
-                .Select(arraySpan => arraySpan
-                    .ToDbRow())
-                .ToArray();
-
-            _readerWriterLockSlim.EnterWriteLock();
-
-
-
-            var result = new Dictionary<string, DbPartition>();
-
-            try
+            List<DbPartition> result = null;
+            
+            foreach (var partitionKey in partitions)
             {
-                if (_partitions.ContainsKey(partitionKey))
-                    _partitions[partitionKey].Clean();
-
-                foreach (var dbRow in dbRows)
+                var dbPartition = _partitions.DeletePartition(partitionKey);
+                
+                
+                if (dbPartition != null)
                 {
-                    if (!_partitions.ContainsKey(dbRow.PartitionKey))
-                        _partitions.Add(dbRow.PartitionKey, DbPartition.Create(dbRow.PartitionKey));
-
-                    var partition = _partitions[dbRow.PartitionKey];
-
-                    partition.InsertOrReplace(dbRow);
-
-                    if (!result.ContainsKey(dbRow.PartitionKey))
-                        result.Add(dbRow.PartitionKey, partition);
+                    result ??= new List<DbPartition>();
+                    result.Add(dbPartition);
                 }
-
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
             }
 
-            return result.Values;
-        }
+            return result;
 
-        public void Clean()
-        {
-            _readerWriterLockSlim.EnterWriteLock();
-
-            try
-            {
-                _partitions.Clear();
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitWriteLock();
-            }
         }
 
 
         public IEnumerable<DbRow> ApplyQuery(IEnumerable<QueryCondition> queryConditions)
         {
-            var conditionsDict = queryConditions.GroupBy(itm => itm.FieldName)
-                .ToDictionary(itm => itm.Key, itm => itm.ToList());
-
-            var partitions = conditionsDict.ContainsKey(RowJsonUtils.PartitionKeyFieldName)
-                ? _partitions.FilterByQueryConditions(conditionsDict[RowJsonUtils.PartitionKeyFieldName]).ToList()
-                : _partitions.Values.ToList();
-
-            if (conditionsDict.ContainsKey(RowJsonUtils.PartitionKeyFieldName))
-                conditionsDict.Remove(RowJsonUtils.PartitionKeyFieldName);
-
-            foreach (var partition in partitions)
-            foreach (var dbRow in partition.ApplyQuery(conditionsDict))
-                yield return dbRow;
-
+            _readerWriterLockSlim.EnterReadLock();
+            try
+            {
+                return _partitions.ApplyQuery(queryConditions);
+            }
+            finally
+            {
+                _readerWriterLockSlim.ExitReadLock();
+            }
         }
-
 
         public int GetRecordsCount(string partitionKey)
         {
@@ -425,9 +358,11 @@ namespace MyNoSqlServer.Domains.Db.Tables
             try
             {
                 if (string.IsNullOrEmpty(partitionKey))
-                    return _partitions.Sum(itm => itm.Value.GetRecordsCount());
+                    return _partitions.GetAllPartitions().Sum(itm => itm.GetRecordsCount());
 
-                return _partitions.ContainsKey(partitionKey) ? _partitions[partitionKey].GetRecordsCount() : 0;
+                var partition = _partitions.TryGet(partitionKey);
+
+                return partition?.GetRecordsCount() ?? 0;
             }
             finally
             {
@@ -442,11 +377,13 @@ namespace MyNoSqlServer.Domains.Db.Tables
             {
                 if (string.IsNullOrEmpty(partitionKey))
                     return Array.Empty<DbRow>();
+                
+                var partition = _partitions.TryGet(partitionKey);
 
-                if (!_partitions.ContainsKey(partitionKey))
+                if (partition == null)
                     return Array.Empty<DbRow>();
 
-                return _partitions[partitionKey].GetRows(rowKeys);
+                return partition.GetRows(rowKeys);
 
             }
             finally
@@ -463,10 +400,12 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 if (string.IsNullOrEmpty(partitionKey))
                     return Array.Empty<DbRow>();
 
-                if (!_partitions.ContainsKey(partitionKey))
+                var partition = _partitions.TryGet(partitionKey);
+
+                if (partition == null)
                     return Array.Empty<DbRow>();
 
-                return _partitions[partitionKey].GetHighestRowAndBelow(rowKey, maxAmount);
+                return partition.GetHighestRowAndBelow(rowKey, maxAmount);
 
             }
             finally
@@ -476,49 +415,32 @@ namespace MyNoSqlServer.Domains.Db.Tables
         }
 
 
-        private IReadOnlyList<DbPartition> GetPartitionsToGarbageCollect(int maxAmount)
+        /*
+        public void KeepMaxPartitions(in int amount, TransactionEventAttributes attributes)
         {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-
-                if (_partitions.Count <= maxAmount)
-                    return Array.Empty<DbPartition>();
-
-
-                return _partitions
-                    .Values
-                    .OrderBy(itm => itm.LastAccessTime)
-                    .Take(_partitions.Count - maxAmount)
-                    .ToList();
-
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
-        }
-
-        public IReadOnlyList<DbPartition> KeepMaxPartitions(in int amount)
-        {
-            var partitionsToGc = this.GetPartitionsToGarbageCollect(amount);
+            var partitionsToGc = GetPartitionsToGc(amount);
 
             if (partitionsToGc.Count == 0)
-                return partitionsToGc;
+                return;
 
-            var result = new List<DbPartition>();
 
             _readerWriterLockSlim.EnterWriteLock();
             try
             {
+                List<DbPartition> deleted = null;
                 foreach (var dbPartition in partitionsToGc)
                 {
-                    if (_partitions.ContainsKey(dbPartition.PartitionKey))
+                    var partition = _partitions.DeletePartition(dbPartition.PartitionKey);
+
+                    if (partition != null)
                     {
-                        _partitions.Remove(dbPartition.PartitionKey);
-                        result.Add(dbPartition);
+                        deleted ??= new List<DbPartition>();
+                        deleted.Add(partition);
                     }
                 }
+                
+                if (deleted != null)
+                    _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.AsDeletePartitions(attributes, this, deleted));
 
             }
             finally
@@ -526,25 +448,19 @@ namespace MyNoSqlServer.Domains.Db.Tables
                 _readerWriterLockSlim.ExitWriteLock();
             }
 
-            return result;
-
         }
-
+*/
 
         private DbPartition GetPartitionIfItHasToBeCleaned(string partitionKey, int maxAmount)
         {
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                if (!_partitions.ContainsKey(partitionKey))
-                    return null;
-                var result = _partitions[partitionKey];
-
-
-                if (result.GetRecordsCount() <= maxAmount)
+                var partition = _partitions.TryGet(partitionKey);
+                if (partition == null)
                     return null;
 
-                return result;
+                return partition.GetRecordsCount() <= maxAmount ? null : partition;
             }
             finally
             {
@@ -553,28 +469,29 @@ namespace MyNoSqlServer.Domains.Db.Tables
         }
 
 
-        public (OperationResult result, DbPartition partition, DbRow dbRow) Replace(
-            DynamicEntity entity, DateTime now)
+        /*
+        public OperationResult Replace(DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
         {
             _readerWriterLockSlim.EnterWriteLock();
             try
             {
-                if (!_partitions.ContainsKey(entity.PartitionKey))
-                    return (OperationResult.RecordNotFound, null, null);
+                var partition = _partitions.TryGet(entity.PartitionKey);
+                if (partition == null)
+                    return OperationResult.RecordNotFound;
 
-                var partition = _partitions[entity.PartitionKey];
-
-                var record = partition.GetRow(entity.RowKey);
+                var record = partition.TryGetRow(entity.RowKey);
 
                 if (record == null)
-                    return (OperationResult.RecordNotFound, null, null);
+                    return OperationResult.RecordNotFound;
 
                 if (record.TimeStamp != entity.TimeStamp)
-                    return (OperationResult.RecordChangedConcurrently, null, null);
+                    return OperationResult.RecordChangedConcurrently;
 
                 record.Replace(entity, now);
+                
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, this, record));
 
-                return (OperationResult.Ok, partition, record);
+                return OperationResult.Ok;
 
             }
             finally
@@ -585,56 +502,39 @@ namespace MyNoSqlServer.Domains.Db.Tables
 
 
 
-
-        private DbRow TryGetDbRowWithReadLock(string partitionKey, string rowKey)
-        {
-            _readerWriterLockSlim.EnterReadLock();
-            try
-            {
-                return !_partitions.ContainsKey(partitionKey)
-                    ? null
-                    : _partitions[partitionKey].GetRow(rowKey);
-            }
-            finally
-            {
-                _readerWriterLockSlim.ExitReadLock();
-            }
-
-        }
-
-
-        public (OperationResult result, DbPartition partition, DbRow dbRow) Merge(
-            DynamicEntity entity, DateTime now)
+        public OperationResult Merge(
+            DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
         {
             var dbRow = TryGetDbRowWithReadLock(entity.PartitionKey, entity.RowKey);
 
             if (dbRow == null)
-                return (OperationResult.RecordNotFound, null, null);
+                return OperationResult.RecordNotFound;
 
             if (dbRow.TimeStamp != entity.TimeStamp)
-                return (OperationResult.RecordChangedConcurrently, null, null);
+                return OperationResult.RecordChangedConcurrently;
 
             var newEntities = dbRow.MergeEntities(entity);
 
             _readerWriterLockSlim.EnterWriteLock();
             try
             {
-                if (!_partitions.ContainsKey(entity.PartitionKey))
-                    return (OperationResult.RecordNotFound, null, null);
+                var partition = _partitions.TryGet(entity.PartitionKey);
+                if (partition == null)
+                    return OperationResult.RecordNotFound;
 
-                var partition = _partitions[entity.PartitionKey];
-
-                var record = partition.GetRow(entity.RowKey);
+                var record = partition.TryGetRow(entity.RowKey);
 
                 if (record == null)
-                    return (OperationResult.RecordNotFound, null, null);
+                    return OperationResult.RecordNotFound;
 
                 if (record.TimeStamp != entity.TimeStamp)
-                    return (OperationResult.RecordChangedConcurrently, null, null);
+                    return OperationResult.RecordChangedConcurrently;
 
                 record.Replace(newEntities, now);
+                
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, this, record));
 
-                return (OperationResult.Ok, partition, record);
+                return OperationResult.Ok;
 
             }
             finally
@@ -643,7 +543,7 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-
+        
         public DbPartition KeepMaxRecordsAmount(string partitionKey, int maxAmount)
         {
 
@@ -670,13 +570,14 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
 
         }
-
+        */
         public PartitionSnapshot GetPartitionSnapshot(string partitionKey)
         {
             _readerWriterLockSlim.EnterReadLock();
             try
             {
-                if (!_partitions.TryGetValue(partitionKey, out var dbPartition))
+                var dbPartition = _partitions.TryGet(partitionKey);
+                if (dbPartition == null)
                     return null;
 
                 var rowsAsBytes = dbPartition.GetAllRows().ToJsonArray().AsArray();
@@ -689,40 +590,118 @@ namespace MyNoSqlServer.Domains.Db.Tables
             }
         }
 
-        public bool BulkDelete(Dictionary<string, List<string>> partitionsAndRows)
+        
+        /*
+        public void BulkDelete(Dictionary<string, List<string>> partitionsAndRows, TransactionEventAttributes attributes)
         {
-            var result = false;
             _readerWriterLockSlim.ExitWriteLock();
             try
             {
+                
 
                 foreach (var (partitionKey, rowKeys) in partitionsAndRows)
                 {
                     if (rowKeys == null || rowKeys.Count == 0)
                     {
-                        if (_partitions.Remove(partitionKey))
-                            result = true;
+                        var deletedPartition = _partitions.DeletePartition(partitionKey);
+                        if (deletedPartition != null)
+                            _syncEventsDispatcher.Dispatch(InitPartitionsTransactionEvent.AsDeletePartition(attributes, this, deletedPartition));
                     }
                     else
                     {
-                        if (_partitions.TryGetValue(partitionKey, out var partition))
+                        var partition = _partitions.TryGet(partitionKey);
+
+                        if (partition != null)
+                        {
+                            List<DbRow> deletedRows = null; 
                             foreach (var rowKey in rowKeys)
                             {
                                 var dbRow = partition.DeleteRow(rowKey);
                                 if (dbRow != null)
-                                    result = true;
+                                {
+                                    deletedRows ??= new List<DbRow>();
+                                    deletedRows.Add(dbRow);
+                                }
                             }
+                            
+                            if (deletedRows != null)
+                                _syncEventsDispatcher.Dispatch(DeleteRowsTransactionEvent.AsRows(attributes, this, deletedRows));
+                        }
                     }
 
                 }
-
             }
             finally
             {
                 _readerWriterLockSlim.ExitWriteLock();
             }
-            
-            return result;
+
         }
+        */
+        
+
+        IReadOnlyList<DbPartition> IDbTableWriteAccess.GetPartitionsToGc(int maxAmount)
+        {
+            return _partitions.GetPartitionsToGc(maxAmount);
+        }
+
+
+        IReadOnlyDictionary<string, IReadOnlyList<DbRow>> IDbTableReadAccess.GetAllRows()
+        {
+            return _partitions.GetAllPartitions()
+                .ToDictionary(
+                    dbPartition => dbPartition.PartitionKey, 
+                    dbPartition => dbPartition.GetAllRows());
+        }
+
+        void IDbTableWriteAccess.InitTable(IReadOnlyDictionary<string, IReadOnlyList<DbRow>> partitions)
+        {
+            _partitions.Clear();
+
+            foreach (var (partitionKey, partitionData) in partitions)
+            {
+                var dbPartition = _partitions.GetOrCreate(partitionKey);
+                dbPartition.InitPartition(partitionData);
+            }
+        }
+
+        void IDbTableWriteAccess.InitPartition(string partitionKey, IReadOnlyList<DbRow> rows)
+        {
+            var partition = _partitions.GetOrCreate(partitionKey);
+
+            partition.InitPartition(rows);
+        }
+
+        
+        /*
+        void IDbTableWriteAccess.Insert(DynamicEntity entity, DateTime now, TransactionEventAttributes attributes)
+        {
+
+            var partition = _partitions.GetOrCreate(entity.PartitionKey);
+
+            var dbRow = DbRow.CreateNew(entity, now);
+
+            if (partition.Insert(dbRow))
+            {
+                _syncEventsDispatcher.Dispatch(UpdateRowsTransactionEvent.AsRow(attributes, this, dbRow));
+                return OperationResult.Ok;
+            }
+
+            return OperationResult.RecordExists;
+
+        }
+        */
+
+        IPartitionWriteAccess IDbTableWriteAccess.TryGetPartitionWriteAccess(string partitionKey)
+        {
+            return _partitions.TryGet(partitionKey);
+        }
+        
+        IPartitionWriteAccess IDbTableWriteAccess.GetOrCreatePartition(string partitionKey)
+        {
+            return _partitions.GetOrCreate(partitionKey);
+        }
+
     }
+    
 }

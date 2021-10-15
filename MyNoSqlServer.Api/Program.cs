@@ -1,6 +1,7 @@
 ﻿using System;
-using Autofac.Extensions.DependencyInjection;
+using System.Net;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -19,17 +20,26 @@ namespace MyNoSqlServer.Api
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+
+                    webBuilder.ConfigureKestrel(options =>
+                    {
+                        options.Listen(IPAddress.Any, 5123,
+                            o => o.Protocols = HttpProtocols.Http1);
+
+                        options.Listen(IPAddress.Any, 5124,
+                            o => o.Protocols = HttpProtocols.Http2);
+                    });
+
                     webBuilder
-                        .UseUrls("http://*:5123")
                         .UseStartup<Startup>()
-                        .ConfigureLogging((context, logging) =>
+                        .ConfigureLogging((_, logging) =>
                         {
-                            if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
+                            //ToDo - remove it after Debug
+                            //if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production")
                                 logging.ClearProviders();
                         });
 
-                })
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory());
-        
+                });
+
     }
 }

@@ -1,9 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
-using MyNoSqlServer.Api.Models;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -18,12 +16,31 @@ namespace MyNoSqlServer.Api.Controllers
             return Json(list.Select(itm => new
             {
                 itm.Name,
-                itm.Persist
+                itm.Persist,
+                MaxPartitionsAmount =  itm.MaxPartitionsAmount == 0 ? "Unlimited" : itm.MaxPartitionsAmount.ToString()
             }));
         }
 
+        private int GetMaxPartitionsAmount(string asString)
+        {
+            if (string.IsNullOrEmpty(asString))
+                return 0;
+            
+            try
+            {
+                return int.Parse(asString);
+
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
         [HttpPost("Tables/CreateIfNotExists")]
-        public IActionResult CreateIfNotExists([Required] [FromQuery] string tableName, [FromQuery]string persist)
+        public IActionResult CreateIfNotExists([Required] [FromQuery] string tableName, [FromQuery] string persist,
+            [FromQuery] string maxPartitionsAmount,
+            [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -32,12 +49,15 @@ namespace MyNoSqlServer.Api.Controllers
             if (string.IsNullOrEmpty(tableName))
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
-            ServiceLocator.DbInstance.CreateTableIfNotExists(tableName, persist != "0");
+            ServiceLocator.DbOperations.CreateTableIfNotExists(tableName, persist != "0",
+                GetMaxPartitionsAmount(maxPartitionsAmount), HttpContext.GetRequestAttributes(syncPeriod));
             return this.ResponseOk();
         }
 
         [HttpPost("Tables/Create")]
-        public IActionResult Create([Required] [FromQuery] string tableName, [FromQuery]string persist)
+        public IActionResult Create([Required] [FromQuery] string tableName, [FromQuery] string persist,
+            [FromQuery] string maxPartitionsAmount,
+            [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -48,14 +68,15 @@ namespace MyNoSqlServer.Api.Controllers
 
             tableName = tableName.ToLower();
 
-            if (ServiceLocator.DbInstance.CreateTable(tableName, persist != "0"))
+            if (ServiceLocator.DbOperations.CreateTable(tableName, persist != "0",
+                GetMaxPartitionsAmount(maxPartitionsAmount), HttpContext.GetRequestAttributes(syncPeriod)))
                 return this.ResponseOk();
 
             return this.GetResult(OperationResult.CanNotCreateObject);
         }
 
         [HttpDelete("Tables/Clean")]
-        public async ValueTask<IActionResult> Clean([Required] [FromQuery] string tableName, [FromQuery] string syncPeriod)
+        public IActionResult Clean([Required][FromQuery] string tableName, [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -65,21 +86,18 @@ namespace MyNoSqlServer.Api.Controllers
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
             var (getTableResult, table) = this.GetTable(tableName);
-            
+
             if (getTableResult != null)
                 return getTableResult;
-
-            table.Clean();
-
-            ServiceLocator.DataSynchronizer.PublishInitTable(table);
-            await ServiceLocator.PersistenceHandler.SynchronizeTableAsync(table, syncPeriod.ParseSynchronizationPeriodContract());
+            
+            ServiceLocator.DbOperations.Clear(table, HttpContext.GetRequestAttributes(syncPeriod));
 
             return Ok();
 
         }
         [HttpPost("Tables/UpdatePersist")]
-        public IActionResult UpdatePersist([Required] [FromQuery] string tableName,
-            [FromQuery] string persist)
+        public IActionResult UpdatePersist([Required][FromQuery] string tableName,
+            [FromQuery] string persist, [FromQuery] string syncPeriod)
         {
             var shutDown = this.CheckOnShuttingDown();
             if (shutDown != null)
@@ -89,18 +107,34 @@ namespace MyNoSqlServer.Api.Controllers
                 return this.GetResult(OperationResult.TableNameIsEmpty);
 
             var (getTableResult, table) = this.GetTable(tableName);
-            
+
             if (getTableResult != null)
                 return getTableResult;
 
             var persistAsBool = persist != "0";
-            
-            table.UpdatePersist(persistAsBool);
-            ServiceLocator.SnapshotSaverScheduler.SynchronizeSetTablePersist(table, persistAsBool);
+
+            table.UpdatePersist(persistAsBool,HttpContext.GetRequestAttributes(syncPeriod));
 
             return Ok();
-        } 
+        }
+
+
+        [HttpGet("Tables/PartitionsCount")]
+        public IActionResult PartitionsCount([Required][FromQuery] string tableName)
+        {
+            if (string.IsNullOrEmpty(tableName))
+                return this.GetResult(OperationResult.TableNameIsEmpty);
+
+            var (getTableResult, table) = this.GetTable(tableName);
+
+            if (getTableResult != null)
+                return getTableResult;
+
+            var result = table.GetPartitionsCount();
+
+            return Content(result.ToString());
+        }
 
     }
-    
+
 }

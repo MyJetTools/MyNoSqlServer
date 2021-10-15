@@ -10,20 +10,24 @@ namespace MyNoSqlServer.AzureStorage
     public class TableMetadata
     {
         public bool Persist { get; set; }
+        
+        public int MaxPartitionsAmount { get; set; }
 
-        public static TableMetadata Create(bool persist)
+        public static TableMetadata Create(bool persist, int maxPartitionsAmount)
         {
-            return new TableMetadata
+            return new ()
             {
-                Persist = persist
+                Persist = persist,
+                MaxPartitionsAmount = maxPartitionsAmount
             };
         }
 
         public static TableMetadata CreateDefault()
         {
-            return new TableMetadata
+            return new ()
             {
-                Persist = true
+                Persist = true,
+                MaxPartitionsAmount = 0
             };
         }
         
@@ -59,9 +63,9 @@ namespace MyNoSqlServer.AzureStorage
         
         
 
-        public static async ValueTask SaveTableMetadataAsync(CloudBlobContainer container,  bool persist)
+        public static async ValueTask SaveTableMetadataAsync(CloudBlobContainer container,  bool persist, int maxPartitionsAmount)
         {
-            var metadataModel = TableMetadata.Create(persist);
+            var metadataModel = TableMetadata.Create(persist, maxPartitionsAmount);
 
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(metadataModel);
 

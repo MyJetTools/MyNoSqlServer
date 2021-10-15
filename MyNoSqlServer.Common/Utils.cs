@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace MyNoSqlServer.Common
@@ -45,7 +46,7 @@ namespace MyNoSqlServer.Common
         
         public static string Base64ToString(this string src)
         {            
-            var bytes = Convert.FromBase64String(src);;
+            var bytes = Convert.FromBase64String(src);
             return Encoding.UTF8.GetString(bytes);
         }
 
@@ -107,8 +108,17 @@ namespace MyNoSqlServer.Common
 
             return result;
         }
-        
-        
+
+
+        public static IReadOnlyList<T> AsReadOnlyList<T>(this IEnumerable<T> src)
+        {
+            if (src is IReadOnlyList<T> readOnlyList)
+                return readOnlyList;
+
+            return src.ToList();
+        }
+
+
     }
     
 }

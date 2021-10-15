@@ -22,6 +22,11 @@ namespace MyNoSqlServer.Abstractions
         
         
         ValueTask<IEnumerable<T>> GetAsync();
+        
+        #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
+        IAsyncEnumerable<T> GetAllAsync(int bulkRecordsCount);
+        #endif
+        
         ValueTask<IEnumerable<T>> GetAsync(string partitionKey);
         ValueTask<T> GetAsync(string partitionKey, string rowKey);
         
@@ -37,6 +42,8 @@ namespace MyNoSqlServer.Abstractions
         ValueTask CleanAndKeepMaxRecords(string partitionKey, int maxAmount);
 
         ValueTask<int> GetCountAsync(string partitionKey);
+
+        ValueTask<ITransactionsBuilder<T>> BeginTransactionAsync();
     }
 
 

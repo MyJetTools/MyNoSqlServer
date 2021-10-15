@@ -1,118 +1,62 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using MyNoSqlServer.Domains.Db.Tables;
-using MyNoSqlServer.Domains.SnapshotSaver;
 
 namespace MyNoSqlServer.Domains.Db
 {
-    public class DbInstance
+
+    public interface IDbInstanceWriteAccess
     {
-        private readonly ISnapshotSaverScheduler _snapshotSaverScheduler;
-        private readonly object _lockObject = new object();
+        DbTable CreateTable(string tableName, bool persist, int maxPartitionsAmount);
+        DbTable TryGetTable(string tableName);
+
+    }
+    
+    public class DbInstance: IDbInstanceWriteAccess
+    {
+        private readonly object _lockObject = new ();
         
-        private Dictionary<string, DbTable> _tables = new Dictionary<string, DbTable>();
+        private Dictionary<string, DbTable> _tables = new ();
         private IReadOnlyList<DbTable> _tablesAsArray = Array.Empty<DbTable>();
 
-        public DbInstance(ISnapshotSaverScheduler snapshotSaverScheduler)
-        {
-            _snapshotSaverScheduler = snapshotSaverScheduler;
-        }
 
-        private (DbTable table, bool createdNow) TryToCreateNewTable(string tableName, bool persistTable)
-        {
-            DbTable syncCreateTable = null;
-            try
-            {
-                lock (_lockObject)
-                {
-
-                    if (_tables.TryGetValue(tableName, out var result))
-                    {
-                        if (result.Persist != persistTable)
-                        {
-                            result.UpdatePersist(persistTable);
-                            syncCreateTable = result;
-                        }
-                        return (result, false);
-                    }
-                        
-
-        
-                    
-                    var tableInstance = DbTable.CreateByRequest(tableName, persistTable);
-
-                    var tables = new Dictionary<string, DbTable>(_tables)
-                    {
-                        {tableInstance.Name, tableInstance}
-                    };
-
-                    _tables = tables;
-
-                    _tablesAsArray = _tables.Values.ToList();
-                    
-                    syncCreateTable = tableInstance;
-
-                    return (tableInstance, true);
-                }
-            }
-            finally
-            {
-                if (syncCreateTable != null)
-                    _snapshotSaverScheduler.SynchronizeSetTablePersist(syncCreateTable, persistTable);
-            }
-  
-        }
-        
-
-        public DbTable CreateTableIfNotExists(string tableName, bool persistTable)
-        {
-            var tables = _tables;
-
-            if (tables.TryGetValue(tableName, out var foundTable))
-            {
-                if (foundTable.Persist != persistTable)
-                {
-                    foundTable.UpdatePersist(persistTable);
-                    _snapshotSaverScheduler.SynchronizeSetTablePersist(foundTable, persistTable);
-                }
-
-                return foundTable;
-            }
-
-            var createdTable = TryToCreateNewTable(tableName, persistTable);
-            return createdTable.table;
-        }
-
-        public DbTable RestoreTable(string tableName, bool persist)
+        public void GetWriteAccess(Action<IDbInstanceWriteAccess> writeAccess)
         {
             lock (_lockObject)
             {
-                var result = new DbTable(tableName, persist);
-                _tables.Add(tableName, result);
-                _tablesAsArray = _tables.Values.ToList();
-                return result;
+                writeAccess(this);
+            }
+        }
+        
+        public T GetWriteAccess<T>(Func<IDbInstanceWriteAccess, T> writeAccess)
+        {
+            lock (_lockObject)
+            {
+                return writeAccess(this);
             }
         }
 
-        public bool CreateTable(string tableName, bool persistTable)
+        DbTable IDbInstanceWriteAccess.CreateTable(string tableName, bool persist, int maxPartitionsAmount)
         {
 
-            var tables = _tables;
-            if (tables.TryGetValue(tableName, out var foundTable))
+
+            if (_tables.TryGetValue(tableName, out var result))
+                return result;
+
+            var tableInstance = new DbTable(tableName, persist, maxPartitionsAmount);
+
+            var tables = new Dictionary<string, DbTable>(_tables)
             {
-                if (foundTable.Persist != persistTable)
-                {
-                    foundTable.UpdatePersist(persistTable);
-                    _snapshotSaverScheduler.SynchronizeSetTablePersist(foundTable, persistTable);
-                }
+                { tableInstance.Name, tableInstance }
+            };
 
-                return false;
-            }
+            _tables = tables;
 
-            var createdTable = TryToCreateNewTable(tableName, persistTable);
+            _tablesAsArray = _tables.Values.ToList();
 
-            return createdTable.createdNow;
+            return tableInstance;
         }
         
         public IReadOnlyList<DbTable> GetTables()
@@ -123,10 +67,38 @@ namespace MyNoSqlServer.Domains.Db
         public DbTable TryGetTable(string tableName)
         {
             var tables = _tables;
-            return tables.ContainsKey(tableName) ? tables[tableName] : null;
+            
+            return tables.TryGetValue(tableName, out var result)  ? result : null;
+
+        }
+
+        public DbTable GetTable(string tableName)
+        {
+            var tables = _tables;
+
+            if (tables.TryGetValue(tableName, out var result))
+                return result;
+
+            throw new Exception($"Table with {tableName} is not found");
 
         }
 
 
+        public void ReplaceTable(DbTable table)
+        {
+            var tables = new Dictionary<string, DbTable>(_tables) ;
+
+            lock (_lockObject)
+            {
+
+                if (tables.ContainsKey(table.Name))
+                    tables[table.Name] = table;
+                else
+                    tables.Add(table.Name, table);
+
+                _tables = tables;
+
+            }
+        }
     }
 }

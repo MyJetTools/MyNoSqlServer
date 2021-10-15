@@ -2,17 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using MyNoSqlServer.Common;
+using MyNoSqlServer.Domains.Logs;
 
 namespace MyNoSqlServer.AzureStorage
 {
     public static class AzureStorageBlobDecorators
     {
         
+        private static AppLogs AppLogs { get; set; }
+        
         private static readonly BlobRequestOptions RequestOptions=
-            new BlobRequestOptions
+            new ()
             {
                 MaximumExecutionTime = TimeSpan.FromSeconds(10)
             };
@@ -106,7 +110,7 @@ namespace MyNoSqlServer.AzureStorage
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Can not delete blob: {blob.Name}. Reason:{e.Message}");
+                AppLogs?.WriteError(null,"Delete from blob", $"BlobName:{blob.Name}", e);
             }
         }
         
@@ -131,8 +135,14 @@ namespace MyNoSqlServer.AzureStorage
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Can not clean container: {container.Name}. Reason:{e.Message}");
+                AppLogs?.WriteError(null,"Cleaning container", $"Container:{container.Name}", e);
             }
+        }
+
+
+        public static void Init(IServiceProvider sp)
+        {
+            AppLogs = sp.GetRequiredService<AppLogs>();
         }
 
     }

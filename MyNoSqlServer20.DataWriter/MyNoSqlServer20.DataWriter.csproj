@@ -7,7 +7,7 @@
 
 
     <ItemGroup>
-      <PackageReference Include="Flurl.Http" Version="3.0.1" />
+      <PackageReference Include="Flurl.Http" Version="3.2.0" />
       <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
     </ItemGroup>
 
@@ -20,6 +20,15 @@
     <ItemGroup>
       <Compile Include="..\MyNoSqlServer.DataWriter\Builders\BulkDeleteBuilder.cs">
         <Link>Builders\BulkDeleteBuilder.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.DataWriter\Builders\TransactionDataSerializer.cs">
+        <Link>Builders\TransactionDataSerializer.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.DataWriter\Builders\TransactionsBuilder.cs">
+        <Link>Builders\TransactionsBuilder.cs</Link>
+      </Compile>
+      <Compile Include="..\MyNoSqlServer.DataWriter\Contracts.cs">
+        <Link>Contracts.cs</Link>
       </Compile>
       <Compile Include="..\MyNoSqlServer.DataWriter\MyNoSqlDataWriterUtils.cs">
         <Link>MyNoSqlDataWriterUtils.cs</Link>

@@ -1,12 +1,15 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.Api.Models;
 using MyNoSqlServer.Common;
 using MyNoSqlServer.Domains.Db.Rows;
 using MyNoSqlServer.Domains.Db.Tables;
+using MyNoSqlServer.Domains.TransactionEvents;
 
 namespace MyNoSqlServer.Api.Controllers
 {
@@ -22,6 +25,56 @@ namespace MyNoSqlServer.Api.Controllers
         {
             var response = dbRows.ToJsonArray().AsArray();
             return ctx.File(response, AppJsonContentType);
+        }
+
+
+        private static DataSynchronizationPeriod GetSyncPeriod(this HttpContext ctx, string syncPeriod)
+        {
+            if (syncPeriod != null)
+                return syncPeriod.ParseDataSynchronizationPeriod(CommonModels.DefaultSyncPeriod);
+
+            return ctx.Request.Query.TryGetValue("syncPeriod", out var value)
+                ? value.ParseSynchronizationPeriodContract()
+                : CommonModels.DefaultSyncPeriod;
+        }
+
+        
+        private static IReadOnlyDictionary<string, string> ParseHeader(string parseHeader)
+        {
+            var result = new Dictionary<string, string>();
+
+            try
+            {
+                foreach (var itm in parseHeader.Split(";"))
+                {
+                    var kv = itm.Split('=');
+                    
+                    if (kv.Length>1)
+                        result.Add(kv[0], kv[1]);
+                }
+
+                return result;
+            }
+            catch (Exception)
+            {
+                return result;
+            }
+
+        }
+
+        private static IReadOnlyDictionary<string, string> GetHeaders(this HttpContext ctx)
+        {
+            if (ctx.Request.Headers.TryGetValue("HEADERS", out var result))
+                return ParseHeader(result);
+            
+            return new Dictionary<string, string>();
+        }
+
+
+        public static TransactionEventAttributes GetRequestAttributes(this HttpContext ctx, string syncPeriod)
+        {
+            return new TransactionEventAttributes(new List<string>{Startup.Settings.Location} , ctx.GetSyncPeriod(syncPeriod), 
+                EventSource.ClientRequest, ctx.GetHeaders());
         }
         
         public static async ValueTask<IMyMemory> BodyAsIMemoryAsync(

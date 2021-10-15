@@ -12,10 +12,9 @@ namespace MyNoSqlServer.Api.Controllers
 {
     
     [ApiController]
-    [Route("Bulk/[Action]")]
     public class BulkController : Controller
     {
-        [HttpPost]
+        [HttpPost("Bulk/InsertOrReplace")]
         public async ValueTask<IActionResult> InsertOrReplace([Required][FromQuery] string tableName, 
             [FromQuery]string syncPeriod)
         {
@@ -41,41 +40,30 @@ namespace MyNoSqlServer.Api.Controllers
 
             var entitiesToInsert = body.SplitJsonArrayToObjects();
 
-            var (dbPartitions, dbRows) = table.BulkInsertOrReplace(entitiesToInsert);
-
-            ServiceLocator.DataSynchronizer.SynchronizeUpdate(table, dbRows);
+            var result =ServiceLocator.DbOperations.BulkInsertOrReplace(table, entitiesToInsert,
+                HttpContext.GetRequestAttributes(syncPeriod));
             
-            foreach (var dbPartition in dbPartitions)
-                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition.PartitionKey, theSyncPeriod);
-            
-            return this.ResponseOk();
+            return this.GetResult(result);
 
         }
 
-        private static void CleanPartitionAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, string partitionKey, 
-            DataSynchronizationPeriod syncPeriod)
+        private void CleanPartitionAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, string partitionKey, 
+            string syncPeriod)
         {
-            var partitionsToSynchronize = table.CleanAndBulkInsert(partitionKey, entitiesToInsert);
-
-            foreach (var dbPartition in partitionsToSynchronize)
-            {
-                ServiceLocator.SnapshotSaverScheduler.SynchronizePartition(table, dbPartition.PartitionKey, syncPeriod);
-                ServiceLocator.DataSynchronizer?.PublishInitPartition(table, dbPartition); 
-            }
+            ServiceLocator.DbOperations
+                .CleanPartitionAndBulkInsert(table, partitionKey, entitiesToInsert, HttpContext.GetRequestAttributes(syncPeriod));
         }
         
         
-        private static void CleanTableAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, 
-            DataSynchronizationPeriod syncPeriod)
+        private void CleanTableAndBulkInsert(DbTable table, IEnumerable<IMyMemory> entitiesToInsert, 
+            string syncPeriod)
         {
-            table.CleanAndBulkInsert(entitiesToInsert);
-            
-            ServiceLocator.SnapshotSaverScheduler.SynchronizeTable(table, syncPeriod);
-            ServiceLocator.DataSynchronizer?.PublishInitTable(table);
+            ServiceLocator.DbOperations
+                .CleanTableAndBulkInsert(table,entitiesToInsert, HttpContext.GetRequestAttributes(syncPeriod));
         }
 
 
-        [HttpPost]
+        [HttpPost("Bulk/CleanAndBulkInsert")]
         public async ValueTask<IActionResult> CleanAndBulkInsert([Required] [FromQuery] string tableName,
             [FromQuery] string partitionKey,
             [FromQuery] string syncPeriod)
@@ -85,23 +73,19 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
             
-            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
-
-            if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
-                return Conflict("CleanAndBulkInsert insert does not support immediate persistence");
-
             var body = await Request.BodyAsIMemoryAsync();
             
             var entitiesToInsert = body.SplitJsonArrayToObjects();
 
             if (string.IsNullOrEmpty(partitionKey))
-                CleanTableAndBulkInsert(table, entitiesToInsert, theSyncPeriod);
+                CleanTableAndBulkInsert(table, entitiesToInsert, syncPeriod);
             else
-                CleanPartitionAndBulkInsert(table, entitiesToInsert, partitionKey, theSyncPeriod);
+                CleanPartitionAndBulkInsert(table, entitiesToInsert, partitionKey, syncPeriod);
 
             return this.ResponseOk();
         }
 
+        [HttpPost("Bulk/Delete")]
         public IActionResult Delete([Required] [FromQuery] string tableName, [FromQuery] string syncPeriod,
             [FromBody] [Required] Dictionary<string, List<string>> partitionsAndRows)
         {
@@ -110,18 +94,8 @@ namespace MyNoSqlServer.Api.Controllers
             if (getTableResult != null)
                 return getTableResult;
             
-            var theSyncPeriod = syncPeriod.ParseSynchronizationPeriodContract();
+            ServiceLocator.DbOperations.BulkDelete(table, partitionsAndRows, HttpContext.GetRequestAttributes(syncPeriod));
 
-            if (theSyncPeriod == DataSynchronizationPeriod.Immediately)
-                return Conflict("CleanAndBulkInsert insert does not support immediate persistence");
-
-            var result = table.BulkDelete(partitionsAndRows);
-
-            if (result)
-            {
-                ServiceLocator.SnapshotSaverScheduler.SynchronizeTable(table, theSyncPeriod);
-                ServiceLocator.DataSynchronizer?.PublishInitTable(table);
-            }
             return this.ResponseOk();
         }
 

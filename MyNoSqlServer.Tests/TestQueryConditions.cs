@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Common;
@@ -21,7 +20,9 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false);
+            
+            
+            var dbTable = new DbTable("myTable", false, 0);
 
             var recordToInsert = new TestRecord
             {
@@ -32,9 +33,9 @@ namespace MyNoSqlServer.Tests
 
             var recordIsByteArray = recordToInsert.AsJsonByteArray();
 
-            var fields = recordIsByteArray.AsMyMemory().ParseDynamicEntity();
-
-            dbTable.Insert(fields, DateTime.UtcNow);
+            var dynEntity = recordIsByteArray.AsMyMemory().ParseDynamicEntity();
+            
+            dbTable.Insert(dynEntity);
 
             var query = "PartitionKey eq 'MyPartition' and RowKey eq 'MyRow'";
 
@@ -49,7 +50,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false);
+            var dbTable = new DbTable("myTable", false, 0);
 
             for (var i = 0; i < 100; i++)
             {
@@ -65,7 +66,7 @@ namespace MyNoSqlServer.Tests
 
                 var entity = recordIsByteArray.ParseDynamicEntity();
             
-                dbTable.Insert(entity, DateTime.UtcNow);
+                dbTable.Insert(entity);
             }
 
             var query = "PartitionKey eq 'MyPartition' and RowKey ge '001' and RowKey le '003'";
@@ -83,7 +84,7 @@ namespace MyNoSqlServer.Tests
         [Test]
         public void TestSimpleRangeAboveQuery()
         {
-            var dbTable = DbTable.CreateByRequest("myTable", false);
+            var dbTable = new DbTable("myTable", false, 0);
 
             for (var i = 0; i <= 100; i++)
             {
@@ -99,7 +100,7 @@ namespace MyNoSqlServer.Tests
 
                 var entity = recordIsByteArray.ParseDynamicEntity();
             
-                dbTable.Insert(entity, DateTime.UtcNow);
+                dbTable.Insert(entity);
             }
 
             var query = "PartitionKey eq 'MyPartition' and RowKey ge '199'";

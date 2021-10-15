@@ -9,7 +9,7 @@ namespace MyNoSqlServer.Common
     public class ChunkedStream : Stream, IMyMemory
     {
 
-        private readonly List<ReadOnlyMemory<byte>> _items = new List<ReadOnlyMemory<byte>>();
+        private readonly List<ReadOnlyMemory<byte>> _items = new ();
         
         public override void Flush()
         {

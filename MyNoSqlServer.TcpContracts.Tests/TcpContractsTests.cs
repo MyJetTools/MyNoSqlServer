@@ -22,6 +22,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
             
             var incomingTraffic = new IncomingTcpTrafficMock();
 
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(pingContract);
@@ -139,6 +140,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
             };
             
             var incomingTraffic = new IncomingTcpTrafficMock();
+
 
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             

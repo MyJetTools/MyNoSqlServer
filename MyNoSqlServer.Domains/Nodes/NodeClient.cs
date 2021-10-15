@@ -1,0 +1,154 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.DataCompression;
+using MyNoSqlServer.Domains.TransactionEvents;
+using MyNoSqlServer.NodePersistence.Grpc;
+
+namespace MyNoSqlServer.Domains.Nodes
+{
+    public class NodeClient
+    {
+        private readonly SyncTransactionHandler _syncTransactionHandler;
+        private readonly IMyNoSqlServerNodeSynchronizationGrpcService _grpcService;
+        private readonly ISettingsLocation _settingsLocation;
+        private readonly IMyNoSqlNodePersistenceSettings _settings;
+
+        private readonly string _sessionId;
+        
+        
+        public string RemoteLocation { get; private set; }
+
+        public NodeClient(SyncTransactionHandler syncTransactionHandler,
+            IMyNoSqlServerNodeSynchronizationGrpcService grpcService, ISettingsLocation settingsLocation, IMyNoSqlNodePersistenceSettings settings)
+        {
+            _syncTransactionHandler = syncTransactionHandler;
+            _grpcService = grpcService;
+            _settingsLocation = settingsLocation;
+            _settings = settings;
+            _sessionId = Guid.NewGuid().ToString("N");
+        }
+
+
+        private async Task<SyncTransactionGrpcModel> SyncAsync(long requestId)
+        {
+            if (_settings.CompressData)
+            {
+                var grpcPayload = await _grpcService.SyncCompressedAsync(new SyncGrpcRequest
+                {
+                    Location = _settingsLocation.Location,
+                    RequestId = requestId,
+                    SessionId = _sessionId
+                });
+
+
+                var payload = MyNoSqlServerDataCompression.UnZipPayload(grpcPayload.Payload);
+
+                return ProtoBuf.Serializer.Deserialize<SyncTransactionGrpcModel>(payload.AsMemory());
+            }
+            
+            
+            return await _grpcService.SyncAsync(new SyncGrpcRequest
+            {
+                Location = _settingsLocation.Location,
+                RequestId = requestId,
+                SessionId = _sessionId
+            });
+
+        }
+
+
+        private async Task ThreadLoopAsync()
+        {
+
+            long requestId = 0;
+
+            while (_working)
+            {
+                try
+                {
+
+                    var grpcResponse = await SyncAsync(requestId);
+
+                    RemoteLocation = grpcResponse.RemoteLocation;
+
+                    if (grpcResponse.TableName == null)
+                    {
+                        requestId++;
+                        continue;
+                    }
+                        
+                    
+                    Console.WriteLine($"grpcResponse got table {grpcResponse.TableName} updates from location {RemoteLocation}. ");
+                    
+                    if (grpcResponse.TableAttributes != null)
+                    {
+                        Console.WriteLine("grpcResponse.TableAttributes not null");    
+                    }
+
+                    if (grpcResponse.InitTableData != null)
+                    {
+                        Console.WriteLine("initTableData.InitTableData not null");    
+                    }
+                    
+                    if (grpcResponse.InitPartitionsData != null)
+                    {
+                        Console.WriteLine("initTableData.InitPartitionsData not null");    
+                    }
+                    
+                    if (grpcResponse.UpdateRowsData != null)
+                    {
+                        Console.WriteLine("initTableData.UpdateRowsData not null");    
+                    }
+
+                    if (grpcResponse.DeleteRows != null)
+                    {
+                        Console.WriteLine("initTableData.DeleteRows not null");    
+                    }
+
+                    _syncTransactionHandler.HandleTransaction(grpcResponse, () =>
+                        CreateTransactionEventAttribute(grpcResponse));
+
+                    requestId++;
+
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("NodeClient: " + e);
+                    await Task.Delay(1000);
+                }
+                
+            }
+            
+        }
+
+
+        private TransactionEventAttributes CreateTransactionEventAttribute(SyncTransactionGrpcModel syncTransactionGrpcModel)
+        {
+
+            var locations = syncTransactionGrpcModel.Locations ?? new List<string>();
+
+            locations.Add(_settingsLocation.Location);
+            return new TransactionEventAttributes(locations,
+                DataSynchronizationPeriod.Sec5,
+                syncTransactionGrpcModel.InitPacket ? EventSource.Init : EventSource.Synchronization,
+                syncTransactionGrpcModel.Headers?.ToDictionary(itm => itm.Key, itm => itm.Value)
+            );
+        }
+
+
+
+        private bool _working;
+        private Task _task;
+
+
+        public void Start()
+        {
+            _working = true;
+            _task = ThreadLoopAsync();
+
+        }
+    }
+}

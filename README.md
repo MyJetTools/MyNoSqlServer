@@ -51,3 +51,103 @@ MyNoSqlServerClient - has a nuget https://www.nuget.org/packages/MyNoSqlClient
 **Docker**:
 * ![myjettools/my-nosql-server](https://img.shields.io/docker/v/myjettools/my-nosql-server-dev?label=myjettools%2Fmy-nosql-server-dev&style=flat-square)
 
+
+# GrpcWriter:
+
+The Library which facilitates the ability to make updates though GRPC Transport
+
+### Example of creating GRPC Writer:
+
+```csharp        
+using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using Grpc.Net.Client;
+using MyNoSqlServer.Abstractions;
+using MyNoSqlServer.Grpc;
+using MyNoSqlServer.GrpcDataWriter;
+using ProtoBuf.Grpc.Client;
+
+namespace MyNoSqlServerTestGrpcClient
+{
+  class Program
+  {
+        static void Main(string[] args)
+        {
+            TestGrpcContracts().Wait();
+
+            Console.WriteLine("Done");
+        }
+
+        private static async Task TestGrpcContracts()
+        {
+            GrpcClientFactory.AllowUnencryptedHttp2 = true;
+            
+            var transportChannel = GrpcChannel
+                .ForAddress("http://127.0.0.1:5124")
+                .CreateGrpcService<IMyNoSqlTransportGrpcService>();
+
+            var grpcWriter = new MyNoSqlGrpcDataWriter(transportChannel);
+
+            grpcWriter.RegisterSupportedEntity<TestEntity>("testtbl");
+  
+            var sw = new Stopwatch();
+            sw.Start();
+            
+            var transaction = grpcWriter.BeginTransaction();
+
+            transaction.InsertOrReplaceEntity(new TestEntity
+            {
+                PartitionKey = "PK",
+                RowKey = "RK",
+                Value = "Value"
+            });
+
+            await transaction.CommitAsync();
+
+            sw.Stop();
+            
+            Console.WriteLine($"Record is inserted in {sw.Elapsed}");
+            
+            
+            sw.Reset();
+            var i = 0;
+            sw.Start();
+            await foreach (var _ in grpcWriter.GetRowsAsync<TestEntity>())
+            {
+                i++;
+            }
+            sw.Stop();
+            
+            Console.WriteLine($"Got {i} records in {sw.Elapsed}");
+        }
+    }
+
+    public class TestEntity : MyNoSqlDbEntity
+    {
+        public string Value { get; set; }
+    }
+}
+
+```
+
+
+# RELEASE NOTES
+
+Server 1.0.54-RC
+
+* Added ability to get all data Partition by partition;
+* Added GRPC Writer Support which can:
+  * Create Table if not exists
+  * Specify Table Attributes:
+    * Whether table has to be persistent or not;
+    * Max amount of partitions table can hold;
+  * All GET Operations by combinations of PartitionsKey and RowKey;
+  * Transactional Updates;
+* Added ability to update data transactionally (only 100% executable operations are support):
+  * Clean table;
+  * Clean Partitions;
+  * Delete Rows;
+  * InsertOrReplace partitions;
+
+

@@ -9,48 +9,95 @@ using MyNoSqlServer.Domains.Query;
 
 namespace MyNoSqlServer.Domains.Db.Partitions
 {
+
+    public interface IPartitionWriteAccess
+    {
+        
+        string PartitionKey { get; }
+        bool Insert(DbRow dbRow);
+        void InsertOrReplace(DbRow row);
+
+        void BulkInsertOrReplace(IReadOnlyList<DbRow> rows);
+
+        void ClearAndBulkInsertOrReplace(IReadOnlyList<DbRow> rows);
+        IReadOnlyList<DbRow> GetAllRows();
+
+        DbRow DeleteRow(string rowKey);
+        
+        IReadOnlyList<DbRow> CleanAndKeepLastRecords(int amount);
+
+        DbRow TryGetRow(string rowKey);
+    }
+
+
+    public interface IPartitionReadAccess
+    {
+        string PartitionKey { get; }
+
+        IReadOnlyList<DbRow> GetAllRows();
+        
+        DbRow TryGetRow(string rowKey);
+    }
     
     /// <summary>
     /// DbPartition Uses SlimLock of Table
     /// </summary>
-    public class DbPartition
+    public class DbPartition : IPartitionWriteAccess, IPartitionReadAccess
     {
-        public string PartitionKey { get; private set; }
+        public string PartitionKey { get; }
         
-        private readonly SortedList<string, DbRow> _rows = new SortedList<string, DbRow>();
+        private readonly SortedList<string, DbRow> _rows = new ();
 
-        private IReadOnlyList<DbRow> _rowsAsList = null;
+        private IReadOnlyList<DbRow> _rowsAsList;
         
-        public DateTime LastAccessTime { get; private set; }
+        internal DateTimeOffset LastTimeAccess { get; set; }
 
-        public bool Insert(DbRow row, DateTime now)
+
+        bool IPartitionWriteAccess.Insert(DbRow row)
         {
             if (_rows.ContainsKey(row.RowKey))
                 return false;
             
             _rows.Add(row.RowKey, row);
             _rowsAsList = null;
-            LastAccessTime = now;
             
             return true;
         }
 
-        public void InsertOrReplace(DbRow row)
+        void IPartitionWriteAccess.InsertOrReplace(DbRow row)
         {
             if (_rows.ContainsKey(row.RowKey))
                 _rows[row.RowKey] = row;
             else
                 _rows.Add(row.RowKey, row);
             
-            _rowsAsList = null;
+   
             
-            LastAccessTime = DateTime.UtcNow;
+            _rowsAsList = null;
+        }
+        
+        void IPartitionWriteAccess.BulkInsertOrReplace(IReadOnlyList<DbRow> rows)
+        {
+
+            foreach (var row in rows)
+            {
+                if (_rows.ContainsKey(row.RowKey))
+                    _rows[row.RowKey] = row;
+                else
+                    _rows.Add(row.RowKey, row);   
+            }
+
+            
+            _rowsAsList = null;
         }
 
-
-        public DbRow GetRow(string rowKey)
+        DbRow IPartitionWriteAccess.TryGetRow(string rowKey)
         {
-            LastAccessTime = DateTime.UtcNow;
+            return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;
+        }
+        
+        DbRow IPartitionReadAccess.TryGetRow(string rowKey)
+        {
             return _rows.ContainsKey(rowKey) ? _rows[rowKey] : null;
         }
 
@@ -66,7 +113,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         
         public IReadOnlyList<DbRow> GetRowsWithLimit(int? limit, int? skip)
         {
-            LastAccessTime = DateTime.UtcNow;
             IEnumerable<DbRow> result = _rows.Values;
 
 
@@ -78,26 +124,24 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             
             return result.ToList();
         }
-        
-        
 
-        public static DbPartition Create(string partitionKey)
+
+        public DbPartition(string partitionKey)
         {
-            return new DbPartition
-            {
-                PartitionKey = partitionKey
-            };
+            PartitionKey = partitionKey;
+            LastTimeAccess = DateTimeOffset.UtcNow;
         }
 
         public DbRow DeleteRow(string rowKey)
         {
-            LastAccessTime = DateTime.UtcNow;
             if (!_rows.Remove(rowKey, out var result))
                 return null;
 
             _rowsAsList = null;
             return result;
         }
+
+
 
         public void RestoreRecord(IMyNoSqlDbEntity entityInfo, IMyMemory data)
         {
@@ -130,7 +174,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         
         public IEnumerable<DbRow> GetHighestRowAndBelow(string rowKey, int maxAmount)
         {
-            LastAccessTime = DateTime.UtcNow;
             return _rows.GetHighestAndBelow(rowKey, maxAmount);
         }
 
@@ -145,11 +188,11 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         {
             _rows.Clear();
         }
+        
             
-        public IReadOnlyList<DbRow> CleanAndKeepLastRecords(int amount)
+        IReadOnlyList<DbRow> IPartitionWriteAccess.CleanAndKeepLastRecords(int amount)
         {
             
-            LastAccessTime = DateTime.UtcNow;
             if (amount<0)
                 throw new Exception("Amount must be greater than zero");
             
@@ -173,7 +216,6 @@ namespace MyNoSqlServer.Domains.Db.Partitions
 
         public IReadOnlyList<DbRow> GetRows(string[] rowKeys)
         {
-            LastAccessTime = DateTime.UtcNow;
             return (from rowKey in rowKeys 
                 where _rows.ContainsKey(rowKey) 
                 select _rows[rowKey]).ToList();
@@ -185,5 +227,22 @@ namespace MyNoSqlServer.Domains.Db.Partitions
         }
 
 
+        public void InitPartition(IReadOnlyList<DbRow> rows)
+        {
+            _rows.Clear();
+
+            foreach (var row in rows)
+                _rows.Add(row.RowKey, row);
+        }
+        
+        
+        public void ClearAndBulkInsertOrReplace(IReadOnlyList<DbRow> rows)
+        {
+            _rows.Clear();
+
+            foreach (var row in rows)
+                _rows.Add(row.RowKey, row);
+        }
+        
     }
 }

@@ -1,13 +1,13 @@
-﻿using Autofac;
+﻿using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using MyNoSqlServer.Api.Hubs;
-using MyNoSqlServer.Api.Models;
-using MyNoSqlServer.AzureStorage;
+using MyNoSqlServer.Api.Grpc;
+using MyNoSqlServer.Api.Middlewares;
 using MyNoSqlServer.Domains;
 using Prometheus;
+using ProtoBuf.Grpc.Server;
 
 
 namespace MyNoSqlServer.Api
@@ -21,7 +21,7 @@ namespace MyNoSqlServer.Api
 
         public IConfiguration Configuration { get; }
 
-        public SettingsModel _settings;
+        public static SettingsModel Settings { get; private set; }
 
         private IServiceCollection _services;
 
@@ -30,6 +30,9 @@ namespace MyNoSqlServer.Api
         {
 
             _services = services;
+            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+            services.AddCodeFirstGrpc();
+            
 
             services.AddApplicationInsightsTelemetry(Configuration);
 
@@ -39,18 +42,25 @@ namespace MyNoSqlServer.Api
 
             services.AddSwaggerDocument(o => { o.Title = "MyNoSqlServer"; });
 
-            _settings = SettingsLoader.LoadSettings();
+            Settings = SettingsLoader.LoadSettings();
+            
+            services.AddSingleton<IMyNoSqlNodePersistenceSettings>(Settings);
+            services.AddSingleton<ISettingsLocation>(Settings);
+            
             
             services.BindDomainsServices();
-            services.BindAzureStorage(_settings.BackupAzureConnectString);
-            services.BindApiServices();
+
+   
+            
+            services.BindDataReadersTcpServices();
+
+            if (Settings.IsNode())
+                services.BindAsNodeServices(Settings);
+            else
+                services.BindAsRootNodeServices(Settings);
 
         }
 
-        public void ConfigureContainer(ContainerBuilder builder)
-        {
-            builder.RegisterModule(new ServiceModule(_settings.BackupAzureConnectString));
-        }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostApplicationLifetime applicationLifetime)
@@ -76,26 +86,30 @@ namespace MyNoSqlServer.Api
             });
 
             //  app.UseForwardedHeaders();
-
             
             app.UseStaticFiles();
+            
 
             app.UseOpenApi();
             app.UseSwaggerUi3();
 
+            app.UseErrorMiddleware();
             app.UseRouting();
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapGrpcService<MyNoSqlGrpcService>();
+                endpoints.MapGrpcService<PersistenceNodeGrpcService>();
+                endpoints.MapGrpcService<NodeSyncGrpcService>();
                 endpoints.MapControllers();
-                endpoints.MapHub<ChangesHub>("/changes");
                 endpoints.MapMetrics();
+                
             });
 
             var sp = _services.BuildServiceProvider();
             ServiceLocator.Init(sp);
             
-            ServiceLocator.Start();
+            ServiceLocator.Start(sp, Settings);
         }
 
         private void OnShutdown()

@@ -2,7 +2,6 @@ using System;
 using MyNoSqlServer.Domains;
 using MyNoSqlServer.Domains.Db;
 using NUnit.Framework;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains.Json;
@@ -24,15 +23,14 @@ namespace MyNoSqlServer.Tests
     {
 
         [Test]
-        public async Task TestOkReplace()
+        public void TestOkReplace()
         {
             var ioc = TestUtils.GetTestIoc();
 
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbOperations.CreateTableIfNotExists("mytable", false, 0,
+                TestUtils.GetTestEventAttributes());
 
             var rawClass = new TestReplaceEntity
             {
@@ -43,7 +41,8 @@ namespace MyNoSqlServer.Tests
 
             var dt = DateTime.UtcNow;
 
-            await dbOperations.InsertAsync(table, rawClass.ToMemory(), DataSynchronizationPeriod.Sec1, dt);
+            dbOperations.Insert(table, rawClass.ToMemory(),  dt,
+                TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec1));
             
             rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
 
@@ -51,7 +50,8 @@ namespace MyNoSqlServer.Tests
             
             dt = DateTime.UtcNow.AddSeconds(1);
             
-            var opResult = await dbOperations.ReplaceAsync(table, rawClass.ToMemory(), DataSynchronizationPeriod.Immediately, dt);
+            var opResult = dbOperations.Replace(table, rawClass.ToMemory(), dt,
+                TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec5));
             
             Assert.AreEqual(OperationResult.Ok, opResult);
 
@@ -62,15 +62,14 @@ namespace MyNoSqlServer.Tests
         }
         
         [Test]
-        public async Task TestConflictReplace()
+        public void TestConflictReplace()
         {
             var ioc = TestUtils.GetTestIoc();
 
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbOperations.CreateTableIfNotExists("mytable", false, 0,
+                TestUtils.GetTestEventAttributes());
 
             var rawClass = new TestReplaceEntity
             {
@@ -82,7 +81,8 @@ namespace MyNoSqlServer.Tests
 
             var memory = rawClass.ToMemory();
 
-            await dbOperations.InsertAsync(table, memory, DataSynchronizationPeriod.Sec1, DateTime.UtcNow);
+            dbOperations.Insert(table, memory,  DateTime.UtcNow,
+                TestUtils.GetTestEventAttributes(DataSynchronizationPeriod.Sec1));
             
             rawClass = table.GetEntity("test", "test").AsResult<TestReplaceEntity>();
 
@@ -91,7 +91,8 @@ namespace MyNoSqlServer.Tests
             
             memory = rawClass.ToMemory();
 
-            var opResult = await dbOperations.ReplaceAsync(table, memory, DataSynchronizationPeriod.Immediately, DateTime.UtcNow);
+            var opResult = dbOperations.Replace(table, memory, DateTime.UtcNow,
+                TestUtils.GetTestEventAttributes());
             
             Assert.AreEqual(OperationResult.RecordChangedConcurrently, opResult);
 

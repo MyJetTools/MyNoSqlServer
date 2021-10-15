@@ -1,9 +1,7 @@
 using System;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.Domains;
-using MyNoSqlServer.Domains.Db;
 using MyNoSqlServer.Domains.Json;
 using NUnit.Framework;
 
@@ -18,7 +16,7 @@ namespace MyNoSqlServer.Tests
         }
 
         [Test]
-        public async Task TestInsert()
+        public void TestInsert()
         {
 
             var insertEntity = new InsertEntity
@@ -32,13 +30,12 @@ namespace MyNoSqlServer.Tests
             
             var dbOperations =  ioc.GetRequiredService<DbOperations>();
 
-            var dbInstance = ioc.GetRequiredService<DbInstance>();
-
-            var table = dbInstance.CreateTableIfNotExists("mytable", false);
+            var table = dbOperations.CreateTableIfNotExists("mytable",
+                false,  0,TestUtils.GetTestEventAttributes());
 
             var now = DateTime.UtcNow;
 
-            var result = await dbOperations.InsertAsync(table, insertEntity.ToMemory(), DataSynchronizationPeriod.Asap, now);
+            var result = dbOperations.Insert(table, insertEntity.ToMemory(), now, TestUtils.GetTestEventAttributes());
             
             Assert.AreEqual(OperationResult.Ok, result);
 
