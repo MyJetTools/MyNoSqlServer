@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using MyNoSqlServer.TcpContracts;
 using MyTcpSockets;
 
@@ -36,9 +37,10 @@ namespace MyNoSqlServer.DataReader
             }
         }
 
-        public void Start()
+        public Task StartAsync()
         {
             _tcpClient.Start();
+            return EverythingIsLoaded.GetTask();
         }
         
         public void Stop()

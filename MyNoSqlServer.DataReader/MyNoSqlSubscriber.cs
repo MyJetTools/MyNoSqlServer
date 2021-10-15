@@ -7,7 +7,12 @@ namespace MyNoSqlServer.DataReader
 {
     public class MyNoSqlSubscriber : IMyNoSqlSubscriber
     {
+
+
+        protected readonly EverythingIsLoadedDetector EverythingIsLoaded = new EverythingIsLoadedDetector();
+        
         protected const string SystemAction = "system";
+
 
         protected readonly Dictionary<string, Func<byte[], IEnumerable<object>>> Deserializers
             = new Dictionary<string, Func<byte[], IEnumerable<object>>>();
@@ -34,6 +39,8 @@ namespace MyNoSqlServer.DataReader
         {
             if (tableName == SystemAction)
                 throw new Exception("Table can not have name: " + SystemAction);
+            
+            EverythingIsLoaded.ChargeTheTable(tableName);
 
             Deserializers.Add(tableName, data =>
             {
@@ -53,6 +60,8 @@ namespace MyNoSqlServer.DataReader
         
         public void HandleInitTableEvent(string tableName, byte[] data)
         {
+            EverythingIsLoaded.Check(tableName);
+            
             var items = Deserializers[tableName](data);
             _initCallbacks[tableName](items);
         }

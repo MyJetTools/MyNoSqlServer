@@ -15,6 +15,9 @@
       <Compile Include="..\MyNoSqlServer.DataReader\DataReaderPartition.cs">
         <Link>DataReaderPartition.cs</Link>
       </Compile>
+      <Compile Include="..\MyNoSqlServer.DataReader\EverythingIsLoadedDetector.cs">
+        <Link>EverythingIsLoadedDetector.cs</Link>
+      </Compile>
       <Compile Include="..\MyNoSqlServer.DataReader\IMyNoSqlSubscriber.cs">
         <Link>IMyNoSqlSubscriber.cs</Link>
       </Compile>

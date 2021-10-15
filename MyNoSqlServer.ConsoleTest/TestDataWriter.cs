@@ -107,7 +107,7 @@ namespace MyNoSqlServer.ConsoleTest
             var dataWriter = new MyNoSqlServerDataWriter<ReplaceEntity>(() => serverUrl, "test", false);
 
             var client = new MyNoSqlTcpClient(() => hostPort, "test-app");
-            client.Start();
+            await client.StartAsync();
             
 
             var dataReader = new MyNoSqlReadRepository<ReplaceEntity>(client, "test");
