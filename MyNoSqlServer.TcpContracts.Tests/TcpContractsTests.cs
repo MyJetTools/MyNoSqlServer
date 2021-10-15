@@ -19,8 +19,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
 
             var pingContract = new PingContract();
-
+            
             var incomingTraffic = new IncomingTcpTrafficMock();
+
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(pingContract);
@@ -46,6 +48,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
             var testContract = new PongContract();
             
             var incomingTraffic = new IncomingTcpTrafficMock();
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
 
             var rawData = serializer.Serialize(testContract);
@@ -74,6 +77,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
             };
 
             var incomingTraffic = new IncomingTcpTrafficMock();
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
@@ -102,9 +106,8 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 Data = new byte[] {1, 2, 3}
             };
 
-
-
             var incomingTraffic = new IncomingTcpTrafficMock();
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
@@ -135,8 +138,10 @@ namespace MyNoSqlServer.TcpContracts.Tests
                 PartitionKey = "PK",
                 Data = new byte[] {1, 2, 3}
             };
-
+            
             var incomingTraffic = new IncomingTcpTrafficMock();
+
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
@@ -169,6 +174,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
             };
 
             var incomingTraffic = new IncomingTcpTrafficMock();
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
@@ -199,6 +205,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
 
 
             var incomingTraffic = new IncomingTcpTrafficMock();
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);
@@ -226,6 +233,7 @@ namespace MyNoSqlServer.TcpContracts.Tests
             };
 
             var incomingTraffic = new IncomingTcpTrafficMock();
+
             var dataReader = new TcpDataReader(incomingTraffic, ReadBufferSize);
             
             var rawData = serializer.Serialize(testContract);

@@ -12,6 +12,9 @@
 
 
     <ItemGroup>
+      <Compile Include="..\MyNoSqlServer.TcpContracts.Tests\IncomingTcpTrafficMock.cs">
+        <Link>IncomingTcpTrafficMock.cs</Link>
+      </Compile>
       <Compile Include="..\MyNoSqlServer.TcpContracts\CommandType.cs">
         <Link>CommandType.cs</Link>
       </Compile>
