@@ -20,8 +20,4 @@
       <ProjectReference Include="..\MyNoSqlServer.Domains\MyNoSqlServer.Domains.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Mocks\NewDirectory1" />
-    </ItemGroup>
-
 </Project>
