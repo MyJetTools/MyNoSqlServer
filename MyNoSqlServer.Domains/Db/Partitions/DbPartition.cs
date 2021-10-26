@@ -15,7 +15,7 @@ namespace MyNoSqlServer.Domains.Db.Partitions
     /// </summary>
     public class DbPartition
     {
-        public string PartitionKey { get; private init; }
+        public string PartitionKey { get; private set; }
         
         private readonly SortedList<string, DbRow> _rows = new ();
 

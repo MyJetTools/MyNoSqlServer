@@ -1,9 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using MyTcpSockets.Extensions;
 
 namespace MyNoSqlServer.TcpContracts.Tests
 {
@@ -30,12 +27,5 @@ namespace MyNoSqlServer.TcpContracts.Tests
             return src.AsReadOnlyListAsync().Result.First();
         }
 
-
-        public static async Task NewPackageAsync(this TcpDataReader tcpDataReader, ReadOnlyMemory<byte> bytes)
-        {
-            var buf = await tcpDataReader.AllocateBufferToWriteAsync(CancellationToken.None);
-            bytes.CopyTo(buf);
-            tcpDataReader.CommitWrittenData(bytes.Length);
-        }
     }
 }
