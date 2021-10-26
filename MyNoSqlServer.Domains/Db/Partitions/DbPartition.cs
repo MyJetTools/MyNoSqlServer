@@ -153,14 +153,16 @@ namespace MyNoSqlServer.Domains.Db.Partitions
             
             while (_rows.Count>amount)
             {
-                if (rowsByLastInsertDateTime == null)
-                    rowsByLastInsertDateTime = _rows.OrderBy(itm => itm.Value.TimeStamp).ToQueue();
+                rowsByLastInsertDateTime ??= _rows.OrderBy(itm => itm.Value.TimeStamp).ToQueue();
                 
                 var item = rowsByLastInsertDateTime.Dequeue();
                 
                 result.Add(item.Value);
                 _rows.Remove(item.Key);
             }
+
+            if (result.Count > 0)
+                _rowsAsList = _rows.Values.ToList();
 
             return result;
         }
