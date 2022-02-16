@@ -5,7 +5,7 @@
 
         <IsPackable>false</IsPackable>
 
-        <LangVersion>9</LangVersion>
+        <LangVersion>10</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,10 +18,6 @@
     <ItemGroup>
       <ProjectReference Include="..\MyNoSqlServer.Api\MyNoSqlServer.Api.csproj" />
       <ProjectReference Include="..\MyNoSqlServer.Domains\MyNoSqlServer.Domains.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Mocks\NewDirectory1" />
     </ItemGroup>
 
 </Project>
