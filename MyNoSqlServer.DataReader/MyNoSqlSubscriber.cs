@@ -38,7 +38,7 @@ namespace MyNoSqlServer.DataReader
             Deserializers.Add(tableName, data =>
             {
                 var json = Encoding.UTF8.GetString(data);
-                return Newtonsoft.Json.JsonConvert.DeserializeObject<T[]>(json).Cast<object>();
+                return (Newtonsoft.Json.JsonConvert.DeserializeObject<T[]>(json) ?? Array.Empty<T>()).Cast<object>();
             });
 
             _initCallbacks.Add(tableName, items => { initAction(items.Cast<T>().ToList()); });
@@ -53,25 +53,58 @@ namespace MyNoSqlServer.DataReader
         
         public void HandleInitTableEvent(string tableName, byte[] data)
         {
-            var items = Deserializers[tableName](data);
-            _initCallbacks[tableName](items);
+            try
+            {
+                var items = Deserializers[tableName](data);
+                _initCallbacks[tableName](items);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
         public void HandleInitPartitionEvent(string tableName, string partitionKey, byte[] data)
         {
-            var items = Deserializers[tableName](data);
-            _initPartitionCallbacks[tableName](partitionKey, items);
+            try
+            {
+                var items = Deserializers[tableName](data);
+                _initPartitionCallbacks[tableName](partitionKey, items);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
         }
 
         public void HandleUpdateRowEvent(string tableName, byte[] data)
         {
-            var items = Deserializers[tableName](data);
-            _updateCallbacks[tableName](items);
-
+            try
+            {
+                var items = Deserializers[tableName](data);
+                _updateCallbacks[tableName](items);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         public void HandleDeleteRowEvent(string tableName, IEnumerable<(string partitionKey, string rowKey)> items)
         {
-            _deleteCallbacks[tableName](items);
+            try
+            {
+                _deleteCallbacks[tableName](items);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
         }
 
         

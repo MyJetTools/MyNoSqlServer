@@ -20,7 +20,6 @@ namespace MyNoSqlServer.DataReader
                 .RegisterTcpSerializerFactory(() => new MyNoSqlTcpSerializer());
         }
 
-
         public bool Connected => _tcpClient.Connected;
 
         public long ConnectionId
