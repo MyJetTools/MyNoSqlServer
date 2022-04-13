@@ -18,15 +18,6 @@
 
 
     <ItemGroup>
-      <Compile Include="..\MyNoSqlServer.DataWriter\Builders\BulkDeleteBuilder.cs">
-        <Link>Builders\BulkDeleteBuilder.cs</Link>
-      </Compile>
-      <Compile Include="..\MyNoSqlServer.DataWriter\Builders\TransactionDataSerializer.cs">
-        <Link>Builders\TransactionDataSerializer.cs</Link>
-      </Compile>
-      <Compile Include="..\MyNoSqlServer.DataWriter\Builders\TransactionsBuilder.cs">
-        <Link>Builders\TransactionsBuilder.cs</Link>
-      </Compile>
       <Compile Include="..\MyNoSqlServer.DataWriter\Contracts.cs">
         <Link>Contracts.cs</Link>
       </Compile>
@@ -35,9 +26,6 @@
       </Compile>
       <Compile Include="..\MyNoSqlServer.DataWriter\MyNoSqlIndex.cs">
         <Link>MyNoSqlIndex.cs</Link>
-      </Compile>
-      <Compile Include="..\MyNoSqlServer.DataWriter\MyNoSqlServerDataWriter.cs">
-        <Link>MyNoSqlServerDataWriter.cs</Link>
       </Compile>
     </ItemGroup>
 
