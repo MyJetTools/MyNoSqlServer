@@ -5,6 +5,7 @@ using Flurl;
 using Flurl.Http;
 using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.DataWriter.Builders;
+using MyNoSqlServer.DataWriter.Exceptions;
 
 namespace MyNoSqlServer.DataWriter
 {
@@ -31,85 +32,86 @@ namespace MyNoSqlServer.DataWriter
 
         public async Task CreateTableIfNotExistsAsync()
         {
-
-            await GetUrl()
-                .AppendPathSegments("Tables", "CreateIfNotExists")
-                .WithTableNameAsQueryParam(TableName)
-                .WithPersistTableAsQueryParam(_persist)
-                .PostStringAsync(string.Empty);
+            await MakeCall(async () =>
+            {
+                await GetUrl()
+                    .AppendPathSegments("Tables", "CreateIfNotExists")
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPersistTableAsQueryParam(_persist)
+                    .PostStringAsync(string.Empty);
+            }, "CreateIfNotExists");
         }
 
         public async ValueTask InsertAsync(T entity)
         {
-            await GetUrl()
-                .AppendPathSegments(RowController, "Insert")
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .WithTableNameAsQueryParam(TableName)
-                .PostJsonAsync(entity);
+            await MakeCall(async () =>
+            {
+                await GetUrl()
+                    .AppendPathSegments(RowController, "Insert")
+                    .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                    .WithTableNameAsQueryParam(TableName)
+                    .PostJsonAsync(entity);
+            }, "Insert");
         }
 
         public async ValueTask InsertOrReplaceAsync(T entity)
         {
-            await GetUrl()
-                .AppendPathSegments(RowController, "InsertOrReplace")
-                .WithTableNameAsQueryParam(TableName)
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .PostJsonAsync(entity);
+            await MakeCall(async () =>
+            {
+                await GetUrl()
+                    .AppendPathSegments(RowController, "InsertOrReplace")
+                    .WithTableNameAsQueryParam(TableName)
+                    .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                    .PostJsonAsync(entity);
+            }, "InsertOrReplace");
         }
 
         public async ValueTask CleanAndKeepLastRecordsAsync(string partitionKey, int amount)
         {
-            await GetUrl()
-                .AppendPathSegments("CleanAndKeepLastRecords")
-                .WithTableNameAsQueryParam(TableName)
-                .WithPartitionKeyAsQueryParam(partitionKey)
-                .SetQueryParam("amount", amount)
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .AllowNonOkCodes()
-                .DeleteAsync();
+            await MakeCall(async () =>
+            {
+                await GetUrl()
+                    .AppendPathSegments("CleanAndKeepLastRecords")
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
+                    .SetQueryParam("amount", amount)
+                    .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                    .AllowNonOkCodes()
+                    .DeleteAsync();
+            }, "CleanAndKeepLastRecords");
         }
 
         public async ValueTask BulkInsertOrReplaceAsync(IEnumerable<T> entities,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
-            try
+            await MakeCall(async () =>
             {
                 await GetUrl()
                     .AppendPathSegments("Bulk", "InsertOrReplace")
                     .WithTableNameAsQueryParam(TableName)
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
                     .PostJsonAsync(entities);
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            }, "InsertOrReplace");
         }
+
 
         public async ValueTask CleanAndBulkInsertAsync(IEnumerable<T> entities,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
-            try
+            await MakeCall(async () =>
             {
                 await GetUrl()
                     .AppendPathSegments("Bulk", "CleanAndBulkInsert")
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
                     .WithTableNameAsQueryParam(TableName)
                     .PostJsonAsync(entities);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            }, "CleanAndBulkInsert");
         }
 
         public async ValueTask CleanAndBulkInsertAsync(string partitionKey, IEnumerable<T> entities,
             DataSynchronizationPeriod dataSynchronizationPeriod = DataSynchronizationPeriod.Sec5)
         {
-            try
+            await MakeCall(async () =>
             {
                 await GetUrl()
                     .AppendPathSegments("Bulk", "CleanAndBulkInsert")
@@ -117,13 +119,7 @@ namespace MyNoSqlServer.DataWriter
                     .WithPartitionKeyAsQueryParam(partitionKey)
                     .AppendDataSyncPeriod(dataSynchronizationPeriod)
                     .PostJsonAsync(entities);
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            }, "CleanAndBulkInsert");
         }
 
 
@@ -178,11 +174,11 @@ namespace MyNoSqlServer.DataWriter
 
         public async ValueTask<IEnumerable<T>> GetAsync()
         {
-            return await GetUrl()
+            return await MakeCall<IEnumerable<T>>(async () => await GetUrl()
                 .AppendPathSegments(RowController)
                 .WithTableNameAsQueryParam(TableName)
                 .GetAsync()
-                .ReceiveJson<T[]>();
+                .ReceiveJson<T[]>(), RowController);
         }
 
 #if NET5_0 || NETSTANDARD2_1 || NETCOREAPP3_1
@@ -224,130 +220,151 @@ namespace MyNoSqlServer.DataWriter
 
         public async ValueTask<IEnumerable<T>> GetAsync(string partitionKey)
         {
-            return await GetUrl()
+            return await MakeCall<IEnumerable<T>>(async () => await GetUrl()
                 .AppendPathSegments(RowController)
                 .WithTableNameAsQueryParam(TableName)
                 .WithPartitionKeyAsQueryParam(partitionKey)
                 .GetAsync()
-                .ReceiveJson<T[]>();
+                .ReceiveJson<T[]>(), RowController);
         }
 
         public async ValueTask<T> GetAsync(string partitionKey, string rowKey)
         {
-            var response = await GetUrl()
-                .AppendPathSegments(RowController)
-                .WithTableNameAsQueryParam(TableName)
-                .WithPartitionKeyAsQueryParam(partitionKey)
-                .WithRowKeyAsQueryParam(rowKey)
-                .AllowNonOkCodes()
-                .GetAsync();
+            return await MakeCall(async () =>
+            {
+                var response = await GetUrl()
+                    .AppendPathSegments(RowController)
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
+                    .WithRowKeyAsQueryParam(rowKey)
+                    .AllowNonOkCodes()
+                    .GetAsync();
 
-            var statusCode = await response.GetOperationResultCodeAsync();
+                var statusCode = await response.GetOperationResultCodeAsync();
 
-            if (statusCode == OperationResult.RecordNotFound)
-                return default;
+                if (statusCode == OperationResult.RecordNotFound)
+                    return default;
 
-            return await response.GetJsonAsync<T>();
+                return await response.GetJsonAsync<T>();
+            }, RowController);
         }
 
-        private static readonly T[] EmptyResponse = new T[0];
+        private static readonly T[] EmptyResponse = Array.Empty<T>();
 
         public async ValueTask<IReadOnlyList<T>> GetMultipleRowKeysAsync(string partitionKey,
             IEnumerable<string> rowKeys)
         {
-            var response = await GetUrl()
-                .AppendPathSegments("Rows", "SinglePartitionMultipleRows")
-                .WithTableNameAsQueryParam(TableName)
-                .WithPartitionKeyAsQueryParam(partitionKey)
-                .AllowNonOkCodes()
-                .PostJsonAsync(rowKeys);
+            return await MakeCall<IReadOnlyList<T>>(async () =>
+            {
+                var response = await GetUrl()
+                    .AppendPathSegments("Rows", "SinglePartitionMultipleRows")
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
+                    .AllowNonOkCodes()
+                    .PostJsonAsync(rowKeys);
+                
+                var statusCode = await response.GetOperationResultCodeAsync();
 
+                if (statusCode == OperationResult.RecordNotFound)
+                    return EmptyResponse;
 
-            var statusCode = await response.GetOperationResultCodeAsync();
-
-            if (statusCode == OperationResult.RecordNotFound)
-                return EmptyResponse;
-
-            return await response.GetJsonAsync<List<T>>();
+                return await response.GetJsonAsync<List<T>>();
+            }, "SinglePartitionMultipleRows");
         }
 
         public async ValueTask<T> DeleteAsync(string partitionKey, string rowKey)
         {
-            var result = await GetAsync(partitionKey, rowKey);
+            return await MakeCall(async () =>
+            {
+                var result = await GetAsync(partitionKey, rowKey);
 
-            if (result == null)
-                return default;
+                if (result == null)
+                    return default;
 
-            await GetUrl()
-                .AppendPathSegments(RowController)
-                .WithTableNameAsQueryParam(TableName)
-                .WithPartitionKeyAsQueryParam(partitionKey)
-                .WithRowKeyAsQueryParam(rowKey)
-                .AppendDataSyncPeriod(_dataSynchronizationPeriod)
-                .AllowNonOkCodes()
-                .DeleteAsync();
+                await GetUrl()
+                    .AppendPathSegments(RowController)
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
+                    .WithRowKeyAsQueryParam(rowKey)
+                    .AppendDataSyncPeriod(_dataSynchronizationPeriod)
+                    .AllowNonOkCodes()
+                    .DeleteAsync();
 
-            return result;
-
+                return result;
+            }, RowController);
         }
 
         public async ValueTask<IEnumerable<T>> QueryAsync(string query)
         {
-            var response = await GetUrl()
-                .AppendPathSegments("Query")
-                .WithTableNameAsQueryParam(TableName)
-                .SetQueryParam("query", query)
-                .GetAsync();
+            return await MakeCall(async () =>
+            {
+                var response = await GetUrl()
+                    .AppendPathSegments("Query")
+                    .WithTableNameAsQueryParam(TableName)
+                    .SetQueryParam("query", query)
+                    .GetAsync();
 
-            return await response.GetJsonAsync<List<T>>();
-
+                return await response.GetJsonAsync<List<T>>();
+            }, "Query");
         }
 
-        public async ValueTask<IEnumerable<T>> GetHighestRowAndBelow(string partitionKey, string rowKeyFrom, int amount)
+      public async ValueTask<IEnumerable<T>> GetHighestRowAndBelow(string partitionKey, string rowKeyFrom, int amount)
         {
-            var response = await GetUrl()
-                .AppendPathSegments("Rows", "HighestRowAndBelow")
-                .WithTableNameAsQueryParam(TableName)
-                .WithPartitionKeyAsQueryParam(partitionKey)
-                .WithRowKeyAsQueryParam(rowKeyFrom)
-                .SetQueryParam("maxAmount", amount)
-                .GetAsync();
+            return await MakeCall(async () =>
+            {
+                var response = await GetUrl()
+                    .AppendPathSegments("Rows", "HighestRowAndBelow")
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
+                    .WithRowKeyAsQueryParam(rowKeyFrom)
+                    .SetQueryParam("maxAmount", amount)
+                    .GetAsync();
 
-            return await response.GetJsonAsync<List<T>>();
+                return await response.GetJsonAsync<List<T>>();
+            }, "HighestRowAndBelow");
         }
 
         public ValueTask CleanAndKeepMaxPartitions(int maxAmount)
         {
-            var result = GetUrl()
-                .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxPartitions")
-                .WithTableNameAsQueryParam(TableName)
-                .SetQueryParam("maxAmount", maxAmount)
-                .PostStringAsync("");
+            return MakeCall(() =>
+            {
+                var result = GetUrl()
+                    .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxPartitions")
+                    .WithTableNameAsQueryParam(TableName)
+                    .SetQueryParam("maxAmount", maxAmount)
+                    .PostStringAsync("");
 
-            return new ValueTask(result);
+                return new ValueTask(result);
+            }, "CleanAndKeepMaxPartitions");
         }
 
         public ValueTask CleanAndKeepMaxRecords(string partitionKey, int maxAmount)
         {
-            var result = GetUrl()
-                .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxRecords")
-                .WithTableNameAsQueryParam(TableName)
-                .WithPartitionKeyAsQueryParam(partitionKey)
-                .SetQueryParam("maxAmount", maxAmount)
-                .PostStringAsync("");
+            return MakeCall(() =>
+            {
+                var result = GetUrl()
+                    .AppendPathSegments("GarbageCollector", "CleanAndKeepMaxRecords")
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
+                    .SetQueryParam("maxAmount", maxAmount)
+                    .PostStringAsync("");
 
-            return new ValueTask(result);
+                return new ValueTask(result);
+            }, "CleanAndKeepMaxRecords");
         }
 
         public async ValueTask<int> GetCountAsync(string partitionKey)
         {
-            var response = await GetUrl()
-                .AppendPathSegments("/Count")
-                .WithTableNameAsQueryParam(TableName)
-                .WithPartitionKeyAsQueryParam(partitionKey)
-                .GetStringAsync();
+            return await MakeCall(async () =>
+            {
+                var response = await GetUrl()
+                    .AppendPathSegments("/Count")
+                    .WithTableNameAsQueryParam(TableName)
+                    .WithPartitionKeyAsQueryParam(partitionKey)
+                    .GetStringAsync();
 
-            return int.Parse(response);
+                return int.Parse(response);
+            }, "Count");
         }
 
         public BulkDeleteBuilder<T> BulkDelete()
@@ -366,6 +383,34 @@ namespace MyNoSqlServer.DataWriter
             var jsonModel = Newtonsoft.Json.JsonConvert.DeserializeObject<StartTransactionResponseContract>(response);
 
             return new TransactionsBuilder<T>(GetUrl, TableName, jsonModel.TransactionId);
+        }
+        
+        private async ValueTask MakeCall(Func<ValueTask> task, string methodName)
+        {
+            try
+            {
+                await task();
+            }
+            catch (FlurlHttpException e)
+            {
+                Console.WriteLine($"Message: {e.Message}, Response: {e.GetResponseStringAsync()}");
+                throw new MyNoSqlHttpException(
+                    $"Failed to call {methodName} method. Response: {e.GetResponseStringAsync()}", e);
+            }
+        }
+
+        private async ValueTask<T> MakeCall<T>(Func<ValueTask<T>> task, string methodName)
+        {
+            try
+            {
+                return await task();
+            }
+            catch (FlurlHttpException e)
+            {
+                Console.WriteLine($"Message: {e.Message}, Response: {e.GetResponseStringAsync()}");
+                throw new MyNoSqlHttpException(
+                    $"Failed to call {methodName} method. Response: {e.GetResponseStringAsync()}", e);
+            }
         }
 
     }
