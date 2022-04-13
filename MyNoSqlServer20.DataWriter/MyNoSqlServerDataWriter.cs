@@ -392,9 +392,9 @@ namespace MyNoSqlServer20.DataWriter
             }
             catch (FlurlHttpException e)
             {
-                Console.WriteLine($"Message: {e.Message}, Response: {e.GetResponseStringAsync()}");
+                Console.WriteLine($"Message: {e.Message}, Response: {await e.GetResponseStringAsync()}");
                 throw new MyNoSqlHttpException(
-                    $"Failed to call {methodName} method. Response: {e.GetResponseStringAsync()}", e);
+                    $"Failed to call {methodName} method. Response: {await e.GetResponseStringAsync()}", e);
             }
         }
 
@@ -406,9 +406,9 @@ namespace MyNoSqlServer20.DataWriter
             }
             catch (FlurlHttpException e)
             {
-                Console.WriteLine($"Message: {e.Message}, Response: {e.GetResponseStringAsync()}");
+                Console.WriteLine($"Message: {e.Message}, Response: {await e.GetResponseStringAsync()}");
                 throw new MyNoSqlHttpException(
-                    $"Failed to call {methodName} method. Response: {e.GetResponseStringAsync()}", e);
+                    $"Failed to call {methodName} method. Response: {await e.GetResponseStringAsync()}", e);
             }
         }
     }
